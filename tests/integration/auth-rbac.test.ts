@@ -118,4 +118,51 @@ describe("auth and RBAC", () => {
     expect(deniedResponse.status).toBe(403);
     expect(deniedResponse.body.error.code).toBe("auth.account_access_denied");
   });
+
+  it("lists portfolio workspaces for the authenticated actor", async () => {
+    const { app, response: loginResponse } = await login("analyst@example.com");
+
+    const response = await request(app)
+      .get("/api/v1/accounts")
+      .set("Authorization", `Bearer ${loginResponse.body.data.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.meta.count).toBe(2);
+    expect(response.body.data.portfolios).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountId: "acct_main",
+          membershipRole: "analyst",
+          freshness: "fresh",
+          status: "ready"
+        }),
+        expect.objectContaining({
+          accountId: "acct_income",
+          freshness: "partial",
+          status: "degraded"
+        })
+      ])
+    );
+  });
+
+  it("returns a portfolio dashboard with freshness metadata", async () => {
+    const { app, response: loginResponse } = await login("analyst@example.com");
+
+    const response = await request(app)
+      .get("/api/v1/accounts/acct_income/dashboard")
+      .set("Authorization", `Bearer ${loginResponse.body.data.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.meta).toMatchObject({
+      freshness: "partial",
+      status: "degraded"
+    });
+    expect(response.body.data).toMatchObject({
+      accountId: "acct_income",
+      accountName: "Income Sleeve",
+      membershipRole: "analyst"
+    });
+    expect(response.body.data.holdings).toHaveLength(3);
+    expect(response.body.data.transactions[0]).toHaveProperty("status");
+  });
 });

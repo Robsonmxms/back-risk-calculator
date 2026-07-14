@@ -1,7 +1,8 @@
 import {
   Account,
   AccountMember,
-  AccountMembershipSummary
+  AccountMembershipSummary,
+  PortfolioAccountSnapshot
 } from "../../01-domain/accounts/account";
 import { User, UserRole } from "../../01-domain/users/user";
 
@@ -30,6 +31,8 @@ export interface AccountRepository {
   findAccountById(id: string): Promise<Account | undefined>;
   listMembershipsForUser(userId: string): Promise<AccountMembershipSummary[]>;
   findMembership(accountId: string, userId: string): Promise<AccountMember | undefined>;
+  listPortfolioSnapshotsForUser(userId: string): Promise<PortfolioAccountSnapshot[]>;
+  findPortfolioSnapshotByAccountId(accountId: string): Promise<PortfolioAccountSnapshot | undefined>;
 }
 
 export type RefreshTokenRevocationReason =

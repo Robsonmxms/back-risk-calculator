@@ -29,11 +29,13 @@ export async function createApp(dependencies: AppDependencies = {}) {
     app,
     useCases: {
       authenticateAccessTokenUseCase: shared.authenticateAccessTokenUseCase,
+      getAccountDashboardUseCase: accountContainer.useCases.getAccountDashboardUseCase,
       getAccountAnalyticsSummaryUseCase:
         accountContainer.useCases.getAccountAnalyticsSummaryUseCase,
       getActorForUserIdUseCase: shared.getActorForUserIdUseCase,
       getCurrentUserUseCase: userContainer.useCases.getCurrentUserUseCase,
       googleLoginUseCase: authContainer.useCases.googleLoginUseCase,
+      listUserPortfoliosUseCase: accountContainer.useCases.listUserPortfoliosUseCase,
       listUsersUseCase: adminContainer.useCases.listUsersUseCase,
       loginUseCase: authContainer.useCases.loginUseCase,
       logoutUseCase: authContainer.useCases.logoutUseCase,
