@@ -10,6 +10,8 @@ export function registerAccountRoutes(
   authenticateAccessTokenUseCase: AuthenticateAccessTokenUseCase
 ): void {
   const auth = authMiddleware(authenticateAccessTokenUseCase);
+  router.get("/accounts", auth, asyncHandler(controller.listPortfolios));
+  router.get("/accounts/:accountId/dashboard", auth, asyncHandler(controller.getDashboard));
   router.get(
     "/accounts/:accountId/analytics/summary",
     auth,
