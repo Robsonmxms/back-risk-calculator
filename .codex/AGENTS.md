@@ -4,94 +4,84 @@ Guidance for AI agents working in the backend project.
 
 ## Backend Role
 
-`back-risk-calculator` is the TypeScript + Express backend for the Investment Portfolio Analytics Platform. It
-owns domain rules, auth, RBAC, market data ingestion, analytics, event publishing, workers,
-reports, alerts, persistence, and observability.
+`back-risk-calculator` is the TypeScript + Express backend for the Investment Portfolio Analytics
+Platform. Today it owns auth, session lifecycle, RBAC, current-user lookup, admin user listing,
+and account-level analytics summary behavior.
+
+The wider platform scope in root specs still exists as roadmap, but workers, queues, market data
+ingestion, reports, alerts, and realtime are not implemented in this repository yet.
 
 Specs are not local to this project. Before implementation, read the relevant root macro spec in
 `../.specs/features/<feature>/`.
 
-## Planned Stack
+## Current Stack
 
 | Layer | Technology |
 | --- | --- |
-| Runtime | Node.js LTS |
+| Runtime | Node.js 26.5.0+ |
 | Language | TypeScript |
-| API | Express |
+| API | Express 5 |
 | Validation | Joi |
-| Database | PostgreSQL + Knex migrations/query builder |
-| Cache | Redis |
-| Async processing | Local queue abstraction, AWS SQS/SNS-ready adapters |
-| File storage | S3-compatible storage |
+| Persistence in runtime | In-memory identity/session store |
+| Persistence prepared | PostgreSQL + Knex migrations/query builder |
 | Auth | JWT access token, refresh token rotation, Google OAuth |
-| Observability | OpenTelemetry, structured logs, Prometheus metrics |
-| Containers | Docker Compose for API, workers, Postgres, Redis, Prometheus, Grafana |
-| Tests | Vitest, Supertest, factories, integration tests, contract tests |
+| Observability | Lightweight logger and metrics adapters |
+| Containers | Docker Compose for API and PostgreSQL |
+| Tests | Vitest and Supertest integration tests |
 
 ## Clean Architecture Rules
 
 Use inward dependencies:
 
 ```text
-api      -> modules/services -> domain rules
-workers  -> modules/services -> domain rules
-infra    -> repository/provider ports
+04-infra -> 03-adapters -> 02-application -> 01-domain
 ```
 
-- Routers parse HTTP, apply middleware/validation, call services, and map responses.
-- Services/use cases own orchestration, policies, transaction boundaries, and events.
-- Domain rules/formulas must not import Express, Joi, Knex, Redis, AWS SDK clients, or provider SDKs.
-- Repository files expose contracts/ports. Concrete database implementations use Knex behind those ports.
-- Workers are thin queue/scheduler entry points and must call services/use cases.
+- Routers parse HTTP, apply middleware/validation, call controllers, and map responses.
+- Use cases own orchestration, policies, and security decisions.
+- Domain rules must not import Express, Joi, or infrastructure adapters.
+- Repository files expose contracts/ports. The current concrete implementation is an in-memory
+  identity store.
 
-## Expected Source Layout
+## Source Layout
 
 ```text
 back-risk-calculator/
   src/
-    api/
-      auth/
-      admin/
-      portfolios/
-      analytics/
-      reports/
-    modules/
+    01-domain/
       accounts/
-        schema.ts
-        service.ts
-        repository.ts
-        events.ts
-      portfolios/
-      market-data/
-      analytics/
-      reports/
-      notifications/
-    infra/
-      db/
-      repositories/
-      providers/
-      cache/
-      queues/
-      storage/
+      auth/
+      users/
+    02-application/
+      accounts/
+      auth/
+      errors/
+      ports/
+      users/
+    03-adapters/
+      controllers/
+      middlewares/
+      oauth/
       observability/
-    middlewares/
-    workers/
+      security/
+    04-infra/
+      config/
+      container/
+      database/
+      repositories/
+      routes/
+      server.ts
     app.ts
-    config.ts
+  scripts/
   tests/
-    unit/
     integration/
-    contract/
 ```
 
 ## Implementation Rules
 
 - Do not create `back-risk-calculator/.specs/`.
 - Follow root macro specs for feature scope and acceptance criteria.
-- Do not put business rules in Express routers, Joi schemas, Knex query builders, or worker entry points.
-- Use Unit of Work/outbox for operations that persist data and publish events.
-- Use provider adapters behind `MarketDataProvider`.
+- Do not put business rules in Express routers, Joi schemas, or infrastructure entry points.
+- Keep README, `.codex/AGENTS.md`, and auth-related root specs aligned with the implemented API.
 - Mock/fake external providers in tests.
-- Add structured logs, metrics, and trace context to async flows.
 - Avoid investment-advice language; the backend analyzes risk and explains metrics.
-

@@ -1,104 +1,167 @@
 # back-risk-calculator
 
-Backend TypeScript + Express do Risk Calculator, uma plataforma de analytics de portfolios de
-investimento. Este projeto e a fonte de verdade para regras de dominio, autenticacao,
-autorizacao, dados de mercado, calculos de risco, eventos, workers, relatorios, alertas,
-persistencia e observabilidade.
+Backend em TypeScript + Express do Risk Calculator. No estado atual, este projeto implementa
+autenticacao, sessao com refresh token rotativo, RBAC e um endpoint protegido de resumo de
+analytics por conta.
 
 ## Estado atual
 
-Este diretorio esta em fase de bootstrap. Antes de implementar codigo, leia:
+O backend ja possui codigo executavel, testes e rotas HTTP. O escopo implementado hoje e:
 
-- [Guia do projeto](.codex/AGENTS.md)
-- [Contexto do workspace](../.specs/context.md)
-- [Visao de produto](../.specs/product/vision.md)
-- [Arquitetura](../.specs/architecture/overview.md)
-- [Convencoes de API](../.specs/api/conventions.md)
-- A macro spec da feature em `../.specs/features/<feature>/`
+- login por email/senha;
+- login Google via verificador configuravel;
+- refresh de sessao com rotacao de refresh token;
+- logout com revogacao do token ativo;
+- identificacao do usuario autenticado;
+- RBAC para rotas globais e por conta;
+- listagem administrativa de usuarios;
+- resumo de analytics por conta;
+- health check em `/health`.
 
-As specs vivem apenas na raiz do workspace. Nao crie `back-risk-calculator/.specs/`.
+Persistencia de identidade e sessoes ainda esta em memoria via
+`src/04-infra/repositories/InMemoryIdentityStore.ts`. O projeto ja contem migracao Knex e
+`DATABASE_URL` no `docker-compose.yml`, mas a API local ainda nao grava usuarios, memberships ou
+refresh tokens no PostgreSQL.
 
-## Responsabilidades
-
-- Expor APIs REST versionadas para auth, portfolios, analytics, market data, reports e alerts.
-- Validar requests e mapear responses no envelope padrao `{ "data": ..., "meta": ... }`.
-- Aplicar RBAC, politicas de seguranca e regras de dominio no backend.
-- Persistir usuarios, portfolios, transacoes, ativos, precos historicos, snapshots e outbox.
-- Ingerir dados de mercado por adapters atras de uma porta `MarketDataProvider`.
-- Processar tarefas lentas com filas, workers, schedulers e eventos.
-- Calcular metricas como retorno, drawdown, volatilidade, beta, Sharpe, concentracao,
-  exposicao setorial e correlacao.
-- Gerar relatorios, notificacoes e eventos realtime consumidos pelo frontend.
-- Publicar logs estruturados, metricas e traces.
-
-## Stack planejada
+## Stack atual
 
 | Camada | Tecnologia |
 | --- | --- |
-| Runtime | Node.js LTS |
+| Runtime | Node.js 26.5.0+ |
 | Linguagem | TypeScript |
-| API | Express |
+| API | Express 5 |
 | Validacao | Joi |
-| Banco | PostgreSQL + Knex |
-| Cache | Redis |
-| Async | Filas locais com adapters prontos para AWS SQS/SNS |
-| Storage | S3 compativel |
-| Auth | JWT, refresh token rotation, Google OAuth |
-| Observabilidade | OpenTelemetry, logs estruturados, Prometheus |
-| Testes | Vitest, Supertest, integration e contract tests |
+| Persistencia atual | Store em memoria |
+| Persistencia preparada | PostgreSQL + Knex |
+| Auth | JWT, refresh token rotation, Google OAuth configuravel |
+| Execucao local | `tsx watch` |
+| Serverless | `serverless` + `serverless-offline` |
+| Testes | Vitest + Supertest |
 
-## Arquitetura esperada
+## Rotas disponiveis
 
-Use dependencias apontando para dentro:
-
-```text
-api      -> modules/services -> domain rules
-workers  -> modules/services -> domain rules
-infra    -> repository/provider ports
-```
-
-Layout esperado:
-
-```text
-back-risk-calculator/
-  src/
-    api/
-    modules/
-    infra/
-    middlewares/
-    workers/
-    app.ts
-    config.ts
-  tests/
-    unit/
-    integration/
-    contract/
-```
-
-## Desenvolvimento local
-
-O scaffold de aplicacao ainda nao foi criado. Quando existir `package.json`, os comandos
-esperados devem seguir este formato:
-
-```bash
-npm install
-npm run dev
-npm test
-```
-
-A API local planejada e:
+Base local:
 
 ```text
 http://localhost:8000/api/v1
 ```
 
-## Regras importantes
+Rotas implementadas:
 
-- Nao coloque regra de negocio em routers, schemas Joi, query builders Knex ou entry points de workers.
-- Use Unit of Work/outbox para operacoes que persistem dados e publicam eventos.
-- Mocke provedores externos em testes.
-- Nao registre senhas, tokens, credenciais, chaves de API ou dados sensiveis em logs.
-- Evite linguagem de recomendacao financeira; o sistema analisa risco e explica metricas.
+- `POST /auth/login`
+- `POST /auth/google`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /users/me`
+- `GET /admin/users`
+- `GET /accounts/:accountId/analytics/summary`
+
+## Dados seed para desenvolvimento
+
+Quando a aplicacao sobe com a store em memoria, estes usuarios ficam disponiveis:
+
+- `admin@example.com`
+- `analyst@example.com`
+- `user@example.com`
+- `other@example.com`
+
+Senha padrao:
+
+```text
+Password123!
+```
+
+Contas seed:
+
+- `acct_main`
+- `acct_private`
+
+## Estrutura do projeto
+
+```text
+back-risk-calculator/
+  src/
+    01-domain/
+    02-application/
+    03-adapters/
+    04-infra/
+    app.ts
+  scripts/
+  tests/
+    integration/
+```
+
+Direcao de dependencias:
+
+```text
+04-infra -> 03-adapters -> 02-application -> 01-domain
+```
+
+## Desenvolvimento local
+
+Use Node e Yarn nas versoes do projeto:
+
+```bash
+nvm use
+yarn install
+yarn dev
+```
+
+Comandos uteis:
+
+```bash
+yarn test
+yarn typecheck
+yarn lint
+yarn offline
+```
+
+`yarn offline` agora usa um bootstrap CommonJS em `src/04-infra/serverless-bootstrap.cjs` para
+carregar o handler TypeScript real sem build previo.
+
+Docker:
+
+```bash
+docker build --target dev -t back-risk-calculator:dev .
+docker run --rm -p 8000:8000 back-risk-calculator:dev
+```
+
+Compose do projeto:
+
+```bash
+docker compose up --build
+```
+
+Scripts de banco atualmente disponiveis:
+
+```bash
+docker compose up -d postgres
+yarn db:migrate:dev
+yarn db:seed:dev
+```
+
+Esses scripts preparam o PostgreSQL local, mas nao substituem a store em memoria usada pela API
+no bootstrap atual da aplicacao.
+
+## Variaveis de ambiente
+
+- `PORT`
+- `ACCESS_TOKEN_SECRET`
+- `ACCESS_TOKEN_TTL_SECONDS`
+- `REFRESH_TOKEN_TTL_DAYS`
+- `GOOGLE_OAUTH_MOCK_TOKENS`
+
+## Testes e comportamento validado
+
+Os testes de integracao cobrem:
+
+- login com credenciais validas e invalidas;
+- refresh token rotativo;
+- revogacao de familia de refresh tokens quando ha reuse;
+- logout com revogacao do token;
+- retorno seguro de `/users/me`;
+- bloqueio de rota admin para nao-admin;
+- autorizacao por conta em `/accounts/:accountId/analytics/summary`.
 
 ## Licenca
 
