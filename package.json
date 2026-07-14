@@ -1,0 +1,60 @@
+{
+  "name": "back-risk-calculator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend TypeScript + Express for the Risk Calculator platform.",
+  "main": "dist/src/04-infra/main.js",
+  "scripts": {
+    "dev": "tsx watch src/04-infra/main.ts",
+    "offline": "serverless offline --stage dev",
+    "start": "node dist/src/04-infra/main.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint-staged": "lint-staged",
+    "prepare": "husky",
+    "db:migrate:dev": "tsx scripts/migrate-dev-database.ts",
+    "db:seed:dev": "tsx scripts/seed-dev-database.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "packageManager": "yarn@4.17.1",
+  "engines": {
+    "node": ">=26.5.0",
+    "yarn": ">=4.0.0"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "joi": "^18.2.3",
+    "knex": "^3.3.0",
+    "pg": "^8.22.0",
+    "serverless-http": "^4.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/aws-lambda": "^8.10.162",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.1",
+    "@types/supertest": "^7.2.0",
+    "eslint": "^10.6.0",
+    "globals": "^17.7.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "serverless": "^3.40.0",
+    "serverless-offline": "^13.9.0",
+    "supertest": "^7.2.2",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.63.0",
+    "vitest": "^4.1.10"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-linux-x64-gnu": "^1.1.5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix"
+    ]
+  }
+}

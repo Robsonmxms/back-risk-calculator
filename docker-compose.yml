@@ -1,0 +1,36 @@
+services:
+  back-risk-calculator:
+    build:
+      context: .
+      target: dev
+    command: yarn dev
+    environment:
+      NODE_ENV: development
+      PORT: "8000"
+      ACCESS_TOKEN_SECRET: docker-local-risk-calculator-access-token-secret
+      ACCESS_TOKEN_TTL_SECONDS: "900"
+      REFRESH_TOKEN_TTL_DAYS: "30"
+      GOOGLE_OAUTH_MOCK_TOKENS: "true"
+      DATABASE_URL: postgres://risk_calculator:risk_calculator@postgres:5432/risk_calculator_dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - back_node_modules:/app/node_modules
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: risk_calculator_dev
+      POSTGRES_USER: risk_calculator
+      POSTGRES_PASSWORD: risk_calculator
+    ports:
+      - "5432:5432"
+    volumes:
+      - back_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  back_node_modules:
+  back_postgres_data:

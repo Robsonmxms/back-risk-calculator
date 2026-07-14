@@ -1,0 +1,14 @@
+.git
+.husky
+.nvmrc
+node_modules
+dist
+coverage
+.vitest
+.eslintcache
+.cache
+logs
+*.log
+.env
+.env.*
+docker-compose.override.yml

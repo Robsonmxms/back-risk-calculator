@@ -1,0 +1,121 @@
+import request from "supertest";
+import { describe, expect, it } from "vitest";
+import { createApp } from "../../src/app";
+
+async function login(email: string) {
+  const { app } = await createApp();
+  const response = await request(app).post("/api/v1/auth/login").send({
+    email,
+    password: "Password123!"
+  });
+  return { app, response };
+}
+
+describe("auth and RBAC", () => {
+  it("returns an auth session for valid credentials", async () => {
+    const { response } = await login("user@example.com");
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.accessToken).toEqual(expect.any(String));
+    expect(response.body.data.refreshToken).toEqual(expect.any(String));
+    expect(response.body.data.actor).toMatchObject({
+      email: "user@example.com",
+      role: "user"
+    });
+    expect(response.body.data.actor.passwordHash).toBeUndefined();
+  });
+
+  it("returns a stable safe error for invalid credentials", async () => {
+    const { app } = await createApp();
+    const response = await request(app).post("/api/v1/auth/login").send({
+      email: "user@example.com",
+      password: "wrong-password"
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.body.error.code).toBe("auth.invalid_credentials");
+    expect(JSON.stringify(response.body)).not.toContain("passwordHash");
+  });
+
+  it("rotates refresh tokens and revokes the family when a rotated token is reused", async () => {
+    const { app, response: loginResponse } = await login("user@example.com");
+    const firstRefreshToken = loginResponse.body.data.refreshToken;
+
+    const refreshResponse = await request(app).post("/api/v1/auth/refresh").send({
+      refreshToken: firstRefreshToken
+    });
+    expect(refreshResponse.status).toBe(200);
+    expect(refreshResponse.body.data.refreshToken).not.toBe(firstRefreshToken);
+
+    const reuseResponse = await request(app).post("/api/v1/auth/refresh").send({
+      refreshToken: firstRefreshToken
+    });
+    expect(reuseResponse.status).toBe(401);
+    expect(reuseResponse.body.error.code).toBe("auth.refresh_reused");
+
+    const familyRevokedResponse = await request(app).post("/api/v1/auth/refresh").send({
+      refreshToken: refreshResponse.body.data.refreshToken
+    });
+    expect(familyRevokedResponse.status).toBe(401);
+    expect(familyRevokedResponse.body.error.code).toBe("auth.refresh_revoked");
+  });
+
+  it("revokes the active refresh token on logout", async () => {
+    const { app, response: loginResponse } = await login("user@example.com");
+    const { accessToken, refreshToken } = loginResponse.body.data;
+
+    const logoutResponse = await request(app)
+      .post("/api/v1/auth/logout")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ refreshToken });
+    expect(logoutResponse.status).toBe(204);
+
+    const refreshResponse = await request(app).post("/api/v1/auth/refresh").send({
+      refreshToken
+    });
+    expect(refreshResponse.status).toBe(401);
+    expect(refreshResponse.body.error.code).toBe("auth.refresh_revoked");
+  });
+
+  it("returns the current actor without sensitive fields", async () => {
+    const { app, response: loginResponse } = await login("analyst@example.com");
+
+    const response = await request(app)
+      .get("/api/v1/users/me")
+      .set("Authorization", `Bearer ${loginResponse.body.data.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.actor).toMatchObject({
+      email: "analyst@example.com",
+      role: "analyst"
+    });
+    expect(response.body.data.user.passwordHash).toBeUndefined();
+  });
+
+  it("forbids non-admin actors from admin operations", async () => {
+    const { app, response: loginResponse } = await login("user@example.com");
+
+    const response = await request(app)
+      .get("/api/v1/admin/users")
+      .set("Authorization", `Bearer ${loginResponse.body.data.accessToken}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe("auth.forbidden");
+  });
+
+  it("allows assigned analysts and blocks analysts without account access", async () => {
+    const { app, response: loginResponse } = await login("analyst@example.com");
+    const token = loginResponse.body.data.accessToken;
+
+    const allowedResponse = await request(app)
+      .get("/api/v1/accounts/acct_main/analytics/summary")
+      .set("Authorization", `Bearer ${token}`);
+    expect(allowedResponse.status).toBe(200);
+
+    const deniedResponse = await request(app)
+      .get("/api/v1/accounts/acct_private/analytics/summary")
+      .set("Authorization", `Bearer ${token}`);
+    expect(deniedResponse.status).toBe(403);
+    expect(deniedResponse.body.error.code).toBe("auth.account_access_denied");
+  });
+});
