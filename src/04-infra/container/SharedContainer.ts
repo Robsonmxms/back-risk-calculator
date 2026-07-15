@@ -8,6 +8,7 @@ import { HmacJwtAccessTokenService } from "../../03-adapters/security/HmacJwtAcc
 import { ScryptPasswordHasher } from "../../03-adapters/security/ScryptPasswordHasher";
 import { Sha256RefreshTokenGenerator } from "../../03-adapters/security/Sha256RefreshTokenGenerator";
 import { AppConfig } from "../config/env";
+import type { MarketDataContainerDependencies } from "./MarketDataContainer";
 import {
   createSeededIdentityStore,
   InMemoryIdentityStore
@@ -15,6 +16,7 @@ import {
 
 export interface AppDependencies {
   identityStore?: InMemoryIdentityStore;
+  marketData?: MarketDataContainerDependencies;
 }
 
 export interface SharedContainer {

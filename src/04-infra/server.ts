@@ -1,14 +1,16 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { errorHandler } from "../03-adapters/http";
 import { AccountController } from "../03-adapters/controllers/AccountController";
 import { AdminController } from "../03-adapters/controllers/AdminController";
 import { AuthController } from "../03-adapters/controllers/AuthController";
 import { UserController } from "../03-adapters/controllers/UserController";
 import { PortfolioController } from "../03-adapters/controllers/PortfolioController";
+import { MarketDataController } from "../03-adapters/controllers/MarketDataController";
 import { AuthenticateAccessTokenUseCase } from "../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { registerAccountRoutes } from "./routes/accountRoutes";
 import { registerAdminRoutes } from "./routes/adminRoutes";
 import { registerAuthRoutes } from "./routes/authRoutes";
+import { registerMarketDataRoutes } from "./routes/marketDataRoutes";
 import { registerPortfolioRoutes } from "./routes/portfolioRoutes";
 import { registerUserRoutes } from "./routes/userRoutes";
 
@@ -18,6 +20,7 @@ export interface ServerDependencies {
   adminController: AdminController;
   accountController: AccountController;
   portfolioController: PortfolioController;
+  marketDataController: MarketDataController;
   authenticateAccessTokenUseCase: AuthenticateAccessTokenUseCase;
 }
 
@@ -25,6 +28,7 @@ export function createServer(dependencies: ServerDependencies) {
   const app = express();
   const apiRouter = express.Router();
 
+  app.use(corsMiddleware);
   app.use(express.json());
   app.get("/health", (_request, response) => response.json({ status: "ok" }));
 
@@ -53,9 +57,41 @@ export function createServer(dependencies: ServerDependencies) {
     dependencies.portfolioController,
     dependencies.authenticateAccessTokenUseCase
   );
+  registerMarketDataRoutes(
+    apiRouter,
+    dependencies.marketDataController,
+    dependencies.authenticateAccessTokenUseCase
+  );
 
   app.use("/api/v1", apiRouter);
   app.use(errorHandler);
 
   return app;
+}
+
+function corsMiddleware(request: Request, response: Response, next: NextFunction) {
+  const origin = request.headers.origin;
+
+  if (origin && isAllowedCorsOrigin(origin)) {
+    response.header("Access-Control-Allow-Origin", origin);
+    response.header("Vary", "Origin");
+    response.header("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
+    response.header("Access-Control-Allow-Headers", "Content-Type,Authorization,Idempotency-Key");
+    response.header("Access-Control-Max-Age", "600");
+  }
+
+  if (request.method === "OPTIONS") {
+    return response.sendStatus(204);
+  }
+
+  return next();
+}
+
+function isAllowedCorsOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname);
+  } catch {
+    return false;
+  }
 }
