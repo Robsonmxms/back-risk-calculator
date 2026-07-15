@@ -7,6 +7,7 @@ import {
   buildSharedContainer
 } from "./04-infra/container/SharedContainer";
 import { buildUserContainer } from "./04-infra/container/UserContainer";
+import { buildPortfolioContainer } from "./04-infra/container/PortfolioContainer";
 import { createServer } from "./04-infra/server";
 
 export async function createApp(dependencies: AppDependencies = {}) {
@@ -16,12 +17,14 @@ export async function createApp(dependencies: AppDependencies = {}) {
   const userContainer = buildUserContainer(shared);
   const adminContainer = buildAdminContainer(shared);
   const accountContainer = buildAccountContainer(shared);
+  const portfolioContainer = buildPortfolioContainer(shared);
 
   const app = createServer({
     authController: authContainer.controller,
     userController: userContainer.controller,
     adminController: adminContainer.controller,
     accountController: accountContainer.controller,
+    portfolioController: portfolioContainer.controller,
     authenticateAccessTokenUseCase: shared.authenticateAccessTokenUseCase
   });
 
@@ -36,6 +39,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
       getCurrentUserUseCase: userContainer.useCases.getCurrentUserUseCase,
       googleLoginUseCase: authContainer.useCases.googleLoginUseCase,
       listUserPortfoliosUseCase: accountContainer.useCases.listUserPortfoliosUseCase,
+      listVisiblePortfoliosUseCase: portfolioContainer.useCases.listVisiblePortfoliosUseCase,
       listUsersUseCase: adminContainer.useCases.listUsersUseCase,
       loginUseCase: authContainer.useCases.loginUseCase,
       logoutUseCase: authContainer.useCases.logoutUseCase,

@@ -5,26 +5,54 @@ import {
   AccountMembershipSummary,
   PortfolioAccountSnapshot
 } from "../../01-domain/accounts/account";
+import {
+  Portfolio,
+  PortfolioDetail,
+  PortfolioOutboxEvent,
+  PortfolioPosition,
+  PortfolioSnapshot,
+  PortfolioSummary,
+  PortfolioTransaction
+} from "../../01-domain/portfolios/portfolio";
 import { User } from "../../01-domain/users/user";
 import {
   AccountRepository,
+  CreatePortfolioInput,
+  CreatePortfolioTransactionInput,
   CreateRefreshTokenInput,
   CreateUserInput,
+  PortfolioRepository,
   RefreshTokenRecord,
   RefreshTokenRepository,
   RefreshTokenRevocationReason,
+  UpdatePortfolioInput,
   UserRepository
 } from "../../02-application/ports/repositories";
+import { ApplicationError } from "../../02-application/errors/application-error";
 import { PasswordHasher } from "../../02-application/ports/security";
 import { ScryptPasswordHasher } from "../../03-adapters/security/ScryptPasswordHasher";
 
+interface PortfolioRuntimeMeta {
+  status: "ready" | "syncing" | "degraded";
+  freshness: "fresh" | "partial" | "stale";
+  analyticsState: "ready" | "pending";
+  marketDataState: "ready" | "pending";
+  warnings: string[];
+}
+
 export class InMemoryIdentityStore
-  implements UserRepository, AccountRepository, RefreshTokenRepository
+  implements UserRepository, AccountRepository, RefreshTokenRepository, PortfolioRepository
 {
   readonly users = new Map<string, User>();
   readonly accounts = new Map<string, Account>();
   readonly accountMembers = new Map<string, AccountMember>();
   readonly portfolioSnapshots = new Map<string, PortfolioAccountSnapshot>();
+  readonly portfolios = new Map<string, Portfolio>();
+  readonly portfolioTransactions = new Map<string, PortfolioTransaction[]>();
+  readonly ledgerSnapshots = new Map<string, PortfolioSnapshot[]>();
+  readonly portfolioRuntimeMeta = new Map<string, PortfolioRuntimeMeta>();
+  readonly transactionIdempotency = new Map<string, PortfolioTransaction>();
+  readonly outboxEvents: PortfolioOutboxEvent[] = [];
   readonly refreshTokens = new Map<string, RefreshTokenRecord>();
 
   async create(input: CreateUserInput): Promise<User>;
@@ -121,6 +149,187 @@ export class InMemoryIdentityStore
     return this.portfolioSnapshots.get(accountId);
   }
 
+  async createPortfolio(input: CreatePortfolioInput): Promise<Portfolio> {
+    const portfolio: Portfolio = { ...input };
+    this.portfolios.set(portfolio.id, portfolio);
+    this.portfolioTransactions.set(portfolio.id, []);
+    this.portfolioRuntimeMeta.set(portfolio.id, {
+      status: "ready",
+      freshness: "fresh",
+      analyticsState: "ready",
+      marketDataState: "ready",
+      warnings: []
+    });
+    this.rebuildSnapshots(portfolio.id);
+    this.pushEvent("PortfolioCreated", portfolio.id, {
+      portfolioId: portfolio.id,
+      accountId: portfolio.accountId
+    });
+    return portfolio;
+  }
+
+  async updatePortfolio(id: string, input: UpdatePortfolioInput): Promise<Portfolio | undefined> {
+    const portfolio = this.portfolios.get(id);
+    if (!portfolio) {
+      return undefined;
+    }
+
+    if (input.name) {
+      portfolio.name = input.name;
+    }
+    portfolio.description = input.description;
+    portfolio.updatedAt = input.updatedAt;
+    this.pushEvent("PortfolioUpdated", portfolio.id, { portfolioId: portfolio.id });
+    return portfolio;
+  }
+
+  async findPortfolioById(id: string): Promise<Portfolio | undefined> {
+    return this.portfolios.get(id);
+  }
+
+  async listVisiblePortfolios(userId: string, isAdmin: boolean): Promise<PortfolioSummary[]> {
+    const memberships = await this.listMembershipsForUser(userId);
+    const membershipByAccountId = new Map(memberships.map((entry) => [entry.accountId, entry]));
+
+    return Array.from(this.portfolios.values())
+      .filter((portfolio) => {
+        const account = this.accounts.get(portfolio.accountId);
+        return Boolean(
+          account &&
+            (isAdmin || account.ownerUserId === userId || membershipByAccountId.has(portfolio.accountId))
+        );
+      })
+      .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
+      .map((portfolio) => this.toPortfolioSummary(portfolio, userId, isAdmin))
+      .sort((left, right) =>
+        (right.lastTransactionDate ?? "").localeCompare(left.lastTransactionDate ?? "")
+      );
+  }
+
+  async findVisiblePortfolioDetail(
+    portfolioId: string,
+    userId: string,
+    isAdmin: boolean
+  ): Promise<PortfolioDetail | undefined> {
+    const portfolio = this.portfolios.get(portfolioId);
+    if (!portfolio) {
+      return undefined;
+    }
+
+    const account = this.accounts.get(portfolio.accountId);
+    const membership = await this.findMembership(portfolio.accountId, userId);
+    if (!account) {
+      return undefined;
+    }
+
+    if (!isAdmin && account.ownerUserId !== userId && !membership) {
+      return undefined;
+    }
+
+    const summary = this.toPortfolioSummary(portfolio, userId, isAdmin);
+    const meta = this.portfolioRuntimeMeta.get(portfolioId);
+    return {
+      ...summary,
+      createdAt: portfolio.createdAt.toISOString(),
+      updatedAt: portfolio.updatedAt.toISOString(),
+      warnings: meta?.warnings ?? []
+    };
+  }
+
+  async listPortfolioTransactions(portfolioId: string): Promise<PortfolioTransaction[]> {
+    return [...(this.portfolioTransactions.get(portfolioId) ?? [])].sort((left, right) => {
+      return right.tradeDate.localeCompare(left.tradeDate) || right.createdAt.getTime() - left.createdAt.getTime();
+    });
+  }
+
+  async createPortfolioTransaction(
+    input: CreatePortfolioTransactionInput
+  ): Promise<PortfolioTransaction> {
+    const portfolio = this.portfolios.get(input.portfolioId);
+    if (!portfolio) {
+      throw new ApplicationError("not_found", "portfolio.not_found", "Portfolio not found");
+    }
+
+    const transactions = [...(this.portfolioTransactions.get(input.portfolioId) ?? [])];
+    const positionMap = this.buildPositionMap(input.portfolioId);
+    const existingPosition = positionMap.get(input.assetSymbol);
+
+    if (input.type === "sell" && (existingPosition?.quantity ?? 0) < input.quantity) {
+      throw new ApplicationError(
+        "invalid",
+        "portfolio.negative_position",
+        "Sell transaction would create a negative position"
+      );
+    }
+
+    const transaction: PortfolioTransaction = { ...input };
+    transactions.push(transaction);
+    this.portfolioTransactions.set(input.portfolioId, transactions);
+    if (input.idempotencyKey) {
+      this.transactionIdempotency.set(
+        this.getIdempotencyIndex(input.portfolioId, input.idempotencyKey),
+        transaction
+      );
+    }
+
+    portfolio.updatedAt = input.createdAt;
+    this.portfolioRuntimeMeta.set(input.portfolioId, {
+      status: "syncing",
+      freshness: "partial",
+      analyticsState: "pending",
+      marketDataState: "pending",
+      warnings: [
+        "Analytics recomputation pending after the latest ledger change.",
+        "Market data refresh pending for affected assets."
+      ]
+    });
+    this.rebuildSnapshots(input.portfolioId);
+    this.pushEvent("TransactionRecorded", transaction.id, {
+      portfolioId: transaction.portfolioId,
+      transactionId: transaction.id
+    });
+    this.pushEvent("PositionProjectionUpdated", transaction.portfolioId, {
+      portfolioId: transaction.portfolioId
+    });
+    this.pushEvent("PortfolioSnapshotCreated", transaction.portfolioId, {
+      portfolioId: transaction.portfolioId
+    });
+    this.pushEvent("AnalyticsRequested", transaction.portfolioId, {
+      portfolioId: transaction.portfolioId
+    });
+    this.pushEvent("MarketDataRequested", transaction.portfolioId, {
+      portfolioId: transaction.portfolioId
+    });
+
+    return transaction;
+  }
+
+  async findTransactionByIdempotencyKey(
+    portfolioId: string,
+    idempotencyKey: string
+  ): Promise<PortfolioTransaction | undefined> {
+    return this.transactionIdempotency.get(this.getIdempotencyIndex(portfolioId, idempotencyKey));
+  }
+
+  async listPortfolioPositions(
+    portfolioId: string,
+    asOfDate?: string
+  ): Promise<PortfolioPosition[]> {
+    return Array.from(this.buildPositionMap(portfolioId, asOfDate).values()).sort((left, right) =>
+      left.assetSymbol.localeCompare(right.assetSymbol)
+    );
+  }
+
+  async listPortfolioSnapshots(portfolioId: string): Promise<PortfolioSnapshot[]> {
+    return [...(this.ledgerSnapshots.get(portfolioId) ?? [])].sort((left, right) =>
+      right.asOfDate.localeCompare(left.asOfDate)
+    );
+  }
+
+  async listOutboxEvents(): Promise<PortfolioOutboxEvent[]> {
+    return [...this.outboxEvents];
+  }
+
   async findByHash(tokenHash: string): Promise<RefreshTokenRecord | undefined> {
     return Array.from(this.refreshTokens.values()).find(
       (token) => token.tokenHash === tokenHash
@@ -178,6 +387,185 @@ export class InMemoryIdentityStore
 
   addPortfolioSnapshot(snapshot: PortfolioAccountSnapshot): void {
     this.portfolioSnapshots.set(snapshot.accountId, snapshot);
+  }
+
+  addLedgerPortfolio(
+    portfolio: Portfolio,
+    meta: PortfolioRuntimeMeta,
+    transactions: Omit<PortfolioTransaction, "portfolioId">[]
+  ): void {
+    this.portfolios.set(portfolio.id, portfolio);
+    this.portfolioRuntimeMeta.set(portfolio.id, meta);
+    this.portfolioTransactions.set(
+      portfolio.id,
+      transactions.map((transaction) => ({
+        ...transaction,
+        portfolioId: portfolio.id
+      }))
+    );
+    this.rebuildSnapshots(portfolio.id);
+  }
+
+  private toPortfolioSummary(
+    portfolio: Portfolio,
+    userId: string,
+    isAdmin: boolean
+  ): PortfolioSummary {
+    const account = this.accounts.get(portfolio.accountId);
+    const membership = Array.from(this.accountMembers.values()).find(
+      (entry) => entry.accountId === portfolio.accountId && entry.userId === userId
+    );
+    const positions = Array.from(this.buildPositionMap(portfolio.id).values());
+    const transactions = [...(this.portfolioTransactions.get(portfolio.id) ?? [])].sort(
+      (left, right) =>
+        right.tradeDate.localeCompare(left.tradeDate) ||
+        right.createdAt.getTime() - left.createdAt.getTime()
+    );
+    const totalCostBasis = Number(
+      positions.reduce((sum, position) => sum + position.totalCostBasis, 0).toFixed(2)
+    );
+    const meta = this.portfolioRuntimeMeta.get(portfolio.id) ?? {
+      status: "ready",
+      freshness: "fresh",
+      analyticsState: "ready",
+      marketDataState: "ready",
+      warnings: []
+    };
+
+    return {
+      id: portfolio.id,
+      accountId: portfolio.accountId,
+      accountName: account?.name ?? "Unknown account",
+      name: portfolio.name,
+      description: portfolio.description,
+      baseCurrency: portfolio.baseCurrency,
+      membershipRole: membership?.role ?? (isAdmin ? "owner" : account?.ownerUserId === userId ? "owner" : "viewer"),
+      holdingsCount: positions.length,
+      transactionCount: transactions.length,
+      totalCostBasis,
+      freshness: meta.freshness,
+      status: meta.status,
+      analyticsState: meta.analyticsState,
+      marketDataState: meta.marketDataState,
+      lastTransactionDate: transactions[0]?.tradeDate
+    };
+  }
+
+  private getIdempotencyIndex(portfolioId: string, key: string): string {
+    return `${portfolioId}:${key}`;
+  }
+
+  private buildPositionMap(
+    portfolioId: string,
+    asOfDate?: string
+  ): Map<string, PortfolioPosition> {
+    const positionMap = new Map<string, PortfolioPosition>();
+    const transactions = [...(this.portfolioTransactions.get(portfolioId) ?? [])]
+      .filter((transaction) => !asOfDate || transaction.tradeDate <= asOfDate)
+      .sort((left, right) => {
+        return left.tradeDate.localeCompare(right.tradeDate) || left.createdAt.getTime() - right.createdAt.getTime();
+      });
+
+    for (const transaction of transactions) {
+      const current = positionMap.get(transaction.assetSymbol) ?? {
+        portfolioId,
+        assetSymbol: transaction.assetSymbol,
+        assetName: transaction.assetName,
+        quantity: 0,
+        averageCost: 0,
+        totalCostBasis: 0,
+        currency: transaction.currency,
+        lastTransactionDate: transaction.tradeDate
+      };
+
+      if (transaction.type === "buy") {
+        current.quantity = Number((current.quantity + transaction.quantity).toFixed(8));
+        current.totalCostBasis = Number(
+          (current.totalCostBasis + transaction.totalAmount).toFixed(2)
+        );
+      } else {
+        if (current.quantity < transaction.quantity) {
+          throw new ApplicationError(
+            "invalid",
+            "portfolio.negative_position",
+            "Sell transaction would create a negative position"
+          );
+        }
+
+        const averageCost = current.quantity === 0 ? 0 : current.totalCostBasis / current.quantity;
+        current.quantity = Number((current.quantity - transaction.quantity).toFixed(8));
+        current.totalCostBasis = Number(
+          (current.totalCostBasis - averageCost * transaction.quantity).toFixed(2)
+        );
+      }
+
+      current.averageCost =
+        current.quantity === 0 ? 0 : Number((current.totalCostBasis / current.quantity).toFixed(2));
+      current.lastTransactionDate = transaction.tradeDate;
+
+      if (current.quantity === 0) {
+        positionMap.delete(transaction.assetSymbol);
+      } else {
+        positionMap.set(transaction.assetSymbol, current);
+      }
+    }
+
+    return positionMap;
+  }
+
+  private rebuildSnapshots(portfolioId: string): void {
+    const portfolio = this.portfolios.get(portfolioId);
+    if (!portfolio) {
+      return;
+    }
+
+    const transactions = [...(this.portfolioTransactions.get(portfolioId) ?? [])].sort((left, right) => {
+      return left.tradeDate.localeCompare(right.tradeDate) || left.createdAt.getTime() - right.createdAt.getTime();
+    });
+
+    const snapshots: PortfolioSnapshot[] = [
+      {
+        id: randomUUID(),
+        portfolioId,
+        asOfDate: portfolio.createdAt.toISOString().slice(0, 10),
+        createdAt: portfolio.createdAt,
+        positions: [],
+        transactionCount: 0,
+        totalCostBasis: 0
+      }
+    ];
+
+    const tradeDates = Array.from(new Set(transactions.map((transaction) => transaction.tradeDate)));
+    for (const tradeDate of tradeDates) {
+      const positions = Array.from(this.buildPositionMap(portfolioId, tradeDate).values());
+      snapshots.push({
+        id: randomUUID(),
+        portfolioId,
+        asOfDate: tradeDate,
+        createdAt: new Date(`${tradeDate}T23:59:59.000Z`),
+        positions,
+        transactionCount: transactions.filter((transaction) => transaction.tradeDate <= tradeDate).length,
+        totalCostBasis: Number(
+          positions.reduce((sum, position) => sum + position.totalCostBasis, 0).toFixed(2)
+        )
+      });
+    }
+
+    this.ledgerSnapshots.set(portfolioId, snapshots);
+  }
+
+  private pushEvent(
+    topic: string,
+    aggregateId: string,
+    payload: Record<string, unknown>
+  ): void {
+    this.outboxEvents.push({
+      id: randomUUID(),
+      topic,
+      aggregateId,
+      payload,
+      createdAt: new Date()
+    });
   }
 }
 
@@ -556,6 +944,129 @@ export async function createSeededIdentityStore(
       ]
     }
   });
+
+  store.addLedgerPortfolio(
+    {
+      id: "prt_main",
+      accountId: "acct_main",
+      name: "Core Growth",
+      description: "Long-term core allocation with ETFs and large-cap equities.",
+      baseCurrency: "USD",
+      createdAt: now,
+      updatedAt: new Date("2026-07-12T00:00:00.000Z")
+    },
+    {
+      status: "ready",
+      freshness: "fresh",
+      analyticsState: "ready",
+      marketDataState: "ready",
+      warnings: []
+    },
+    [
+      {
+        id: "pltxn_001",
+        assetSymbol: "MSFT",
+        assetName: "Microsoft",
+        tradeDate: "2026-07-08",
+        type: "buy",
+        quantity: 120,
+        unitPrice: 410,
+        totalAmount: 49200,
+        currency: "USD",
+        notes: "Initial core position",
+        createdAt: new Date("2026-07-08T10:00:00.000Z")
+      },
+      {
+        id: "pltxn_002",
+        assetSymbol: "VTI",
+        assetName: "Vanguard Total Stock Market ETF",
+        tradeDate: "2026-07-10",
+        type: "buy",
+        quantity: 300,
+        unitPrice: 229.33,
+        totalAmount: 68799,
+        currency: "USD",
+        notes: "Broad market allocation",
+        createdAt: new Date("2026-07-10T10:00:00.000Z")
+      },
+      {
+        id: "pltxn_003",
+        assetSymbol: "NVDA",
+        assetName: "NVIDIA",
+        tradeDate: "2026-07-12",
+        type: "buy",
+        quantity: 55,
+        unitPrice: 803.64,
+        totalAmount: 44200.2,
+        currency: "USD",
+        notes: "AI growth sleeve",
+        createdAt: new Date("2026-07-12T10:00:00.000Z")
+      }
+    ]
+  );
+
+  store.addLedgerPortfolio(
+    {
+      id: "prt_income",
+      accountId: "acct_income",
+      name: "Income Sleeve",
+      description: "Dividend and bond sleeve monitored by the analyst team.",
+      baseCurrency: "USD",
+      createdAt: now,
+      updatedAt: new Date("2026-07-13T00:00:00.000Z")
+    },
+    {
+      status: "degraded",
+      freshness: "partial",
+      analyticsState: "pending",
+      marketDataState: "pending",
+      warnings: [
+        "Fixed-income market data is partially delayed.",
+        "Analytics refresh is pending for the latest trade."
+      ]
+    },
+    [
+      {
+        id: "pltxn_101",
+        assetSymbol: "LQD",
+        assetName: "iShares iBoxx $ Investment Grade Corporate Bond ETF",
+        tradeDate: "2026-07-09",
+        type: "buy",
+        quantity: 410,
+        unitPrice: 93.9,
+        totalAmount: 38499,
+        currency: "USD",
+        notes: "Investment grade exposure",
+        createdAt: new Date("2026-07-09T10:00:00.000Z")
+      },
+      {
+        id: "pltxn_102",
+        assetSymbol: "VNQ",
+        assetName: "Vanguard Real Estate ETF",
+        tradeDate: "2026-07-10",
+        type: "buy",
+        quantity: 160,
+        unitPrice: 78.75,
+        totalAmount: 12600,
+        currency: "USD",
+        notes: "REIT income sleeve",
+        createdAt: new Date("2026-07-10T10:00:00.000Z")
+      },
+      {
+        id: "pltxn_103",
+        assetSymbol: "SCHD",
+        assetName: "Schwab US Dividend Equity ETF",
+        tradeDate: "2026-07-13",
+        type: "buy",
+        quantity: 290,
+        unitPrice: 106.21,
+        totalAmount: 30800.9,
+        currency: "USD",
+        notes: "Dividend coverage",
+        createdAt: new Date("2026-07-13T10:00:00.000Z")
+      }
+    ]
+  );
 
   return store;
 }

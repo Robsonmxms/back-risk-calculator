@@ -37,6 +37,7 @@ refresh tokens no PostgreSQL.
 | Execucao local | `tsx watch` |
 | Serverless | `serverless` + `serverless-offline` |
 | Testes | Vitest + Supertest |
+| Pacotes | Yarn 4.17.1 via `packageManager` |
 
 ## Rotas disponiveis
 
@@ -103,9 +104,13 @@ Use Node e Yarn nas versoes do projeto:
 
 ```bash
 nvm use
+corepack enable
 yarn install
 yarn dev
 ```
+
+Use `yarn` para instalar dependencias e executar scripts; o projeto declara `packageManager`
+como `yarn@4.17.1` e usa `nodeLinker: node-modules`.
 
 Comandos uteis:
 

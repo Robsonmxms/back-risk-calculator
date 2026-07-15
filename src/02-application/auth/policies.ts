@@ -39,3 +39,51 @@ export function assertCanReadAccountAnalytics(
     "Account access denied"
   );
 }
+
+export function assertCanReadAccountLedger(
+  actor: Actor,
+  account: Account | undefined,
+  membership: AccountMember | undefined
+): void {
+  if (actor.role === "admin") {
+    return;
+  }
+
+  if (!account) {
+    throw new ApplicationError("not_found", "account.not_found", "Account not found");
+  }
+
+  if (account.ownerUserId === actor.id || membership) {
+    return;
+  }
+
+  throw new ApplicationError(
+    "forbidden",
+    "auth.account_access_denied",
+    "Account access denied"
+  );
+}
+
+export function assertCanManageAccountLedger(
+  actor: Actor,
+  account: Account | undefined,
+  membership: AccountMember | undefined
+): void {
+  if (actor.role === "admin") {
+    return;
+  }
+
+  if (!account) {
+    throw new ApplicationError("not_found", "account.not_found", "Account not found");
+  }
+
+  if (account.ownerUserId === actor.id || membership?.role === "owner") {
+    return;
+  }
+
+  throw new ApplicationError(
+    "forbidden",
+    "auth.account_write_denied",
+    "Account write access denied"
+  );
+}

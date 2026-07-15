@@ -4,10 +4,12 @@ import { AccountController } from "../03-adapters/controllers/AccountController"
 import { AdminController } from "../03-adapters/controllers/AdminController";
 import { AuthController } from "../03-adapters/controllers/AuthController";
 import { UserController } from "../03-adapters/controllers/UserController";
+import { PortfolioController } from "../03-adapters/controllers/PortfolioController";
 import { AuthenticateAccessTokenUseCase } from "../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { registerAccountRoutes } from "./routes/accountRoutes";
 import { registerAdminRoutes } from "./routes/adminRoutes";
 import { registerAuthRoutes } from "./routes/authRoutes";
+import { registerPortfolioRoutes } from "./routes/portfolioRoutes";
 import { registerUserRoutes } from "./routes/userRoutes";
 
 export interface ServerDependencies {
@@ -15,6 +17,7 @@ export interface ServerDependencies {
   userController: UserController;
   adminController: AdminController;
   accountController: AccountController;
+  portfolioController: PortfolioController;
   authenticateAccessTokenUseCase: AuthenticateAccessTokenUseCase;
 }
 
@@ -43,6 +46,11 @@ export function createServer(dependencies: ServerDependencies) {
   registerAccountRoutes(
     apiRouter,
     dependencies.accountController,
+    dependencies.authenticateAccessTokenUseCase
+  );
+  registerPortfolioRoutes(
+    apiRouter,
+    dependencies.portfolioController,
     dependencies.authenticateAccessTokenUseCase
   );
 
