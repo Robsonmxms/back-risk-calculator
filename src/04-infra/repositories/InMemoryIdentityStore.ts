@@ -31,6 +31,7 @@ import {
 import { ApplicationError } from "../../02-application/errors/application-error";
 import { PasswordHasher } from "../../02-application/ports/security";
 import { ScryptPasswordHasher } from "../../03-adapters/security/ScryptPasswordHasher";
+import { PortfolioMarketDataProjection } from "../../modules/market-data/ports";
 
 interface PortfolioRuntimeMeta {
   status: "ready" | "syncing" | "degraded";
@@ -41,7 +42,12 @@ interface PortfolioRuntimeMeta {
 }
 
 export class InMemoryIdentityStore
-  implements UserRepository, AccountRepository, RefreshTokenRepository, PortfolioRepository
+  implements
+    UserRepository,
+    AccountRepository,
+    RefreshTokenRepository,
+    PortfolioRepository,
+    PortfolioMarketDataProjection
 {
   readonly users = new Map<string, User>();
   readonly accounts = new Map<string, Account>();
@@ -328,6 +334,71 @@ export class InMemoryIdentityStore
 
   async listOutboxEvents(): Promise<PortfolioOutboxEvent[]> {
     return [...this.outboxEvents];
+  }
+
+  async listTrackedAssetSymbols(): Promise<string[]> {
+    const symbols = new Set<string>();
+    for (const portfolio of this.portfolios.values()) {
+      for (const position of this.buildPositionMap(portfolio.id).values()) {
+        symbols.add(position.assetSymbol);
+      }
+    }
+
+    return Array.from(symbols).sort((left, right) => left.localeCompare(right));
+  }
+
+  async listPortfolioIdsHoldingAsset(symbol: string): Promise<string[]> {
+    const normalizedSymbol = symbol.trim().toUpperCase();
+    return Array.from(this.portfolios.values())
+      .filter((portfolio) => this.buildPositionMap(portfolio.id).has(normalizedSymbol))
+      .map((portfolio) => portfolio.id);
+  }
+
+  async markMarketDataRefreshSucceeded(symbol: string, _refreshedAt: Date): Promise<void> {
+    for (const portfolioId of await this.listPortfolioIdsHoldingAsset(symbol)) {
+      const meta = this.portfolioRuntimeMeta.get(portfolioId);
+      if (!meta) {
+        continue;
+      }
+
+      meta.marketDataState = "ready";
+      meta.status = meta.analyticsState === "pending" ? "syncing" : "ready";
+      meta.freshness = meta.analyticsState === "pending" ? "partial" : "fresh";
+      meta.warnings = meta.warnings.filter(
+        (warning) => !warning.toLowerCase().includes("market data")
+      );
+      if (meta.analyticsState === "pending" && meta.warnings.length === 0) {
+        meta.warnings.push("Analytics recomputation pending after the latest market data update.");
+      }
+    }
+  }
+
+  async markMarketDataRefreshFailed(
+    symbol: string,
+    errorCode: string,
+    _failedAt: Date
+  ): Promise<void> {
+    for (const portfolioId of await this.listPortfolioIdsHoldingAsset(symbol)) {
+      const meta = this.portfolioRuntimeMeta.get(portfolioId);
+      if (!meta) {
+        continue;
+      }
+
+      meta.marketDataState = "pending";
+      meta.status = "degraded";
+      meta.freshness = "stale";
+      meta.warnings = [
+        `Market data refresh failed (${errorCode}); last known good data was preserved.`
+      ];
+    }
+  }
+
+  async appendOutboxEvent(
+    topic: string,
+    aggregateId: string,
+    payload: Record<string, unknown>
+  ): Promise<void> {
+    this.pushEvent(topic, aggregateId, payload);
   }
 
   async findByHash(tokenHash: string): Promise<RefreshTokenRecord | undefined> {
