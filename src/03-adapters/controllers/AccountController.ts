@@ -53,6 +53,6 @@ export class AccountController {
       freshness: dashboard.meta.freshness,
       status: dashboard.meta.status,
       asOf: dashboard.meta.asOf
-    );
+    });
   };
 }
