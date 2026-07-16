@@ -22,6 +22,7 @@ import {
   CreateRefreshTokenInput,
   CreateUserInput,
   PortfolioRepository,
+  PortfolioTransactionIdempotencyRecord,
   RefreshTokenRecord,
   RefreshTokenRepository,
   RefreshTokenRevocationReason,
@@ -59,7 +60,7 @@ export class InMemoryIdentityStore
   readonly portfolioTransactions = new Map<string, PortfolioTransaction[]>();
   readonly ledgerSnapshots = new Map<string, PortfolioSnapshot[]>();
   readonly portfolioRuntimeMeta = new Map<string, PortfolioRuntimeMeta>();
-  readonly transactionIdempotency = new Map<string, PortfolioTransaction>();
+  readonly transactionIdempotency = new Map<string, PortfolioTransactionIdempotencyRecord>();
   readonly outboxEvents: PortfolioOutboxEvent[] = [];
   readonly refreshTokens = new Map<string, RefreshTokenRecord>();
 
@@ -276,7 +277,10 @@ export class InMemoryIdentityStore
     if (input.idempotencyKey) {
       this.transactionIdempotency.set(
         this.getIdempotencyIndex(input.portfolioId, input.idempotencyKey),
-        transaction
+        {
+          transaction,
+          requestFingerprint: input.idempotencyFingerprint ?? ""
+        }
       );
     }
 
@@ -312,10 +316,10 @@ export class InMemoryIdentityStore
     return transaction;
   }
 
-  async findTransactionByIdempotencyKey(
+  async findTransactionIdempotencyRecord(
     portfolioId: string,
     idempotencyKey: string
-  ): Promise<PortfolioTransaction | undefined> {
+  ): Promise<PortfolioTransactionIdempotencyRecord | undefined> {
     return this.transactionIdempotency.get(this.getIdempotencyIndex(portfolioId, idempotencyKey));
   }
 

@@ -120,6 +120,120 @@ describe("portfolio ledger", () => {
     expect(snapshotsResponse.body.data.snapshots[0]).toHaveProperty("asOfDate");
   });
 
+  it("rejects reused idempotency keys with a different transaction payload", async () => {
+    const identityStore = await createSeededIdentityStore();
+    const { app } = await createApp({ identityStore });
+    const token = await login(app, "user@example.com");
+
+    const firstResponse = await request(app)
+      .post("/api/v1/portfolios/prt_main/transactions")
+      .set("Authorization", `Bearer ${token}`)
+      .set("Idempotency-Key", "mismatch-key-001")
+      .send({
+        assetSymbol: "MSFT",
+        assetName: "Microsoft",
+        tradeDate: "2026-07-14",
+        type: "buy",
+        quantity: 5,
+        unitPrice: 420,
+        currency: "USD"
+      });
+    expect(firstResponse.status).toBe(201);
+    const outboxAfterFirstWrite = await identityStore.listOutboxEvents();
+
+    const mismatchResponse = await request(app)
+      .post("/api/v1/portfolios/prt_main/transactions")
+      .set("Authorization", `Bearer ${token}`)
+      .set("Idempotency-Key", "mismatch-key-001")
+      .send({
+        assetSymbol: "AAPL",
+        assetName: "Apple",
+        tradeDate: "2026-07-14",
+        type: "buy",
+        quantity: 5,
+        unitPrice: 210,
+        currency: "USD"
+      });
+
+    expect(mismatchResponse.status).toBe(409);
+    expect(mismatchResponse.body.error.code).toBe(
+      "portfolio.idempotency_key_payload_mismatch"
+    );
+    await expect(identityStore.listOutboxEvents()).resolves.toHaveLength(
+      outboxAfterFirstWrite.length
+    );
+
+    const transactionsResponse = await request(app)
+      .get("/api/v1/portfolios/prt_main/transactions")
+      .set("Authorization", `Bearer ${token}`);
+    expect(transactionsResponse.body.data.transactions).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ assetSymbol: "AAPL" })])
+    );
+  });
+
+  it("keeps missing idempotency keys non-idempotent", async () => {
+    const { app } = await createApp();
+    const token = await login(app, "user@example.com");
+    const payload = {
+      assetSymbol: "AMZN",
+      assetName: "Amazon",
+      tradeDate: "2026-07-14",
+      type: "buy",
+      quantity: 2,
+      unitPrice: 190,
+      currency: "USD"
+    };
+
+    const firstResponse = await request(app)
+      .post("/api/v1/portfolios/prt_main/transactions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+    const secondResponse = await request(app)
+      .post("/api/v1/portfolios/prt_main/transactions")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(firstResponse.status).toBe(201);
+    expect(secondResponse.status).toBe(201);
+    expect(secondResponse.body.data.id).not.toBe(firstResponse.body.data.id);
+  });
+
+  it("scopes idempotency keys to each portfolio", async () => {
+    const { app } = await createApp();
+    const adminToken = await login(app, "admin@example.com");
+
+    const mainResponse = await request(app)
+      .post("/api/v1/portfolios/prt_main/transactions")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("Idempotency-Key", "shared-portfolio-key")
+      .send({
+        assetSymbol: "AMZN",
+        assetName: "Amazon",
+        tradeDate: "2026-07-14",
+        type: "buy",
+        quantity: 2,
+        unitPrice: 190,
+        currency: "USD"
+      });
+    const incomeResponse = await request(app)
+      .post("/api/v1/portfolios/prt_income/transactions")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("Idempotency-Key", "shared-portfolio-key")
+      .send({
+        assetSymbol: "SCHD",
+        assetName: "Schwab US Dividend Equity ETF",
+        tradeDate: "2026-07-14",
+        type: "buy",
+        quantity: 3,
+        unitPrice: 106,
+        currency: "USD"
+      });
+
+    expect(mainResponse.status).toBe(201);
+    expect(incomeResponse.status).toBe(201);
+    expect(incomeResponse.body.data.id).not.toBe(mainResponse.body.data.id);
+  });
+
   it("rejects sell transactions that would create a negative position", async () => {
     const { app } = await createApp();
     const token = await login(app, "user@example.com");

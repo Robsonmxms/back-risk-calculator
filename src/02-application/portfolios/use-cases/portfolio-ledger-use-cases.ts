@@ -190,14 +190,23 @@ export class RecordPortfolioTransactionUseCase {
     }
 
     await getPortfolioAccess(actor, portfolio.accountId, this.accounts, "manage");
+    const idempotencyFingerprint = createTransactionIdempotencyFingerprint(input);
 
     if (input.idempotencyKey) {
-      const existing = await this.portfolios.findTransactionByIdempotencyKey(
+      const existing = await this.portfolios.findTransactionIdempotencyRecord(
         portfolioId,
         input.idempotencyKey
       );
       if (existing) {
-        return existing;
+        if (existing.requestFingerprint !== idempotencyFingerprint) {
+          throw new ApplicationError(
+            "conflict",
+            "portfolio.idempotency_key_payload_mismatch",
+            "Idempotency key was already used with a different transaction payload"
+          );
+        }
+
+        return existing.transaction;
       }
     }
 
@@ -214,9 +223,32 @@ export class RecordPortfolioTransactionUseCase {
       currency: input.currency.trim().toUpperCase(),
       notes: input.notes?.trim() || undefined,
       idempotencyKey: input.idempotencyKey,
+      idempotencyFingerprint,
       createdAt: new Date()
     });
   }
+}
+
+function createTransactionIdempotencyFingerprint(input: {
+  assetSymbol: string;
+  assetName: string;
+  tradeDate: string;
+  type: PortfolioTransaction["type"];
+  quantity: number;
+  unitPrice: number;
+  currency: string;
+  notes?: string;
+}): string {
+  return JSON.stringify({
+    assetSymbol: input.assetSymbol.trim().toUpperCase(),
+    assetName: input.assetName.trim(),
+    tradeDate: input.tradeDate,
+    type: input.type,
+    quantity: Number(input.quantity),
+    unitPrice: Number(input.unitPrice),
+    currency: input.currency.trim().toUpperCase(),
+    notes: input.notes?.trim() || null
+  });
 }
 
 export class ListPortfolioPositionsUseCase {

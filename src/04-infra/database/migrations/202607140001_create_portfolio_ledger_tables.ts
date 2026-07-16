@@ -24,6 +24,7 @@ export async function up(knex: Knex): Promise<void> {
     table.string("currency", 3).notNullable();
     table.text("notes");
     table.string("idempotency_key");
+    table.text("idempotency_fingerprint");
     table.timestamp("created_at").notNullable().defaultTo(knex.fn.now());
     table.index(["portfolio_id", "trade_date"]);
     table.index(["portfolio_id", "asset_symbol"]);
