@@ -19,6 +19,12 @@ import {
   Household,
   HouseholdStatus
 } from "../../01-domain/clients/client";
+import {
+  ReviewItem,
+  ReviewItemSeverity,
+  ReviewItemStatus,
+  ReviewResourceType
+} from "../../01-domain/workbench/workbench";
 import { User, UserRole } from "../../01-domain/users/user";
 import {
   Portfolio,
@@ -201,6 +207,56 @@ export interface ClientRepository {
     householdId: string,
     input: UpdateHouseholdInput
   ): Promise<Household | undefined>;
+}
+
+export interface ReviewItemFilters {
+  status?: ReviewItemStatus;
+  severity?: ReviewItemSeverity;
+  assignedToUserId?: string;
+  clientId?: string;
+}
+
+export interface CreateReviewItemInput {
+  id: string;
+  officeId: string;
+  title: string;
+  severity: ReviewItemSeverity;
+  status: ReviewItemStatus;
+  resourceType: ReviewResourceType;
+  resourceId: string;
+  clientId?: string;
+  portfolioId?: string;
+  assignedToUserId?: string;
+  dueDate?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpdateReviewItemInput {
+  title?: string;
+  severity?: ReviewItemSeverity;
+  status?: ReviewItemStatus;
+  assignedToUserId?: string;
+  dueDate?: string;
+  notes?: string;
+  updatedAt: Date;
+  closedAt?: Date;
+}
+
+export interface WorkbenchRepository {
+  listReviewItems(
+    officeId: string,
+    filters: ReviewItemFilters,
+    visibleClientIds?: Set<string>
+  ): Promise<ReviewItem[]>;
+  findReviewItemById(reviewItemId: string): Promise<ReviewItem | undefined>;
+  createReviewItem(input: CreateReviewItemInput): Promise<ReviewItem>;
+  updateReviewItem(
+    reviewItemId: string,
+    input: UpdateReviewItemInput
+  ): Promise<ReviewItem | undefined>;
 }
 
 export interface CreatePortfolioInput {

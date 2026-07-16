@@ -102,6 +102,30 @@ export async function up(knex: Knex): Promise<void> {
     table.index(["office_id", "onboarding_status"]);
   });
 
+  await knex.schema.createTable("review_items", (table) => {
+    table.uuid("id").primary();
+    table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
+    table.string("title").notNullable();
+    table.enu("severity", ["low", "medium", "high"]).notNullable();
+    table.enu("status", ["open", "in_progress", "closed"]).notNullable().defaultTo("open");
+    table
+      .enu("resource_type", ["client", "portfolio", "analytics", "report", "alert", "notification"])
+      .notNullable();
+    table.string("resource_id").notNullable();
+    table.uuid("client_id").references("clients.id").onDelete("SET NULL");
+    table.uuid("portfolio_id");
+    table.uuid("assigned_to_user_id").references("users.id").onDelete("SET NULL");
+    table.date("due_date");
+    table.text("notes");
+    table.uuid("created_by").notNullable().references("users.id");
+    table.timestamp("closed_at");
+    table.timestamps(true, true);
+    table.index(["office_id", "status"]);
+    table.index(["office_id", "severity"]);
+    table.index(["office_id", "client_id"]);
+    table.index(["office_id", "assigned_to_user_id"]);
+  });
+
   await knex.schema.createTable("accounts", (table) => {
     table.uuid("id").primary();
     table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
@@ -148,6 +172,7 @@ export async function down(knex: Knex): Promise<void> {
   await knex.schema.dropTableIfExists("refresh_tokens");
   await knex.schema.dropTableIfExists("account_members");
   await knex.schema.dropTableIfExists("accounts");
+  await knex.schema.dropTableIfExists("review_items");
   await knex.schema.dropTableIfExists("clients");
   await knex.schema.dropTableIfExists("households");
   await knex.schema.dropTableIfExists("advisory_assignments");
