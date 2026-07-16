@@ -73,7 +73,13 @@ export interface CreatePortfolioTransactionInput {
   currency: string;
   notes?: string;
   idempotencyKey?: string;
+  idempotencyFingerprint?: string;
   createdAt: Date;
+}
+
+export interface PortfolioTransactionIdempotencyRecord {
+  transaction: PortfolioTransaction;
+  requestFingerprint: string;
 }
 
 export interface PortfolioRepository {
@@ -90,10 +96,10 @@ export interface PortfolioRepository {
   createPortfolioTransaction(
     input: CreatePortfolioTransactionInput
   ): Promise<PortfolioTransaction>;
-  findTransactionByIdempotencyKey(
+  findTransactionIdempotencyRecord(
     portfolioId: string,
     idempotencyKey: string
-  ): Promise<PortfolioTransaction | undefined>;
+  ): Promise<PortfolioTransactionIdempotencyRecord | undefined>;
   listPortfolioPositions(portfolioId: string, asOfDate?: string): Promise<PortfolioPosition[]>;
   listPortfolioSnapshots(portfolioId: string): Promise<PortfolioSnapshot[]>;
   listOutboxEvents(): Promise<PortfolioOutboxEvent[]>;

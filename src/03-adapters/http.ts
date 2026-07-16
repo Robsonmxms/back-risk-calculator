@@ -88,6 +88,8 @@ function statusCodeFor(error: ApplicationError): number {
       return 401;
     case "forbidden":
       return 403;
+    case "conflict":
+      return 409;
     case "not_found":
       return 404;
     case "unavailable":

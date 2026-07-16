@@ -2,6 +2,7 @@ export type ApplicationErrorKind =
   | "invalid"
   | "unauthorized"
   | "forbidden"
+  | "conflict"
   | "not_found"
   | "unavailable";
 
