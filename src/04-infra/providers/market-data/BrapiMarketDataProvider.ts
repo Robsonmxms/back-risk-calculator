@@ -1,8 +1,12 @@
 import { ApplicationError } from "../../../02-application/errors/application-error";
-import { MarketDataProvider } from "../../../modules/market-data/ports";
+import {
+  CurrencyRateProvider,
+  MarketDataProvider
+} from "../../../modules/market-data/ports";
 import {
   DateRange,
   Dividend,
+  ExchangeRate,
   HistoricalPrice,
   LatestQuote,
   MarketAssetCandidate,
@@ -62,6 +66,16 @@ const FIXTURE_ASSETS: BrapiAssetPayload[] = [
     close: 92.48
   },
   {
+    stock: "SPY",
+    name: "SPDR S&P 500 ETF Trust",
+    exchange: "NYSEARCA",
+    currency: "USD",
+    type: "etf",
+    region: "US",
+    sector: "Benchmark",
+    close: 512.74
+  },
+  {
     stock: "PETR4",
     name: "Petroleo Brasileiro SA Petrobras PN",
     exchange: "B3",
@@ -93,7 +107,7 @@ const FIXTURE_ASSETS: BrapiAssetPayload[] = [
   }
 ];
 
-export class BrapiMarketDataProvider implements MarketDataProvider {
+export class BrapiMarketDataProvider implements MarketDataProvider, CurrencyRateProvider {
   readonly name = "brapi";
 
   constructor(
@@ -189,6 +203,29 @@ export class BrapiMarketDataProvider implements MarketDataProvider {
     ];
   }
 
+  async getExchangeRate(from: string, to: string): Promise<ExchangeRate> {
+    const normalizedFrom = from.trim().toUpperCase();
+    const normalizedTo = to.trim().toUpperCase();
+    const rate = fixtureExchangeRate(normalizedFrom, normalizedTo);
+
+    if (rate === undefined) {
+      throw new ApplicationError(
+        "unavailable",
+        "market_data.currency_pair_not_supported",
+        "Currency pair is not supported by the configured provider"
+      );
+    }
+
+    return {
+      from: normalizedFrom,
+      to: normalizedTo,
+      rate,
+      providerName: this.name,
+      asOf: this.now(),
+      updatedAt: this.now()
+    };
+  }
+
   private requireAsset(symbol: string): BrapiAssetPayload {
     const normalizedSymbol = symbol.trim().toUpperCase();
     const asset = this.fixtures.find((entry) => entry.stock === normalizedSymbol);
@@ -223,4 +260,32 @@ export class BrapiMarketDataProvider implements MarketDataProvider {
 
 function assetIdFor(symbol: string): string {
   return `asset-${symbol.toLowerCase()}`;
+}
+
+function fixtureExchangeRate(from: string, to: string): number | undefined {
+  if (from === to) {
+    return 1;
+  }
+
+  const usdRates: Record<string, number> = {
+    BRL: 5.42,
+    EUR: 0.92,
+    GBP: 0.78,
+    JPY: 156.4,
+    USD: 1
+  };
+
+  if (from === "USD" && usdRates[to]) {
+    return usdRates[to];
+  }
+
+  if (to === "USD" && usdRates[from]) {
+    return Number((1 / usdRates[from]).toFixed(8));
+  }
+
+  if (usdRates[from] && usdRates[to]) {
+    return Number((usdRates[to] / usdRates[from]).toFixed(8));
+  }
+
+  return undefined;
 }

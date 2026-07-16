@@ -6,6 +6,6 @@ export interface LoggerPort {
 }
 
 export interface MetricsPort {
-  increment(name: string): void;
+  increment(name: string, value?: number): void;
   snapshot(): Record<string, number>;
 }

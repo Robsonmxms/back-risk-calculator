@@ -31,6 +31,7 @@ import {
 import { ApplicationError } from "../../02-application/errors/application-error";
 import { PasswordHasher } from "../../02-application/ports/security";
 import { ScryptPasswordHasher } from "../../03-adapters/security/ScryptPasswordHasher";
+import { AnalyticsPortfolioProjection } from "../../modules/analytics/ports";
 import { PortfolioMarketDataProjection } from "../../modules/market-data/ports";
 
 interface PortfolioRuntimeMeta {
@@ -47,7 +48,8 @@ export class InMemoryIdentityStore
     AccountRepository,
     RefreshTokenRepository,
     PortfolioRepository,
-    PortfolioMarketDataProjection
+    PortfolioMarketDataProjection,
+    AnalyticsPortfolioProjection
 {
   readonly users = new Map<string, User>();
   readonly accounts = new Map<string, Account>();
@@ -391,6 +393,41 @@ export class InMemoryIdentityStore
         `Market data refresh failed (${errorCode}); last known good data was preserved.`
       ];
     }
+  }
+
+  async markAnalyticsSucceeded(portfolioId: string, _refreshedAt: Date): Promise<void> {
+    const meta = this.portfolioRuntimeMeta.get(portfolioId);
+    if (!meta) {
+      return;
+    }
+
+    meta.analyticsState = "ready";
+    meta.status = meta.marketDataState === "pending" ? "syncing" : "ready";
+    meta.freshness = meta.marketDataState === "pending" ? "partial" : "fresh";
+    meta.warnings = meta.warnings.filter(
+      (warning) => !warning.toLowerCase().includes("analytics")
+    );
+    if (meta.marketDataState === "pending" && meta.warnings.length === 0) {
+      meta.warnings.push("Market data refresh pending for affected assets.");
+    }
+  }
+
+  async markAnalyticsFailed(
+    portfolioId: string,
+    errorCode: string,
+    _failedAt: Date
+  ): Promise<void> {
+    const meta = this.portfolioRuntimeMeta.get(portfolioId);
+    if (!meta) {
+      return;
+    }
+
+    meta.analyticsState = "pending";
+    meta.status = "degraded";
+    meta.freshness = "stale";
+    meta.warnings = [
+      `Analytics recomputation failed (${errorCode}); last successful snapshot remains available.`
+    ];
   }
 
   async appendOutboxEvent(

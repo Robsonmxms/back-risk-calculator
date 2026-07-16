@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
 import {
+  ConvertCurrencyUseCase,
   GetMarketAssetUseCase,
   GetMarketDataProviderStatusUseCase,
+  GetTradePriceUseCase,
+  ListMarketExchangesUseCase,
   RequestMarketDataRefreshUseCase,
   SearchMarketAssetsUseCase
 } from "../../modules/market-data/use-cases";
@@ -13,22 +16,34 @@ export class MarketDataController {
     private readonly searchAssetsUseCase: SearchMarketAssetsUseCase,
     private readonly getAssetUseCase: GetMarketAssetUseCase,
     private readonly requestRefreshUseCase: RequestMarketDataRefreshUseCase,
-    private readonly getProviderStatusUseCase: GetMarketDataProviderStatusUseCase
+    private readonly getProviderStatusUseCase: GetMarketDataProviderStatusUseCase,
+    private readonly convertCurrencyUseCase: ConvertCurrencyUseCase,
+    private readonly listMarketExchangesUseCase: ListMarketExchangesUseCase,
+    private readonly getTradePriceUseCase: GetTradePriceUseCase
   ) {}
 
   searchAssets = async (request: Request, response: Response) => {
     const query = typeof request.query.q === "string" ? request.query.q : "";
+    const exchangeCode =
+      typeof request.query.exchange === "string" ? request.query.exchange : undefined;
     const correlationId = request.header("x-correlation-id") ?? undefined;
-    const result = await this.searchAssetsUseCase.execute(query, correlationId);
+    const result = await this.searchAssetsUseCase.execute({ query, exchangeCode }, correlationId);
 
     return ok(
       response,
       { assets: result.assets },
       {
         count: result.assets.length,
-        providerStatus: result.providerStatus
+        providerStatus: result.providerStatus,
+        exchange: result.exchange?.code
       }
     );
+  };
+
+  listExchanges = async (_request: Request, response: Response) => {
+    const exchanges = await this.listMarketExchangesUseCase.execute();
+
+    return ok(response, { exchanges }, { count: exchanges.length });
   };
 
   getAsset = async (request: Request, response: Response) => {
@@ -38,6 +53,28 @@ export class MarketDataController {
     return ok(response, data, {
       freshness: data.latestQuote?.freshness ?? "stale"
     });
+  };
+
+  getTradePrice = async (request: Request, response: Response) => {
+    const assetId = requireAssetId(request);
+    const tradeDate = typeof request.query.tradeDate === "string" ? request.query.tradeDate : "";
+    const quantity =
+      typeof request.query.quantity === "string" ? Number(request.query.quantity) : Number.NaN;
+    const correlationId = request.header("x-correlation-id") ?? undefined;
+    const tradePrice = await this.getTradePriceUseCase.execute(
+      { assetId, tradeDate, quantity },
+      correlationId
+    );
+
+    return ok(
+      response,
+      { tradePrice },
+      {
+        providerName: tradePrice.providerName,
+        priceSource: tradePrice.priceSource,
+        asOf: tradePrice.asOf.toISOString()
+      }
+    );
   };
 
   refreshAsset = async (request: Request, response: Response) => {
@@ -62,6 +99,26 @@ export class MarketDataController {
   getProviderStatus = async (request: Request, response: Response) => {
     const actor = (request as AuthenticatedRequest).actor;
     return ok(response, { provider: await this.getProviderStatusUseCase.execute(actor) });
+  };
+
+  convertCurrency = async (request: Request, response: Response) => {
+    const from = typeof request.query.from === "string" ? request.query.from : "USD";
+    const to = typeof request.query.to === "string" ? request.query.to : "USD";
+    const amount = typeof request.query.amount === "string" ? Number(request.query.amount) : 1;
+    const correlationId = request.header("x-correlation-id") ?? undefined;
+    const conversion = await this.convertCurrencyUseCase.execute(
+      { from, to, amount },
+      correlationId
+    );
+
+    return ok(
+      response,
+      { conversion },
+      {
+        providerName: conversion.providerName,
+        asOf: conversion.asOf.toISOString()
+      }
+    );
   };
 }
 

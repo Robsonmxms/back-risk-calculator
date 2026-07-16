@@ -6,7 +6,8 @@ export type ProviderRequestOperation =
   | "latest_quote"
   | "historical_prices"
   | "dividends"
-  | "splits";
+  | "splits"
+  | "currency_rate";
 
 export interface DateRange {
   from: string;
@@ -26,6 +27,19 @@ export interface MarketAsset {
   providerName: string;
   isActive: boolean;
   updatedAt: Date;
+}
+
+export interface MarketAssetSearchItem extends MarketAsset {
+  latestQuote?: LatestQuote;
+}
+
+export interface MarketExchange {
+  code: string;
+  name: string;
+  country: string;
+  currency: string;
+  yahooSuffix: string;
+  aliases: string[];
 }
 
 export interface MarketAssetCandidate extends Omit<MarketAsset, "updatedAt"> {
@@ -78,6 +92,28 @@ export interface Split {
   numerator: number;
   denominator: number;
   updatedAt: Date;
+}
+
+export interface ExchangeRate {
+  from: string;
+  to: string;
+  rate: number;
+  providerName: string;
+  asOf: Date;
+  updatedAt: Date;
+}
+
+export interface TradePriceQuote {
+  assetId: string;
+  symbol: string;
+  tradeDate: string;
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  currency: string;
+  providerName: string;
+  priceSource: "latest_quote" | "historical_close";
+  asOf: Date;
 }
 
 export interface ProviderRequestLog {

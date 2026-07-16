@@ -1,15 +1,19 @@
 import { MarketDataController } from "../../03-adapters/controllers/MarketDataController";
-import { BrapiMarketDataProvider } from "../providers/market-data/BrapiMarketDataProvider";
+import { YahooFinanceMarketDataProvider } from "../providers/market-data/YahooFinanceMarketDataProvider";
 import { InMemoryMarketDataCache } from "../repositories/InMemoryMarketDataCache";
 import { InMemoryMarketDataStore } from "../repositories/InMemoryMarketDataStore";
 import {
+  ConvertCurrencyUseCase,
   GetMarketAssetUseCase,
   GetMarketDataProviderStatusUseCase,
+  GetTradePriceUseCase,
+  ListMarketExchangesUseCase,
   RequestMarketDataRefreshUseCase,
   SearchMarketAssetsUseCase
 } from "../../modules/market-data/use-cases";
 import { MarketDataScheduler, MarketDataIngestionWorker } from "../../modules/market-data/worker";
 import {
+  CurrencyRateProvider,
   MarketDataCache,
   MarketDataEventPublisher,
   MarketDataJobQueue,
@@ -20,6 +24,7 @@ import type { SharedContainer } from "./SharedContainer";
 
 export interface MarketDataContainerDependencies {
   marketDataProvider?: MarketDataProvider;
+  currencyRateProvider?: CurrencyRateProvider;
   marketDataRepository?: MarketDataRepository;
   marketDataCache?: MarketDataCache;
   marketDataJobQueue?: MarketDataJobQueue;
@@ -34,11 +39,16 @@ export interface MarketDataContainer {
   repository: MarketDataRepository;
   cache: MarketDataCache;
   queue: MarketDataJobQueue;
+  provider: MarketDataProvider;
+  currencyRateProvider: CurrencyRateProvider;
   useCases: {
     searchAssetsUseCase: SearchMarketAssetsUseCase;
     getAssetUseCase: GetMarketAssetUseCase;
     requestRefreshUseCase: RequestMarketDataRefreshUseCase;
     getProviderStatusUseCase: GetMarketDataProviderStatusUseCase;
+    convertCurrencyUseCase: ConvertCurrencyUseCase;
+    listMarketExchangesUseCase: ListMarketExchangesUseCase;
+    getTradePriceUseCase: GetTradePriceUseCase;
   };
 }
 
@@ -47,7 +57,11 @@ export function buildMarketDataContainer(
   dependencies: MarketDataContainerDependencies = {}
 ): MarketDataContainer {
   const now = dependencies.marketDataNow ?? (() => new Date());
-  const provider = dependencies.marketDataProvider ?? new BrapiMarketDataProvider(now);
+  const defaultProvider = new YahooFinanceMarketDataProvider(now);
+  const provider = dependencies.marketDataProvider ?? defaultProvider;
+  const currencyRateProvider =
+    dependencies.currencyRateProvider ??
+    (provider as MarketDataProvider & CurrencyRateProvider);
   const store = new InMemoryMarketDataStore(now);
   const repository = dependencies.marketDataRepository ?? store;
   const queue = dependencies.marketDataJobQueue ?? store;
@@ -74,6 +88,19 @@ export function buildMarketDataContainer(
     now
   );
   const getProviderStatusUseCase = new GetMarketDataProviderStatusUseCase(repository, provider);
+  const listMarketExchangesUseCase = new ListMarketExchangesUseCase();
+  const convertCurrencyUseCase = new ConvertCurrencyUseCase(
+    currencyRateProvider,
+    repository,
+    shared.metrics,
+    now
+  );
+  const getTradePriceUseCase = new GetTradePriceUseCase(
+    provider,
+    repository,
+    shared.metrics,
+    now
+  );
   const worker = new MarketDataIngestionWorker(
     provider,
     repository,
@@ -90,7 +117,10 @@ export function buildMarketDataContainer(
     searchAssetsUseCase,
     getAssetUseCase,
     requestRefreshUseCase,
-    getProviderStatusUseCase
+    getProviderStatusUseCase,
+    convertCurrencyUseCase,
+    listMarketExchangesUseCase,
+    getTradePriceUseCase
   );
 
   return {
@@ -100,11 +130,16 @@ export function buildMarketDataContainer(
     repository,
     cache,
     queue,
+    provider,
+    currencyRateProvider,
     useCases: {
       searchAssetsUseCase,
       getAssetUseCase,
       requestRefreshUseCase,
-      getProviderStatusUseCase
+      getProviderStatusUseCase,
+      convertCurrencyUseCase,
+      listMarketExchangesUseCase,
+      getTradePriceUseCase
     }
   };
 }

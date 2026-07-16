@@ -6,12 +6,16 @@ import { AuthController } from "../03-adapters/controllers/AuthController";
 import { UserController } from "../03-adapters/controllers/UserController";
 import { PortfolioController } from "../03-adapters/controllers/PortfolioController";
 import { MarketDataController } from "../03-adapters/controllers/MarketDataController";
+import { AnalyticsController } from "../03-adapters/controllers/AnalyticsController";
+import { ReportsAlertsController } from "../03-adapters/controllers/ReportsAlertsController";
 import { AuthenticateAccessTokenUseCase } from "../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { registerAccountRoutes } from "./routes/accountRoutes";
 import { registerAdminRoutes } from "./routes/adminRoutes";
+import { registerAnalyticsRoutes } from "./routes/analyticsRoutes";
 import { registerAuthRoutes } from "./routes/authRoutes";
 import { registerMarketDataRoutes } from "./routes/marketDataRoutes";
 import { registerPortfolioRoutes } from "./routes/portfolioRoutes";
+import { registerReportsAlertsRoutes } from "./routes/reportsAlertsRoutes";
 import { registerUserRoutes } from "./routes/userRoutes";
 
 export interface ServerDependencies {
@@ -21,6 +25,8 @@ export interface ServerDependencies {
   accountController: AccountController;
   portfolioController: PortfolioController;
   marketDataController: MarketDataController;
+  analyticsController: AnalyticsController;
+  reportsAlertsController: ReportsAlertsController;
   authenticateAccessTokenUseCase: AuthenticateAccessTokenUseCase;
 }
 
@@ -57,9 +63,19 @@ export function createServer(dependencies: ServerDependencies) {
     dependencies.portfolioController,
     dependencies.authenticateAccessTokenUseCase
   );
+  registerAnalyticsRoutes(
+    apiRouter,
+    dependencies.analyticsController,
+    dependencies.authenticateAccessTokenUseCase
+  );
   registerMarketDataRoutes(
     apiRouter,
     dependencies.marketDataController,
+    dependencies.authenticateAccessTokenUseCase
+  );
+  registerReportsAlertsRoutes(
+    apiRouter,
+    dependencies.reportsAlertsController,
     dependencies.authenticateAccessTokenUseCase
   );
 
