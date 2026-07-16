@@ -13,6 +13,7 @@ import { buildAnalyticsContainer } from "./04-infra/container/AnalyticsContainer
 import { buildReportsAlertsContainer } from "./04-infra/container/ReportsAlertsContainer";
 import { buildOfficeContainer } from "./04-infra/container/OfficeContainer";
 import { buildClientContainer } from "./04-infra/container/ClientContainer";
+import { buildWorkbenchContainer } from "./04-infra/container/WorkbenchContainer";
 import { createServer } from "./04-infra/server";
 
 export async function createApp(dependencies: AppDependencies = {}) {
@@ -23,6 +24,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
   const adminContainer = buildAdminContainer(shared);
   const officeContainer = buildOfficeContainer(shared);
   const clientContainer = buildClientContainer(shared);
+  const workbenchContainer = buildWorkbenchContainer(shared);
   const accountContainer = buildAccountContainer(shared);
   const portfolioContainer = buildPortfolioContainer(shared);
   const reportsAlertsContainer = buildReportsAlertsContainer(shared, dependencies.reportsAlerts);
@@ -45,6 +47,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
     adminController: adminContainer.controller,
     officeController: officeContainer.controller,
     clientController: clientContainer.controller,
+    workbenchController: workbenchContainer.controller,
     accountController: accountContainer.controller,
     portfolioController: portfolioContainer.controller,
     marketDataController: marketDataContainer.controller,
@@ -74,6 +77,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
       listUsersUseCase: adminContainer.useCases.listUsersUseCase,
       listOfficesUseCase: officeContainer.useCases.listOfficesUseCase,
       listClientsUseCase: clientContainer.useCases.listClientsUseCase,
+      getWorkbenchUseCase: workbenchContainer.useCases.getWorkbenchUseCase,
       loginUseCase: authContainer.useCases.loginUseCase,
       logoutUseCase: authContainer.useCases.logoutUseCase,
       refreshSessionUseCase: authContainer.useCases.refreshSessionUseCase

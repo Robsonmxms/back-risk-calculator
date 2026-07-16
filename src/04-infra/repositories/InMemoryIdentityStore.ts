@@ -18,6 +18,7 @@ import {
   ClientSummary,
   Household
 } from "../../01-domain/clients/client";
+import { ReviewItem } from "../../01-domain/workbench/workbench";
 import {
   Portfolio,
   PortfolioDetail,
@@ -40,6 +41,7 @@ import {
   ClientRepository,
   CreateClientInput,
   CreateHouseholdInput,
+  CreateReviewItemInput,
   CreateAdvisoryAssignmentInput,
   CreateAdvisoryTeamInput,
   CreatePortfolioInput,
@@ -55,8 +57,11 @@ import {
   UpdateAdvisoryTeamInput,
   UpdateClientInput,
   UpdateHouseholdInput,
+  UpdateReviewItemInput,
   UpdatePortfolioInput,
-  UserRepository
+  UserRepository,
+  WorkbenchRepository,
+  ReviewItemFilters
 } from "../../02-application/ports/repositories";
 import { ApplicationError } from "../../02-application/errors/application-error";
 import { ROLE_PERMISSION_MATRIX } from "../../02-application/auth/permission-service";
@@ -80,6 +85,7 @@ export class InMemoryIdentityStore
     OfficeRepository,
     AdvisoryTeamRepository,
     ClientRepository,
+    WorkbenchRepository,
     RefreshTokenRepository,
     PortfolioRepository,
     PortfolioMarketDataProjection,
@@ -93,6 +99,7 @@ export class InMemoryIdentityStore
   readonly advisoryAssignments = new Map<string, AdvisoryAssignment>();
   readonly households = new Map<string, Household>();
   readonly clients = new Map<string, ClientProfile>();
+  readonly reviewItems = new Map<string, ReviewItem>();
   readonly accounts = new Map<string, Account>();
   readonly accountMembers = new Map<string, AccountMember>();
   readonly portfolioSnapshots = new Map<string, PortfolioAccountSnapshot>();
@@ -555,6 +562,81 @@ export class InMemoryIdentityStore
       householdId: household.id
     });
     return { ...household };
+  }
+
+  async listReviewItems(
+    officeId: string,
+    filters: ReviewItemFilters,
+    visibleClientIds?: Set<string>
+  ): Promise<ReviewItem[]> {
+    return Array.from(this.reviewItems.values())
+      .filter((item) => item.officeId === officeId)
+      .filter((item) => !visibleClientIds || (item.clientId ? visibleClientIds.has(item.clientId) : false))
+      .filter((item) => !filters.status || item.status === filters.status)
+      .filter((item) => !filters.severity || item.severity === filters.severity)
+      .filter(
+        (item) => !filters.assignedToUserId || item.assignedToUserId === filters.assignedToUserId
+      )
+      .filter((item) => !filters.clientId || item.clientId === filters.clientId)
+      .map((item) => ({ ...item }))
+      .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
+  }
+
+  async findReviewItemById(reviewItemId: string): Promise<ReviewItem | undefined> {
+    const item = this.reviewItems.get(reviewItemId);
+    return item ? { ...item } : undefined;
+  }
+
+  async createReviewItem(input: CreateReviewItemInput): Promise<ReviewItem> {
+    const item: ReviewItem = { ...input };
+    this.reviewItems.set(item.id, item);
+    this.pushEvent("ReviewItemCreated", item.id, {
+      officeId: item.officeId,
+      reviewItemId: item.id,
+      resourceType: item.resourceType,
+      severity: item.severity
+    });
+    return { ...item };
+  }
+
+  async updateReviewItem(
+    reviewItemId: string,
+    input: UpdateReviewItemInput
+  ): Promise<ReviewItem | undefined> {
+    const item = this.reviewItems.get(reviewItemId);
+    if (!item) {
+      return undefined;
+    }
+
+    if (input.title !== undefined) {
+      item.title = input.title;
+    }
+    if (input.severity !== undefined) {
+      item.severity = input.severity;
+    }
+    if (input.status !== undefined) {
+      item.status = input.status;
+    }
+    if (input.assignedToUserId !== undefined) {
+      item.assignedToUserId = input.assignedToUserId;
+    }
+    if (input.dueDate !== undefined) {
+      item.dueDate = input.dueDate;
+    }
+    if (input.notes !== undefined) {
+      item.notes = input.notes;
+    }
+    item.updatedAt = input.updatedAt;
+    if (input.closedAt) {
+      item.closedAt = input.closedAt;
+    }
+    this.pushEvent("ReviewItemUpdated", item.id, {
+      officeId: item.officeId,
+      reviewItemId: item.id,
+      status: item.status,
+      severity: item.severity
+    });
+    return { ...item };
   }
 
   async createPortfolio(input: CreatePortfolioInput): Promise<Portfolio> {
@@ -1498,6 +1580,40 @@ export async function createSeededIdentityStore(
     onboardingStatus: "complete",
     advisorUserId: "usr_other",
     riskProfileDescriptor: "Capital preservation profile",
+    createdAt: now,
+    updatedAt: now
+  });
+
+  store.reviewItems.set("rev_main_report", {
+    id: "rev_main_report",
+    officeId: "ofc_main",
+    title: "Review monthly risk pack before client meeting",
+    severity: "medium",
+    status: "open",
+    resourceType: "client",
+    resourceId: "client_main",
+    clientId: "client_main",
+    assignedToUserId: "usr_advisor",
+    dueDate: "2026-07-20",
+    notes: "Confirm stale-data warnings are clear before delivery.",
+    createdBy: "usr_user",
+    createdAt: now,
+    updatedAt: now
+  });
+  store.reviewItems.set("rev_income_data", {
+    id: "rev_income_data",
+    officeId: "ofc_private",
+    title: "Investigate delayed fixed-income market data",
+    severity: "high",
+    status: "open",
+    resourceType: "portfolio",
+    resourceId: "prt_income",
+    clientId: "client_private",
+    portfolioId: "prt_income",
+    assignedToUserId: "usr_analyst",
+    dueDate: "2026-07-18",
+    notes: "Market data remains partial for one source.",
+    createdBy: "usr_other",
     createdAt: now,
     updatedAt: now
   });
