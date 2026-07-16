@@ -1,6 +1,7 @@
 import { Account, AccountMember } from "../../01-domain/accounts/account";
 import { Actor } from "../../01-domain/auth/actor";
 import { ApplicationError } from "../errors/application-error";
+import { actorHasDefaultOfficePermission } from "./permission-service";
 
 export function assertAdmin(actor: Actor): void {
   if (actor.role !== "admin") {
@@ -27,7 +28,10 @@ export function assertCanReadAccountAnalytics(
 
   assertOfficeAccess(actor, account);
 
-  if (account.ownerUserId === actor.id) {
+  if (
+    actorHasDefaultOfficePermission(actor, account.officeId, "analytics.read") ||
+    account.ownerUserId === actor.id
+  ) {
     return;
   }
 
@@ -57,7 +61,11 @@ export function assertCanReadAccountLedger(
 
   assertOfficeAccess(actor, account);
 
-  if (account.ownerUserId === actor.id || membership) {
+  if (
+    actorHasDefaultOfficePermission(actor, account.officeId, "ledger.read") ||
+    account.ownerUserId === actor.id ||
+    membership
+  ) {
     return;
   }
 
@@ -83,14 +91,18 @@ export function assertCanManageAccountLedger(
 
   assertOfficeAccess(actor, account);
 
-  if (account.ownerUserId === actor.id || membership?.role === "owner") {
+  if (
+    actorHasDefaultOfficePermission(actor, account.officeId, "ledger.write") ||
+    account.ownerUserId === actor.id ||
+    membership?.role === "owner"
+  ) {
     return;
   }
 
   throw new ApplicationError(
     "forbidden",
-    "auth.account_write_denied",
-    "Account write access denied"
+    "auth.permission_denied",
+    "Permission ledger.write is required"
   );
 }
 
