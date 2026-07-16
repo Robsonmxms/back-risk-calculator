@@ -31,6 +31,11 @@ import {
   SupervisionReviewStatus
 } from "../../01-domain/compliance/audit";
 import {
+  ReportPackage,
+  ReportPackageItem,
+  ReportPackageStatus
+} from "../../01-domain/delivery/report-package";
+import {
   ReviewItem,
   ReviewItemSeverity,
   ReviewItemStatus,
@@ -347,6 +352,55 @@ export interface AuditRepository {
     input: UpdateSupervisionReviewInput
   ): Promise<SupervisionReview | undefined>;
   createAuditExport(input: CreateAuditExportInput): Promise<AuditExportJob>;
+}
+
+export interface ReportPackageFilters {
+  status?: ReportPackageStatus;
+}
+
+export interface CreateReportPackageInput {
+  id: string;
+  officeId: string;
+  clientId: string;
+  householdId?: string;
+  title: string;
+  summaryNotes: string;
+  internalNotes?: string;
+  status: Extract<ReportPackageStatus, "draft" | "pending_approval">;
+  items: ReportPackageItem[];
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpdateReportPackageInput {
+  title?: string;
+  summaryNotes?: string;
+  internalNotes?: string;
+  status?: ReportPackageStatus;
+  items?: ReportPackageItem[];
+  approvedBy?: string;
+  deliveredBy?: string;
+  viewedBy?: string;
+  revokedBy?: string;
+  updatedAt: Date;
+  approvedAt?: Date;
+  deliveredAt?: Date;
+  viewedAt?: Date;
+  revokedAt?: Date;
+}
+
+export interface ReportPackageRepository {
+  listReportPackagesByClient(
+    clientId: string,
+    filters?: ReportPackageFilters
+  ): Promise<ReportPackage[]>;
+  findReportPackageById(packageId: string): Promise<ReportPackage | undefined>;
+  createReportPackage(input: CreateReportPackageInput): Promise<ReportPackage>;
+  updateReportPackage(
+    packageId: string,
+    input: UpdateReportPackageInput
+  ): Promise<ReportPackage | undefined>;
 }
 
 export interface CreatePortfolioInput {

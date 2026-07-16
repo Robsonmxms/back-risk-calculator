@@ -26,6 +26,7 @@ import {
   SafeAuditMetadata,
   SupervisionReview
 } from "../../01-domain/compliance/audit";
+import { ReportPackage } from "../../01-domain/delivery/report-package";
 import { ReviewItem } from "../../01-domain/workbench/workbench";
 import {
   Portfolio,
@@ -58,11 +59,14 @@ import {
   CreateAdvisoryAssignmentInput,
   CreateAdvisoryTeamInput,
   CreatePortfolioInput,
+  CreateReportPackageInput,
   CreatePortfolioTransactionInput,
   CreateRefreshTokenInput,
   CreateUserInput,
   OfficeRepository,
   PortfolioRepository,
+  ReportPackageFilters,
+  ReportPackageRepository,
   PortfolioTransactionIdempotencyRecord,
   RefreshTokenRecord,
   RefreshTokenRepository,
@@ -73,6 +77,7 @@ import {
   UpdateHouseholdInput,
   UpdateReviewItemInput,
   UpdateSupervisionReviewInput,
+  UpdateReportPackageInput,
   UpdatePortfolioInput,
   UserRepository,
   WorkbenchRepository,
@@ -102,6 +107,7 @@ export class InMemoryIdentityStore
     ClientRepository,
     WorkbenchRepository,
     AuditRepository,
+    ReportPackageRepository,
     RefreshTokenRepository,
     PortfolioRepository,
     PortfolioMarketDataProjection,
@@ -119,6 +125,7 @@ export class InMemoryIdentityStore
   readonly auditEvents = new Map<string, AuditEvent>();
   readonly supervisionReviews = new Map<string, SupervisionReview>();
   readonly auditExports = new Map<string, AuditExportJob>();
+  readonly reportPackages = new Map<string, ReportPackage>();
   readonly accounts = new Map<string, Account>();
   readonly accountMembers = new Map<string, AccountMember>();
   readonly portfolioSnapshots = new Map<string, PortfolioAccountSnapshot>();
@@ -763,6 +770,83 @@ export class InMemoryIdentityStore
     };
     this.auditExports.set(exportJob.id, exportJob);
     return { ...exportJob, filters: { ...exportJob.filters } };
+  }
+
+  async listReportPackagesByClient(
+    clientId: string,
+    filters: ReportPackageFilters = {}
+  ): Promise<ReportPackage[]> {
+    return Array.from(this.reportPackages.values())
+      .filter((reportPackage) => reportPackage.clientId === clientId)
+      .filter((reportPackage) => !filters.status || reportPackage.status === filters.status)
+      .map((reportPackage) => this.copyReportPackage(reportPackage))
+      .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
+  }
+
+  async findReportPackageById(packageId: string): Promise<ReportPackage | undefined> {
+    const reportPackage = this.reportPackages.get(packageId);
+    return reportPackage ? this.copyReportPackage(reportPackage) : undefined;
+  }
+
+  async createReportPackage(input: CreateReportPackageInput): Promise<ReportPackage> {
+    const reportPackage: ReportPackage = {
+      ...input,
+      items: input.items.map((item) => ({ ...item }))
+    };
+    this.reportPackages.set(reportPackage.id, reportPackage);
+    return this.copyReportPackage(reportPackage);
+  }
+
+  async updateReportPackage(
+    packageId: string,
+    input: UpdateReportPackageInput
+  ): Promise<ReportPackage | undefined> {
+    const reportPackage = this.reportPackages.get(packageId);
+    if (!reportPackage) {
+      return undefined;
+    }
+
+    if (input.title !== undefined) {
+      reportPackage.title = input.title;
+    }
+    if (input.summaryNotes !== undefined) {
+      reportPackage.summaryNotes = input.summaryNotes;
+    }
+    if (input.internalNotes !== undefined) {
+      reportPackage.internalNotes = input.internalNotes;
+    }
+    if (input.status !== undefined) {
+      reportPackage.status = input.status;
+    }
+    if (input.items !== undefined) {
+      reportPackage.items = input.items.map((item) => ({ ...item }));
+    }
+    if (input.approvedBy !== undefined) {
+      reportPackage.approvedBy = input.approvedBy;
+    }
+    if (input.deliveredBy !== undefined) {
+      reportPackage.deliveredBy = input.deliveredBy;
+    }
+    if (input.viewedBy !== undefined) {
+      reportPackage.viewedBy = input.viewedBy;
+    }
+    if (input.revokedBy !== undefined) {
+      reportPackage.revokedBy = input.revokedBy;
+    }
+    reportPackage.updatedAt = input.updatedAt;
+    if (input.approvedAt) {
+      reportPackage.approvedAt = input.approvedAt;
+    }
+    if (input.deliveredAt) {
+      reportPackage.deliveredAt = input.deliveredAt;
+    }
+    if (input.viewedAt) {
+      reportPackage.viewedAt = input.viewedAt;
+    }
+    if (input.revokedAt) {
+      reportPackage.revokedAt = input.revokedAt;
+    }
+    return this.copyReportPackage(reportPackage);
   }
 
   async createPortfolio(input: CreatePortfolioInput): Promise<Portfolio> {
@@ -1439,6 +1523,13 @@ export class InMemoryIdentityStore
     };
   }
 
+  private copyReportPackage(reportPackage: ReportPackage): ReportPackage {
+    return {
+      ...reportPackage,
+      items: reportPackage.items.map((item) => ({ ...item }))
+    };
+  }
+
   private pushEvent(
     topic: string,
     aggregateId: string,
@@ -2019,6 +2110,109 @@ export async function createSeededIdentityStore(
     severity: "warning",
     createdAt: new Date("2026-07-15T16:00:00.000Z"),
     updatedAt: new Date("2026-07-15T16:00:00.000Z")
+  });
+  store.reportPackages.set("rpkg_delivered_main", {
+    id: "rpkg_delivered_main",
+    officeId: "ofc_main",
+    clientId: "client_main",
+    householdId: "hh_main_silva",
+    title: "July risk summary",
+    summaryNotes: "Portfolio summary prepared for the July review cycle.",
+    internalNotes: "Confirm next meeting agenda before follow-up.",
+    status: "delivered",
+    items: [
+      {
+        id: "rpkg_item_main_summary",
+        type: "portfolio_summary",
+        title: "Core Growth overview",
+        portfolioId: "prt_main",
+        status: "ready"
+      },
+      {
+        id: "rpkg_item_main_analytics",
+        type: "analytics_snapshot",
+        title: "Risk metric snapshot",
+        portfolioId: "prt_main",
+        analyticsSnapshotId: "analytics_prt_main_latest",
+        format: "json",
+        status: "ready"
+      }
+    ],
+    createdBy: "usr_advisor",
+    approvedBy: "usr_user",
+    deliveredBy: "usr_user",
+    createdAt: new Date("2026-07-14T10:00:00.000Z"),
+    updatedAt: new Date("2026-07-15T11:00:00.000Z"),
+    approvedAt: new Date("2026-07-15T10:00:00.000Z"),
+    deliveredAt: new Date("2026-07-15T11:00:00.000Z")
+  });
+  store.reportPackages.set("rpkg_pending_main", {
+    id: "rpkg_pending_main",
+    officeId: "ofc_main",
+    clientId: "client_main",
+    householdId: "hh_main_silva",
+    title: "Pending allocation review",
+    summaryNotes: "Draft package waiting for office approval.",
+    internalNotes: "Pending final report generation.",
+    status: "pending_approval",
+    items: [
+      {
+        id: "rpkg_item_pending_report",
+        type: "report",
+        title: "Monthly risk pack",
+        portfolioId: "prt_main",
+        reportId: "rpt_001",
+        format: "pdf",
+        status: "pending"
+      }
+    ],
+    createdBy: "usr_advisor",
+    createdAt: new Date("2026-07-15T09:00:00.000Z"),
+    updatedAt: new Date("2026-07-15T09:00:00.000Z")
+  });
+  store.reportPackages.set("rpkg_private_delivered", {
+    id: "rpkg_private_delivered",
+    officeId: "ofc_private",
+    clientId: "client_private",
+    householdId: "hh_private_allocation",
+    title: "Private income sleeve update",
+    summaryNotes: "Read-only update for the income sleeve.",
+    status: "delivered",
+    items: [
+      {
+        id: "rpkg_item_private_summary",
+        type: "portfolio_summary",
+        title: "Income sleeve overview",
+        portfolioId: "prt_income",
+        status: "ready"
+      }
+    ],
+    createdBy: "usr_other",
+    approvedBy: "usr_other",
+    deliveredBy: "usr_other",
+    createdAt: new Date("2026-07-15T08:00:00.000Z"),
+    updatedAt: new Date("2026-07-15T12:00:00.000Z"),
+    approvedAt: new Date("2026-07-15T11:00:00.000Z"),
+    deliveredAt: new Date("2026-07-15T12:00:00.000Z")
+  });
+  store.auditEvents.set("aud_report_package_delivered", {
+    id: "aud_report_package_delivered",
+    officeId: "ofc_main",
+    actorId: "usr_user",
+    actorName: "Portfolio User",
+    action: "report_package.delivered",
+    resourceType: "delivery",
+    resourceId: "rpkg_delivered_main",
+    clientId: "client_main",
+    portfolioId: "prt_main",
+    outcome: "success",
+    severity: "info",
+    reviewRequired: false,
+    metadata: {
+      status: "delivered",
+      itemCount: 2
+    },
+    createdAt: new Date("2026-07-15T11:00:00.000Z")
   });
 
   store.addAccount({
