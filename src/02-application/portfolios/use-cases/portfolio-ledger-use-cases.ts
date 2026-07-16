@@ -9,6 +9,7 @@ import {
   PortfolioTransaction
 } from "../../../01-domain/portfolios/portfolio";
 import { assertCanManageAccountLedger, assertCanReadAccountLedger } from "../../auth/policies";
+import { PermissionService } from "../../auth/permission-service";
 import { ApplicationError } from "../../errors/application-error";
 import {
   AccountRepository,
@@ -25,7 +26,9 @@ async function getPortfolioAccess(
   actor: Actor,
   accountId: string,
   accounts: AccountRepository,
-  mode: "read" | "manage"
+  mode: "read" | "manage",
+  permissions?: PermissionService,
+  portfolioId?: string
 ): Promise<PortfolioAccess> {
   const account = await accounts.findAccountById(accountId);
   if (!account) {
@@ -36,10 +39,56 @@ async function getPortfolioAccess(
   if (mode === "read") {
     assertCanReadAccountLedger(actor, account, membership);
   } else {
-    assertCanManageAccountLedger(actor, account, membership);
+    try {
+      assertCanManageAccountLedger(actor, account, membership);
+    } catch (error) {
+      if (
+        !(error instanceof ApplicationError) ||
+        error.code !== "auth.permission_denied" ||
+        !permissions
+      ) {
+        throw error;
+      }
+
+      await assertExplicitLedgerWritePermission(
+        actor,
+        account,
+        permissions,
+        portfolioId
+      );
+    }
   }
 
   return { account, membership };
+}
+
+async function assertExplicitLedgerWritePermission(
+  actor: Actor,
+  account: Account,
+  permissions: PermissionService,
+  portfolioId?: string
+): Promise<void> {
+  const scopes = [
+    { resourceType: "account" as const, resourceId: account.id },
+    ...(portfolioId ? [{ resourceType: "portfolio" as const, resourceId: portfolioId }] : [])
+  ];
+
+  for (const scope of scopes) {
+    try {
+      await permissions.assertPermission(actor, account.officeId, "ledger.write", scope);
+      return;
+    } catch (error) {
+      if (!(error instanceof ApplicationError) || error.code !== "auth.permission_denied") {
+        throw error;
+      }
+    }
+  }
+
+  throw new ApplicationError(
+    "forbidden",
+    "auth.permission_denied",
+    "Permission ledger.write is required"
+  );
 }
 
 export class ListVisiblePortfoliosUseCase {
@@ -53,14 +102,21 @@ export class ListVisiblePortfoliosUseCase {
 export class CreatePortfolioUseCase {
   constructor(
     private readonly accounts: AccountRepository,
-    private readonly portfolios: PortfolioRepository
+    private readonly portfolios: PortfolioRepository,
+    private readonly permissions?: PermissionService
   ) {}
 
   async execute(
     actor: Actor,
     input: { accountId: string; name: string; description?: string; baseCurrency: string }
   ) {
-    const { account } = await getPortfolioAccess(actor, input.accountId, this.accounts, "manage");
+    const { account } = await getPortfolioAccess(
+      actor,
+      input.accountId,
+      this.accounts,
+      "manage",
+      this.permissions
+    );
 
     const created = await this.portfolios.createPortfolio({
       id: randomUUID(),
@@ -116,7 +172,8 @@ export class GetPortfolioDetailUseCase {
 export class UpdatePortfolioUseCase {
   constructor(
     private readonly accounts: AccountRepository,
-    private readonly portfolios: PortfolioRepository
+    private readonly portfolios: PortfolioRepository,
+    private readonly permissions?: PermissionService
   ) {}
 
   async execute(
@@ -129,7 +186,14 @@ export class UpdatePortfolioUseCase {
       throw new ApplicationError("not_found", "portfolio.not_found", "Portfolio not found");
     }
 
-    await getPortfolioAccess(actor, portfolio.accountId, this.accounts, "manage");
+    await getPortfolioAccess(
+      actor,
+      portfolio.accountId,
+      this.accounts,
+      "manage",
+      this.permissions,
+      portfolioId
+    );
     await this.portfolios.updatePortfolio(portfolioId, {
       name: input.name?.trim(),
       description: input.description?.trim() || undefined,
@@ -167,7 +231,8 @@ export class ListPortfolioTransactionsUseCase {
 export class RecordPortfolioTransactionUseCase {
   constructor(
     private readonly accounts: AccountRepository,
-    private readonly portfolios: PortfolioRepository
+    private readonly portfolios: PortfolioRepository,
+    private readonly permissions?: PermissionService
   ) {}
 
   async execute(
@@ -190,7 +255,14 @@ export class RecordPortfolioTransactionUseCase {
       throw new ApplicationError("not_found", "portfolio.not_found", "Portfolio not found");
     }
 
-    await getPortfolioAccess(actor, portfolio.accountId, this.accounts, "manage");
+    await getPortfolioAccess(
+      actor,
+      portfolio.accountId,
+      this.accounts,
+      "manage",
+      this.permissions,
+      portfolioId
+    );
     const idempotencyFingerprint = createTransactionIdempotencyFingerprint(input);
 
     if (input.idempotencyKey) {

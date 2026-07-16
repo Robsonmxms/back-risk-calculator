@@ -30,6 +30,45 @@ export async function up(knex: Knex): Promise<void> {
     table.unique(["office_id", "user_id"]);
   });
 
+  await knex.schema.createTable("advisory_teams", (table) => {
+    table.uuid("id").primary();
+    table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
+    table.string("name").notNullable();
+    table.text("description");
+    table.enu("status", ["active", "archived"]).notNullable().defaultTo("active");
+    table.timestamps(true, true);
+    table.index(["office_id", "status"]);
+  });
+
+  await knex.schema.createTable("advisory_team_members", (table) => {
+    table.uuid("id").primary();
+    table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
+    table.uuid("team_id").notNullable().references("advisory_teams.id").onDelete("CASCADE");
+    table.uuid("user_id").notNullable().references("users.id").onDelete("CASCADE");
+    table
+      .enu("role", ["office_admin", "advisor", "analyst", "assistant", "client"])
+      .notNullable();
+    table.timestamp("created_at").notNullable().defaultTo(knex.fn.now());
+    table.unique(["team_id", "user_id"]);
+    table.index(["office_id", "user_id"]);
+  });
+
+  await knex.schema.createTable("advisory_assignments", (table) => {
+    table.uuid("id").primary();
+    table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
+    table.enu("resource_type", ["client", "household", "account", "portfolio"]).notNullable();
+    table.string("resource_id").notNullable();
+    table.uuid("assignee_user_id").references("users.id").onDelete("CASCADE");
+    table.uuid("team_id").references("advisory_teams.id").onDelete("CASCADE");
+    table.specificType("permissions", "text[]").notNullable();
+    table.uuid("created_by").notNullable().references("users.id");
+    table.timestamp("created_at").notNullable().defaultTo(knex.fn.now());
+    table.timestamp("revoked_at");
+    table.index(["office_id", "resource_type", "resource_id"]);
+    table.index(["office_id", "assignee_user_id"]);
+    table.index(["office_id", "team_id"]);
+  });
+
   await knex.schema.createTable("accounts", (table) => {
     table.uuid("id").primary();
     table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
@@ -74,6 +113,9 @@ export async function down(knex: Knex): Promise<void> {
   await knex.schema.dropTableIfExists("refresh_tokens");
   await knex.schema.dropTableIfExists("account_members");
   await knex.schema.dropTableIfExists("accounts");
+  await knex.schema.dropTableIfExists("advisory_assignments");
+  await knex.schema.dropTableIfExists("advisory_team_members");
+  await knex.schema.dropTableIfExists("advisory_teams");
   await knex.schema.dropTableIfExists("office_members");
   await knex.schema.dropTableIfExists("offices");
   await knex.schema.dropTableIfExists("users");

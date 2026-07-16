@@ -4,6 +4,13 @@ import {
   AccountMembershipSummary,
   PortfolioAccountSnapshot
 } from "../../01-domain/accounts/account";
+import {
+  AdvisoryAssignment,
+  AdvisoryTeam,
+  AdvisoryTeamSummary,
+  AssignmentResourceType,
+  PermissionKey
+} from "../../01-domain/advisory/advisory-team";
 import { User, UserRole } from "../../01-domain/users/user";
 import {
   Portfolio,
@@ -64,6 +71,55 @@ export interface OfficeRepository {
     officeId: string,
     input: Partial<Pick<Office, "name" | "status" | "updatedAt">>
   ): Promise<Office | undefined>;
+}
+
+export interface CreateAdvisoryTeamInput {
+  id: string;
+  officeId: string;
+  name: string;
+  description?: string;
+  memberUserIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpdateAdvisoryTeamInput {
+  name?: string;
+  description?: string;
+  status?: AdvisoryTeam["status"];
+  memberUserIds?: string[];
+  updatedAt: Date;
+}
+
+export interface CreateAdvisoryAssignmentInput {
+  id: string;
+  officeId: string;
+  resourceType: AssignmentResourceType;
+  resourceId: string;
+  assigneeUserId?: string;
+  teamId?: string;
+  permissions: PermissionKey[];
+  createdBy: string;
+  createdAt: Date;
+}
+
+export interface AdvisoryTeamRepository {
+  listTeamsByOffice(officeId: string): Promise<AdvisoryTeamSummary[]>;
+  findTeamById(teamId: string): Promise<AdvisoryTeam | undefined>;
+  createTeam(input: CreateAdvisoryTeamInput): Promise<AdvisoryTeamSummary>;
+  updateTeam(
+    teamId: string,
+    input: UpdateAdvisoryTeamInput
+  ): Promise<AdvisoryTeamSummary | undefined>;
+  listAssignmentsByOffice(officeId: string): Promise<AdvisoryAssignment[]>;
+  listAssignmentsForUser(userId: string, officeId: string): Promise<AdvisoryAssignment[]>;
+  listAssignmentsForResource(
+    resourceType: AssignmentResourceType,
+    resourceId: string
+  ): Promise<AdvisoryAssignment[]>;
+  findAssignmentById(assignmentId: string): Promise<AdvisoryAssignment | undefined>;
+  createAssignment(input: CreateAdvisoryAssignmentInput): Promise<AdvisoryAssignment>;
+  revokeAssignment(assignmentId: string, revokedAt: Date): Promise<AdvisoryAssignment | undefined>;
 }
 
 export interface CreatePortfolioInput {

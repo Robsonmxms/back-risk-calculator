@@ -8,6 +8,7 @@ import {
   RecordPortfolioTransactionUseCase,
   UpdatePortfolioUseCase
 } from "../../02-application/portfolios/use-cases/portfolio-ledger-use-cases";
+import { PermissionService } from "../../02-application/auth/permission-service";
 import { PortfolioController } from "../../03-adapters/controllers/PortfolioController";
 import { SharedContainer } from "./SharedContainer";
 
@@ -26,10 +27,12 @@ export interface PortfolioContainer {
 }
 
 export function buildPortfolioContainer(shared: SharedContainer): PortfolioContainer {
+  const permissionService = new PermissionService(shared.identityStore, shared.identityStore);
   const listVisiblePortfoliosUseCase = new ListVisiblePortfoliosUseCase(shared.identityStore);
   const createPortfolioUseCase = new CreatePortfolioUseCase(
     shared.identityStore,
-    shared.identityStore
+    shared.identityStore,
+    permissionService
   );
   const getPortfolioDetailUseCase = new GetPortfolioDetailUseCase(
     shared.identityStore,
@@ -37,7 +40,8 @@ export function buildPortfolioContainer(shared: SharedContainer): PortfolioConta
   );
   const updatePortfolioUseCase = new UpdatePortfolioUseCase(
     shared.identityStore,
-    shared.identityStore
+    shared.identityStore,
+    permissionService
   );
   const listPortfolioTransactionsUseCase = new ListPortfolioTransactionsUseCase(
     shared.identityStore,
@@ -45,7 +49,8 @@ export function buildPortfolioContainer(shared: SharedContainer): PortfolioConta
   );
   const recordPortfolioTransactionUseCase = new RecordPortfolioTransactionUseCase(
     shared.identityStore,
-    shared.identityStore
+    shared.identityStore,
+    permissionService
   );
   const listPortfolioPositionsUseCase = new ListPortfolioPositionsUseCase(
     shared.identityStore,

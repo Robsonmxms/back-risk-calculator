@@ -6,6 +6,13 @@ import {
   PortfolioAccountSnapshot
 } from "../../01-domain/accounts/account";
 import {
+  AdvisoryAssignment,
+  AdvisoryTeam,
+  AdvisoryTeamMember,
+  AdvisoryTeamSummary,
+  AssignmentResourceType
+} from "../../01-domain/advisory/advisory-team";
+import {
   Portfolio,
   PortfolioDetail,
   PortfolioOutboxEvent,
@@ -22,6 +29,9 @@ import {
 import { User } from "../../01-domain/users/user";
 import {
   AccountRepository,
+  AdvisoryTeamRepository,
+  CreateAdvisoryAssignmentInput,
+  CreateAdvisoryTeamInput,
   CreatePortfolioInput,
   CreatePortfolioTransactionInput,
   CreateRefreshTokenInput,
@@ -32,10 +42,12 @@ import {
   RefreshTokenRecord,
   RefreshTokenRepository,
   RefreshTokenRevocationReason,
+  UpdateAdvisoryTeamInput,
   UpdatePortfolioInput,
   UserRepository
 } from "../../02-application/ports/repositories";
 import { ApplicationError } from "../../02-application/errors/application-error";
+import { ROLE_PERMISSION_MATRIX } from "../../02-application/auth/permission-service";
 import { PasswordHasher } from "../../02-application/ports/security";
 import { ScryptPasswordHasher } from "../../03-adapters/security/ScryptPasswordHasher";
 import { AnalyticsPortfolioProjection } from "../../modules/analytics/ports";
@@ -54,6 +66,7 @@ export class InMemoryIdentityStore
     UserRepository,
     AccountRepository,
     OfficeRepository,
+    AdvisoryTeamRepository,
     RefreshTokenRepository,
     PortfolioRepository,
     PortfolioMarketDataProjection,
@@ -62,6 +75,9 @@ export class InMemoryIdentityStore
   readonly users = new Map<string, User>();
   readonly offices = new Map<string, Office>();
   readonly officeMembers = new Map<string, OfficeMembership>();
+  readonly advisoryTeams = new Map<string, AdvisoryTeam>();
+  readonly advisoryTeamMembers = new Map<string, AdvisoryTeamMember>();
+  readonly advisoryAssignments = new Map<string, AdvisoryAssignment>();
   readonly accounts = new Map<string, Account>();
   readonly accountMembers = new Map<string, AccountMember>();
   readonly portfolioSnapshots = new Map<string, PortfolioAccountSnapshot>();
@@ -252,6 +268,140 @@ export class InMemoryIdentityStore
     return { ...office };
   }
 
+  async listTeamsByOffice(officeId: string): Promise<AdvisoryTeamSummary[]> {
+    return Array.from(this.advisoryTeams.values())
+      .filter((team) => team.officeId === officeId)
+      .map((team) => this.toTeamSummary(team))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  async findTeamById(teamId: string): Promise<AdvisoryTeam | undefined> {
+    const team = this.advisoryTeams.get(teamId);
+    return team ? { ...team } : undefined;
+  }
+
+  async createTeam(input: CreateAdvisoryTeamInput): Promise<AdvisoryTeamSummary> {
+    const team: AdvisoryTeam = {
+      id: input.id,
+      officeId: input.officeId,
+      name: input.name,
+      description: input.description,
+      status: "active",
+      createdAt: input.createdAt,
+      updatedAt: input.updatedAt
+    };
+    this.advisoryTeams.set(team.id, team);
+    this.replaceTeamMembers(team, input.memberUserIds, input.createdAt);
+    this.pushEvent("AdvisoryTeamCreated", team.id, {
+      officeId: team.officeId,
+      teamId: team.id
+    });
+    return this.toTeamSummary(team);
+  }
+
+  async updateTeam(
+    teamId: string,
+    input: UpdateAdvisoryTeamInput
+  ): Promise<AdvisoryTeamSummary | undefined> {
+    const team = this.advisoryTeams.get(teamId);
+    if (!team) {
+      return undefined;
+    }
+
+    if (input.name !== undefined) {
+      team.name = input.name;
+    }
+    if (input.description !== undefined) {
+      team.description = input.description;
+    }
+    if (input.status !== undefined) {
+      team.status = input.status;
+    }
+    team.updatedAt = input.updatedAt;
+    if (input.memberUserIds) {
+      this.replaceTeamMembers(team, input.memberUserIds, input.updatedAt);
+    }
+    this.pushEvent("AdvisoryTeamUpdated", team.id, {
+      officeId: team.officeId,
+      teamId: team.id
+    });
+    return this.toTeamSummary(team);
+  }
+
+  async listAssignmentsByOffice(officeId: string): Promise<AdvisoryAssignment[]> {
+    return Array.from(this.advisoryAssignments.values())
+      .filter((assignment) => assignment.officeId === officeId)
+      .map((assignment) => ({ ...assignment, permissions: [...assignment.permissions] }))
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+  }
+
+  async listAssignmentsForUser(userId: string, officeId: string): Promise<AdvisoryAssignment[]> {
+    const teamIds = new Set(
+      Array.from(this.advisoryTeamMembers.values())
+        .filter((member) => member.officeId === officeId && member.userId === userId)
+        .map((member) => member.teamId)
+    );
+
+    return Array.from(this.advisoryAssignments.values())
+      .filter(
+        (assignment) =>
+          assignment.officeId === officeId &&
+          !assignment.revokedAt &&
+          (assignment.assigneeUserId === userId ||
+            (assignment.teamId ? teamIds.has(assignment.teamId) : false))
+      )
+      .map((assignment) => ({ ...assignment, permissions: [...assignment.permissions] }));
+  }
+
+  async listAssignmentsForResource(
+    resourceType: AssignmentResourceType,
+    resourceId: string
+  ): Promise<AdvisoryAssignment[]> {
+    return Array.from(this.advisoryAssignments.values())
+      .filter(
+        (assignment) =>
+          assignment.resourceType === resourceType && assignment.resourceId === resourceId
+      )
+      .map((assignment) => ({ ...assignment, permissions: [...assignment.permissions] }));
+  }
+
+  async findAssignmentById(assignmentId: string): Promise<AdvisoryAssignment | undefined> {
+    const assignment = this.advisoryAssignments.get(assignmentId);
+    return assignment ? { ...assignment, permissions: [...assignment.permissions] } : undefined;
+  }
+
+  async createAssignment(input: CreateAdvisoryAssignmentInput): Promise<AdvisoryAssignment> {
+    const assignment: AdvisoryAssignment = {
+      ...input,
+      permissions: [...new Set(input.permissions)]
+    };
+    this.advisoryAssignments.set(assignment.id, assignment);
+    this.pushEvent("AdvisoryAssignmentCreated", assignment.id, {
+      officeId: assignment.officeId,
+      assignmentId: assignment.id,
+      resourceType: assignment.resourceType,
+      resourceId: assignment.resourceId
+    });
+    return { ...assignment, permissions: [...assignment.permissions] };
+  }
+
+  async revokeAssignment(
+    assignmentId: string,
+    revokedAt: Date
+  ): Promise<AdvisoryAssignment | undefined> {
+    const assignment = this.advisoryAssignments.get(assignmentId);
+    if (!assignment) {
+      return undefined;
+    }
+
+    assignment.revokedAt = revokedAt;
+    this.pushEvent("AdvisoryAssignmentRevoked", assignment.id, {
+      officeId: assignment.officeId,
+      assignmentId: assignment.id
+    });
+    return { ...assignment, permissions: [...assignment.permissions] };
+  }
+
   async createPortfolio(input: CreatePortfolioInput): Promise<Portfolio> {
     const portfolio: Portfolio = { ...input };
     this.portfolios.set(portfolio.id, portfolio);
@@ -303,7 +453,10 @@ export class InMemoryIdentityStore
         const account = this.accounts.get(portfolio.accountId);
         return Boolean(
           account &&
-            (isAdmin || account.ownerUserId === userId || membershipByAccountId.has(portfolio.accountId))
+            (isAdmin ||
+              account.ownerUserId === userId ||
+              membershipByAccountId.has(portfolio.accountId) ||
+              this.userHasOfficePermission(userId, account.officeId, "ledger.read"))
         );
       })
       .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
@@ -329,7 +482,12 @@ export class InMemoryIdentityStore
       return undefined;
     }
 
-    if (!isAdmin && account.ownerUserId !== userId && !membership) {
+    if (
+      !isAdmin &&
+      account.ownerUserId !== userId &&
+      !membership &&
+      !this.userHasOfficePermission(userId, account.officeId, "ledger.read")
+    ) {
       return undefined;
     }
 
@@ -621,6 +779,67 @@ export class InMemoryIdentityStore
     this.rebuildSnapshots(portfolio.id);
   }
 
+  private userHasOfficePermission(
+    userId: string,
+    officeId: string,
+    permission: "ledger.read"
+  ): boolean {
+    const membership = Array.from(this.officeMembers.values()).find(
+      (entry) => entry.officeId === officeId && entry.userId === userId
+    );
+    return membership ? ROLE_PERMISSION_MATRIX[membership.role].includes(permission) : false;
+  }
+
+  private toTeamSummary(team: AdvisoryTeam): AdvisoryTeamSummary {
+    const members = Array.from(this.advisoryTeamMembers.values())
+      .filter((member) => member.teamId === team.id)
+      .map((member) => {
+        const user = this.users.get(member.userId);
+        return {
+          ...member,
+          userName: user?.name ?? "Unknown user",
+          userEmail: user?.email ?? "unknown@example.com"
+        };
+      })
+      .sort((left, right) => left.userName.localeCompare(right.userName));
+
+    return {
+      ...team,
+      members
+    };
+  }
+
+  private replaceTeamMembers(
+    team: AdvisoryTeam,
+    memberUserIds: string[],
+    createdAt: Date
+  ): void {
+    for (const [id, member] of this.advisoryTeamMembers.entries()) {
+      if (member.teamId === team.id) {
+        this.advisoryTeamMembers.delete(id);
+      }
+    }
+
+    for (const userId of new Set(memberUserIds)) {
+      const officeMembership = Array.from(this.officeMembers.values()).find(
+        (membership) => membership.officeId === team.officeId && membership.userId === userId
+      );
+      if (!officeMembership) {
+        continue;
+      }
+
+      const member: AdvisoryTeamMember = {
+        id: randomUUID(),
+        officeId: team.officeId,
+        teamId: team.id,
+        userId,
+        role: officeMembership.role,
+        createdAt
+      };
+      this.advisoryTeamMembers.set(member.id, member);
+    }
+  }
+
   private toPortfolioSummary(
     portfolio: Portfolio,
     userId: string,
@@ -814,6 +1033,36 @@ export async function createSeededIdentityStore(
       updatedAt: now
     },
     {
+      id: "usr_advisor",
+      email: "advisor@example.com",
+      name: "Advisor User",
+      role: "user",
+      status: "active",
+      passwordHash,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "usr_assistant",
+      email: "assistant@example.com",
+      name: "Assistant User",
+      role: "user",
+      status: "active",
+      passwordHash,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "usr_client",
+      email: "client@example.com",
+      name: "Client Viewer",
+      role: "user",
+      status: "active",
+      passwordHash,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
       id: "usr_user",
       email: "user@example.com",
       name: "Portfolio User",
@@ -868,11 +1117,32 @@ export async function createSeededIdentityStore(
     role: "office_admin",
     createdAt: now
   });
+  store.officeMembers.set("ofm_advisor_main", {
+    id: "ofm_advisor_main",
+    officeId: "ofc_main",
+    userId: "usr_advisor",
+    role: "advisor",
+    createdAt: now
+  });
   store.officeMembers.set("ofm_analyst_main", {
     id: "ofm_analyst_main",
     officeId: "ofc_main",
     userId: "usr_analyst",
     role: "analyst",
+    createdAt: now
+  });
+  store.officeMembers.set("ofm_assistant_main", {
+    id: "ofm_assistant_main",
+    officeId: "ofc_main",
+    userId: "usr_assistant",
+    role: "assistant",
+    createdAt: now
+  });
+  store.officeMembers.set("ofm_client_main", {
+    id: "ofm_client_main",
+    officeId: "ofc_main",
+    userId: "usr_client",
+    role: "client",
     createdAt: now
   });
   store.officeMembers.set("ofm_analyst_private", {
@@ -887,6 +1157,55 @@ export async function createSeededIdentityStore(
     officeId: "ofc_private",
     userId: "usr_other",
     role: "office_admin",
+    createdAt: now
+  });
+
+  store.advisoryTeams.set("team_core_main", {
+    id: "team_core_main",
+    officeId: "ofc_main",
+    name: "Core Advisory Team",
+    description: "Advisor, analyst, and assistant coverage for priority clients.",
+    status: "active",
+    createdAt: now,
+    updatedAt: now
+  });
+  for (const [id, userId] of [
+    ["tm_advisor_main", "usr_advisor"],
+    ["tm_analyst_main", "usr_analyst"],
+    ["tm_assistant_main", "usr_assistant"]
+  ]) {
+    const membership = Array.from(store.officeMembers.values()).find(
+      (entry) => entry.officeId === "ofc_main" && entry.userId === userId
+    );
+    if (membership) {
+      store.advisoryTeamMembers.set(id, {
+        id,
+        officeId: "ofc_main",
+        teamId: "team_core_main",
+        userId,
+        role: membership.role,
+        createdAt: now
+      });
+    }
+  }
+  store.advisoryAssignments.set("asn_core_client_main", {
+    id: "asn_core_client_main",
+    officeId: "ofc_main",
+    resourceType: "client",
+    resourceId: "client_main",
+    teamId: "team_core_main",
+    permissions: ["client.read", "ledger.read", "analytics.read", "reports.request"],
+    createdBy: "usr_user",
+    createdAt: now
+  });
+  store.advisoryAssignments.set("asn_client_viewer_main", {
+    id: "asn_client_viewer_main",
+    officeId: "ofc_main",
+    resourceType: "client",
+    resourceId: "client_main",
+    assigneeUserId: "usr_client",
+    permissions: ["client.read", "reports.request", "notifications.read"],
+    createdBy: "usr_user",
     createdAt: now
   });
 
