@@ -122,6 +122,8 @@ export class CreatePortfolioUseCase {
       id: randomUUID(),
       officeId: account.officeId,
       accountId: input.accountId,
+      clientId: account.clientId,
+      householdId: account.householdId,
       name: input.name.trim(),
       description: input.description?.trim() || undefined,
       baseCurrency: input.baseCurrency.trim().toUpperCase(),

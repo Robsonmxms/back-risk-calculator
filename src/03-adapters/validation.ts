@@ -16,3 +16,19 @@ export function validateBody(schema: ObjectSchema) {
     return next();
   };
 }
+
+export function validateQuery(schema: ObjectSchema) {
+  return (request: Request, _response: Response, next: NextFunction) => {
+    const { error, value } = schema.validate(request.query, {
+      abortEarly: false,
+      stripUnknown: true
+    });
+
+    if (error) {
+      return next(error);
+    }
+
+    (request as Request & { validatedQuery?: unknown }).validatedQuery = value;
+    return next();
+  };
+}

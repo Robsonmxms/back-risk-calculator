@@ -7,6 +7,8 @@ export interface Portfolio {
   id: string;
   officeId: string;
   accountId: string;
+  clientId?: string;
+  householdId?: string;
   name: string;
   description?: string;
   baseCurrency: string;
@@ -64,6 +66,10 @@ export interface PortfolioSummary {
   officeId: string;
   accountId: string;
   accountName: string;
+  clientId?: string;
+  clientName?: string;
+  householdId?: string;
+  householdName?: string;
   name: string;
   description?: string;
   baseCurrency: string;

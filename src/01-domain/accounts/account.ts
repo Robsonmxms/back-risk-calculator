@@ -7,6 +7,8 @@ export type AlertSeverity = "low" | "medium" | "high";
 export interface Account {
   id: string;
   officeId: string;
+  clientId?: string;
+  householdId?: string;
   name: string;
   ownerUserId: string;
   createdAt: Date;
