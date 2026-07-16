@@ -69,9 +69,44 @@ export async function up(knex: Knex): Promise<void> {
     table.index(["office_id", "team_id"]);
   });
 
+  await knex.schema.createTable("households", (table) => {
+    table.uuid("id").primary();
+    table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
+    table.string("name").notNullable();
+    table.enu("status", ["active", "archived"]).notNullable().defaultTo("active");
+    table.timestamps(true, true);
+    table.index(["office_id", "status"]);
+  });
+
+  await knex.schema.createTable("clients", (table) => {
+    table.uuid("id").primary();
+    table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
+    table.uuid("household_id").references("households.id").onDelete("SET NULL");
+    table.string("name").notNullable();
+    table.string("email").notNullable();
+    table.string("phone");
+    table.string("document_label");
+    table.enu("status", ["active", "inactive", "archived"]).notNullable().defaultTo("active");
+    table
+      .enu("onboarding_status", ["invited", "onboarding", "complete", "paused"])
+      .notNullable()
+      .defaultTo("onboarding");
+    table.uuid("advisor_user_id").references("users.id").onDelete("SET NULL");
+    table.string("risk_profile_descriptor").notNullable();
+    table.text("notes");
+    table.timestamp("archived_at");
+    table.timestamps(true, true);
+    table.index(["office_id", "status"]);
+    table.index(["office_id", "advisor_user_id"]);
+    table.index(["office_id", "household_id"]);
+    table.index(["office_id", "onboarding_status"]);
+  });
+
   await knex.schema.createTable("accounts", (table) => {
     table.uuid("id").primary();
     table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
+    table.uuid("client_id").references("clients.id").onDelete("SET NULL");
+    table.uuid("household_id").references("households.id").onDelete("SET NULL");
     table.string("name").notNullable();
     table.uuid("owner_user_id").notNullable().references("users.id");
     table.timestamps(true, true);
@@ -113,6 +148,8 @@ export async function down(knex: Knex): Promise<void> {
   await knex.schema.dropTableIfExists("refresh_tokens");
   await knex.schema.dropTableIfExists("account_members");
   await knex.schema.dropTableIfExists("accounts");
+  await knex.schema.dropTableIfExists("clients");
+  await knex.schema.dropTableIfExists("households");
   await knex.schema.dropTableIfExists("advisory_assignments");
   await knex.schema.dropTableIfExists("advisory_team_members");
   await knex.schema.dropTableIfExists("advisory_teams");

@@ -11,6 +11,14 @@ import {
   AssignmentResourceType,
   PermissionKey
 } from "../../01-domain/advisory/advisory-team";
+import {
+  ClientDetail,
+  ClientOnboardingStatus,
+  ClientStatus,
+  ClientSummary,
+  Household,
+  HouseholdStatus
+} from "../../01-domain/clients/client";
 import { User, UserRole } from "../../01-domain/users/user";
 import {
   Portfolio,
@@ -122,10 +130,85 @@ export interface AdvisoryTeamRepository {
   revokeAssignment(assignmentId: string, revokedAt: Date): Promise<AdvisoryAssignment | undefined>;
 }
 
+export interface ClientFilters {
+  search?: string;
+  status?: ClientStatus;
+  advisorUserId?: string;
+  householdId?: string;
+  onboardingStatus?: ClientOnboardingStatus;
+}
+
+export interface CreateClientInput {
+  id: string;
+  officeId: string;
+  householdId?: string;
+  name: string;
+  email: string;
+  phone?: string;
+  documentLabel?: string;
+  status: ClientStatus;
+  onboardingStatus: ClientOnboardingStatus;
+  advisorUserId?: string;
+  riskProfileDescriptor: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpdateClientInput {
+  householdId?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  documentLabel?: string;
+  status?: ClientStatus;
+  onboardingStatus?: ClientOnboardingStatus;
+  advisorUserId?: string;
+  riskProfileDescriptor?: string;
+  notes?: string;
+  updatedAt: Date;
+  archivedAt?: Date;
+}
+
+export interface CreateHouseholdInput {
+  id: string;
+  officeId: string;
+  name: string;
+  status: HouseholdStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpdateHouseholdInput {
+  name?: string;
+  status?: HouseholdStatus;
+  updatedAt: Date;
+}
+
+export interface ClientRepository {
+  listClients(
+    officeId: string,
+    filters: ClientFilters,
+    visibleClientIds?: Set<string>
+  ): Promise<ClientSummary[]>;
+  findClientById(clientId: string): Promise<ClientDetail | undefined>;
+  createClient(input: CreateClientInput): Promise<ClientDetail>;
+  updateClient(clientId: string, input: UpdateClientInput): Promise<ClientDetail | undefined>;
+  listHouseholds(officeId: string): Promise<Household[]>;
+  findHouseholdById(householdId: string): Promise<Household | undefined>;
+  createHousehold(input: CreateHouseholdInput): Promise<Household>;
+  updateHousehold(
+    householdId: string,
+    input: UpdateHouseholdInput
+  ): Promise<Household | undefined>;
+}
+
 export interface CreatePortfolioInput {
   id: string;
   officeId: string;
   accountId: string;
+  clientId?: string;
+  householdId?: string;
   name: string;
   description?: string;
   baseCurrency: string;

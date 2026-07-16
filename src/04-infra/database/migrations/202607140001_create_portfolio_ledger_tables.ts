@@ -5,12 +5,16 @@ export async function up(knex: Knex): Promise<void> {
     table.uuid("id").primary();
     table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
     table.uuid("account_id").notNullable().references("accounts.id").onDelete("CASCADE");
+    table.uuid("client_id").references("clients.id").onDelete("SET NULL");
+    table.uuid("household_id").references("households.id").onDelete("SET NULL");
     table.string("name").notNullable();
     table.text("description");
     table.string("base_currency", 3).notNullable();
     table.timestamps(true, true);
     table.index(["office_id", "updated_at"]);
     table.index(["account_id", "updated_at"]);
+    table.index(["client_id", "updated_at"]);
+    table.index(["household_id", "updated_at"]);
   });
 
   await knex.schema.createTable("transactions", (table) => {

@@ -13,6 +13,12 @@ import {
   AssignmentResourceType
 } from "../../01-domain/advisory/advisory-team";
 import {
+  ClientDetail,
+  ClientProfile,
+  ClientSummary,
+  Household
+} from "../../01-domain/clients/client";
+import {
   Portfolio,
   PortfolioDetail,
   PortfolioOutboxEvent,
@@ -30,6 +36,10 @@ import { User } from "../../01-domain/users/user";
 import {
   AccountRepository,
   AdvisoryTeamRepository,
+  ClientFilters,
+  ClientRepository,
+  CreateClientInput,
+  CreateHouseholdInput,
   CreateAdvisoryAssignmentInput,
   CreateAdvisoryTeamInput,
   CreatePortfolioInput,
@@ -43,6 +53,8 @@ import {
   RefreshTokenRepository,
   RefreshTokenRevocationReason,
   UpdateAdvisoryTeamInput,
+  UpdateClientInput,
+  UpdateHouseholdInput,
   UpdatePortfolioInput,
   UserRepository
 } from "../../02-application/ports/repositories";
@@ -67,6 +79,7 @@ export class InMemoryIdentityStore
     AccountRepository,
     OfficeRepository,
     AdvisoryTeamRepository,
+    ClientRepository,
     RefreshTokenRepository,
     PortfolioRepository,
     PortfolioMarketDataProjection,
@@ -78,6 +91,8 @@ export class InMemoryIdentityStore
   readonly advisoryTeams = new Map<string, AdvisoryTeam>();
   readonly advisoryTeamMembers = new Map<string, AdvisoryTeamMember>();
   readonly advisoryAssignments = new Map<string, AdvisoryAssignment>();
+  readonly households = new Map<string, Household>();
+  readonly clients = new Map<string, ClientProfile>();
   readonly accounts = new Map<string, Account>();
   readonly accountMembers = new Map<string, AccountMember>();
   readonly portfolioSnapshots = new Map<string, PortfolioAccountSnapshot>();
@@ -400,6 +415,146 @@ export class InMemoryIdentityStore
       assignmentId: assignment.id
     });
     return { ...assignment, permissions: [...assignment.permissions] };
+  }
+
+  async listClients(
+    officeId: string,
+    filters: ClientFilters,
+    visibleClientIds?: Set<string>
+  ): Promise<ClientSummary[]> {
+    const search = filters.search?.trim().toLowerCase();
+    return Array.from(this.clients.values())
+      .filter((client) => client.officeId === officeId)
+      .filter((client) => !visibleClientIds || visibleClientIds.has(client.id))
+      .filter((client) => !filters.status || client.status === filters.status)
+      .filter(
+        (client) =>
+          !filters.onboardingStatus || client.onboardingStatus === filters.onboardingStatus
+      )
+      .filter((client) => !filters.advisorUserId || client.advisorUserId === filters.advisorUserId)
+      .filter((client) => !filters.householdId || client.householdId === filters.householdId)
+      .filter((client) => {
+        if (!search) {
+          return true;
+        }
+        return [client.name, client.email, client.documentLabel ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(search);
+      })
+      .map((client) => this.toClientSummary(client))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  async findClientById(clientId: string): Promise<ClientDetail | undefined> {
+    const client = this.clients.get(clientId);
+    return client ? this.toClientDetail(client) : undefined;
+  }
+
+  async createClient(input: CreateClientInput): Promise<ClientDetail> {
+    const client: ClientProfile = { ...input };
+    this.clients.set(client.id, client);
+    this.pushEvent("ClientCreated", client.id, {
+      officeId: client.officeId,
+      clientId: client.id,
+      actorId: input.advisorUserId
+    });
+    return this.toClientDetail(client);
+  }
+
+  async updateClient(
+    clientId: string,
+    input: UpdateClientInput
+  ): Promise<ClientDetail | undefined> {
+    const client = this.clients.get(clientId);
+    if (!client) {
+      return undefined;
+    }
+
+    if (input.householdId !== undefined) {
+      client.householdId = input.householdId;
+    }
+    if (input.name !== undefined) {
+      client.name = input.name;
+    }
+    if (input.email !== undefined) {
+      client.email = input.email;
+    }
+    if (input.phone !== undefined) {
+      client.phone = input.phone;
+    }
+    if (input.documentLabel !== undefined) {
+      client.documentLabel = input.documentLabel;
+    }
+    if (input.status !== undefined) {
+      client.status = input.status;
+    }
+    if (input.onboardingStatus !== undefined) {
+      client.onboardingStatus = input.onboardingStatus;
+    }
+    if (input.advisorUserId !== undefined) {
+      client.advisorUserId = input.advisorUserId;
+    }
+    if (input.riskProfileDescriptor !== undefined) {
+      client.riskProfileDescriptor = input.riskProfileDescriptor;
+    }
+    if (input.notes !== undefined) {
+      client.notes = input.notes;
+    }
+    client.updatedAt = input.updatedAt;
+    if (input.archivedAt) {
+      client.archivedAt = input.archivedAt;
+    }
+    this.pushEvent(input.status === "archived" ? "ClientArchived" : "ClientUpdated", client.id, {
+      officeId: client.officeId,
+      clientId: client.id
+    });
+    return this.toClientDetail(client);
+  }
+
+  async listHouseholds(officeId: string): Promise<Household[]> {
+    return Array.from(this.households.values())
+      .filter((household) => household.officeId === officeId)
+      .map((household) => ({ ...household }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  async findHouseholdById(householdId: string): Promise<Household | undefined> {
+    const household = this.households.get(householdId);
+    return household ? { ...household } : undefined;
+  }
+
+  async createHousehold(input: CreateHouseholdInput): Promise<Household> {
+    const household: Household = { ...input };
+    this.households.set(household.id, household);
+    this.pushEvent("HouseholdCreated", household.id, {
+      officeId: household.officeId,
+      householdId: household.id
+    });
+    return { ...household };
+  }
+
+  async updateHousehold(
+    householdId: string,
+    input: UpdateHouseholdInput
+  ): Promise<Household | undefined> {
+    const household = this.households.get(householdId);
+    if (!household) {
+      return undefined;
+    }
+
+    if (input.name !== undefined) {
+      household.name = input.name;
+    }
+    if (input.status !== undefined) {
+      household.status = input.status;
+    }
+    household.updatedAt = input.updatedAt;
+    this.pushEvent("HouseholdUpdated", household.id, {
+      officeId: household.officeId,
+      householdId: household.id
+    });
+    return { ...household };
   }
 
   async createPortfolio(input: CreatePortfolioInput): Promise<Portfolio> {
@@ -779,6 +934,51 @@ export class InMemoryIdentityStore
     this.rebuildSnapshots(portfolio.id);
   }
 
+  private toClientSummary(client: ClientProfile): ClientSummary {
+    const household = client.householdId ? this.households.get(client.householdId) : undefined;
+    const advisor = client.advisorUserId ? this.users.get(client.advisorUserId) : undefined;
+    const accounts = Array.from(this.accounts.values()).filter(
+      (account) => account.clientId === client.id
+    );
+    const portfolioCount = Array.from(this.portfolios.values()).filter(
+      (portfolio) => portfolio.clientId === client.id
+    ).length;
+
+    return {
+      ...client,
+      householdName: household?.name,
+      advisorName: advisor?.name,
+      accountCount: accounts.length,
+      portfolioCount
+    };
+  }
+
+  private toClientDetail(client: ClientProfile): ClientDetail {
+    const summary = this.toClientSummary(client);
+    const accounts = Array.from(this.accounts.values())
+      .filter((account) => account.clientId === client.id)
+      .map((account) => ({
+        id: account.id,
+        officeId: account.officeId,
+        name: account.name,
+        portfolioCount: Array.from(this.portfolios.values()).filter(
+          (portfolio) => portfolio.accountId === account.id
+        ).length
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+    const portfolios = Array.from(this.portfolios.values())
+      .filter((portfolio) => portfolio.clientId === client.id)
+      .map((portfolio) => this.toPortfolioSummary(portfolio, client.advisorUserId ?? "", false))
+      .sort((left, right) => left.name.localeCompare(right.name));
+
+    return {
+      ...summary,
+      household: client.householdId ? this.households.get(client.householdId) : undefined,
+      accounts,
+      portfolios
+    };
+  }
+
   private userHasOfficePermission(
     userId: string,
     officeId: string,
@@ -846,6 +1046,10 @@ export class InMemoryIdentityStore
     isAdmin: boolean
   ): PortfolioSummary {
     const account = this.accounts.get(portfolio.accountId);
+    const clientId = portfolio.clientId ?? account?.clientId;
+    const householdId = portfolio.householdId ?? account?.householdId;
+    const client = clientId ? this.clients.get(clientId) : undefined;
+    const household = householdId ? this.households.get(householdId) : undefined;
     const membership = Array.from(this.accountMembers.values()).find(
       (entry) => entry.accountId === portfolio.accountId && entry.userId === userId
     );
@@ -871,6 +1075,10 @@ export class InMemoryIdentityStore
       officeId: portfolio.officeId,
       accountId: portfolio.accountId,
       accountName: account?.name ?? "Unknown account",
+      clientId,
+      clientName: client?.name,
+      householdId,
+      householdName: household?.name,
       name: portfolio.name,
       description: portfolio.description,
       baseCurrency: portfolio.baseCurrency,
@@ -1209,9 +1417,96 @@ export async function createSeededIdentityStore(
     createdAt: now
   });
 
+  store.households.set("hh_main_silva", {
+    id: "hh_main_silva",
+    officeId: "ofc_main",
+    name: "Silva Family",
+    status: "active",
+    createdAt: now,
+    updatedAt: now
+  });
+  store.households.set("hh_main_founders", {
+    id: "hh_main_founders",
+    officeId: "ofc_main",
+    name: "Founders Group",
+    status: "active",
+    createdAt: now,
+    updatedAt: now
+  });
+  store.households.set("hh_private_allocation", {
+    id: "hh_private_allocation",
+    officeId: "ofc_private",
+    name: "Private Allocation Household",
+    status: "active",
+    createdAt: now,
+    updatedAt: now
+  });
+
+  store.clients.set("client_main", {
+    id: "client_main",
+    officeId: "ofc_main",
+    householdId: "hh_main_silva",
+    name: "Marina Silva",
+    email: "marina.silva@example.com",
+    phone: "+55 11 99999-0101",
+    documentLabel: "CPF ending 0123",
+    status: "active",
+    onboardingStatus: "complete",
+    advisorUserId: "usr_advisor",
+    riskProfileDescriptor: "Balanced growth profile",
+    notes: "Prefers monthly risk reporting.",
+    createdAt: now,
+    updatedAt: now
+  });
+  store.clients.set("client_spouse", {
+    id: "client_spouse",
+    officeId: "ofc_main",
+    householdId: "hh_main_silva",
+    name: "Renato Silva",
+    email: "renato.silva@example.com",
+    phone: "+55 11 99999-0102",
+    documentLabel: "CPF ending 0456",
+    status: "active",
+    onboardingStatus: "onboarding",
+    advisorUserId: "usr_advisor",
+    riskProfileDescriptor: "Income-oriented profile",
+    createdAt: now,
+    updatedAt: now
+  });
+  store.clients.set("client_founder", {
+    id: "client_founder",
+    officeId: "ofc_main",
+    householdId: "hh_main_founders",
+    name: "Alice Founder",
+    email: "alice.founder@example.com",
+    documentLabel: "Passport ending 7788",
+    status: "inactive",
+    onboardingStatus: "paused",
+    advisorUserId: "usr_advisor",
+    riskProfileDescriptor: "Concentrated equity exposure",
+    createdAt: now,
+    updatedAt: now
+  });
+  store.clients.set("client_private", {
+    id: "client_private",
+    officeId: "ofc_private",
+    householdId: "hh_private_allocation",
+    name: "Private Client",
+    email: "private.client@example.com",
+    documentLabel: "CPF ending 9999",
+    status: "active",
+    onboardingStatus: "complete",
+    advisorUserId: "usr_other",
+    riskProfileDescriptor: "Capital preservation profile",
+    createdAt: now,
+    updatedAt: now
+  });
+
   store.addAccount({
     id: "acct_main",
     officeId: "ofc_main",
+    clientId: "client_main",
+    householdId: "hh_main_silva",
     name: "Main Portfolio Account",
     ownerUserId: "usr_user",
     createdAt: now,
@@ -1220,6 +1515,8 @@ export async function createSeededIdentityStore(
   store.addAccount({
     id: "acct_private",
     officeId: "ofc_private",
+    clientId: "client_private",
+    householdId: "hh_private_allocation",
     name: "Private Account",
     ownerUserId: "usr_other",
     createdAt: now,
@@ -1228,6 +1525,8 @@ export async function createSeededIdentityStore(
   store.addAccount({
     id: "acct_income",
     officeId: "ofc_private",
+    clientId: "client_private",
+    householdId: "hh_private_allocation",
     name: "Income Sleeve",
     ownerUserId: "usr_other",
     createdAt: now,
@@ -1541,6 +1840,8 @@ export async function createSeededIdentityStore(
       id: "prt_main",
       officeId: "ofc_main",
       accountId: "acct_main",
+      clientId: "client_main",
+      householdId: "hh_main_silva",
       name: "Core Growth",
       description: "Long-term core allocation with ETFs and large-cap equities.",
       baseCurrency: "USD",
@@ -1602,6 +1903,8 @@ export async function createSeededIdentityStore(
       id: "prt_income",
       officeId: "ofc_private",
       accountId: "acct_income",
+      clientId: "client_private",
+      householdId: "hh_private_allocation",
       name: "Income Sleeve",
       description: "Dividend and bond sleeve monitored by the analyst team.",
       baseCurrency: "USD",
