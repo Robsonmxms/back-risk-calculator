@@ -96,14 +96,15 @@ export class MarketDataIngestionWorker {
       });
 
       await this.portfolios.markMarketDataRefreshSucceeded(asset.symbol, this.now());
+      const portfolioIds = await this.portfolios.listPortfolioIdsHoldingAsset(asset.symbol);
       await this.events.publish("MarketDataUpdated", asset.id, {
         assetId: asset.id,
         symbol: asset.symbol,
         providerName: this.provider.name,
+        portfolioIds,
         correlationId: job.correlationId
       });
 
-      const portfolioIds = await this.portfolios.listPortfolioIdsHoldingAsset(asset.symbol);
       for (const portfolioId of portfolioIds) {
         await this.events.publish("AnalyticsRequested", portfolioId, {
           portfolioId,

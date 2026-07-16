@@ -9,6 +9,8 @@ import {
 import { buildUserContainer } from "./04-infra/container/UserContainer";
 import { buildPortfolioContainer } from "./04-infra/container/PortfolioContainer";
 import { buildMarketDataContainer } from "./04-infra/container/MarketDataContainer";
+import { buildAnalyticsContainer } from "./04-infra/container/AnalyticsContainer";
+import { buildReportsAlertsContainer } from "./04-infra/container/ReportsAlertsContainer";
 import { createServer } from "./04-infra/server";
 
 export async function createApp(dependencies: AppDependencies = {}) {
@@ -19,7 +21,19 @@ export async function createApp(dependencies: AppDependencies = {}) {
   const adminContainer = buildAdminContainer(shared);
   const accountContainer = buildAccountContainer(shared);
   const portfolioContainer = buildPortfolioContainer(shared);
-  const marketDataContainer = buildMarketDataContainer(shared, dependencies.marketData);
+  const reportsAlertsContainer = buildReportsAlertsContainer(shared, dependencies.reportsAlerts);
+  const marketDataContainer = buildMarketDataContainer(shared, {
+    marketDataEventPublisher: reportsAlertsContainer.eventPublisher,
+    ...dependencies.marketData
+  });
+  const analyticsContainer = buildAnalyticsContainer(
+    shared,
+    marketDataContainer,
+    {
+      analyticsEventPublisher: reportsAlertsContainer.eventPublisher,
+      ...dependencies.analytics
+    }
+  );
 
   const app = createServer({
     authController: authContainer.controller,
@@ -28,6 +42,8 @@ export async function createApp(dependencies: AppDependencies = {}) {
     accountController: accountContainer.controller,
     portfolioController: portfolioContainer.controller,
     marketDataController: marketDataContainer.controller,
+    analyticsController: analyticsContainer.controller,
+    reportsAlertsController: reportsAlertsContainer.controller,
     authenticateAccessTokenUseCase: shared.authenticateAccessTokenUseCase
   });
 
@@ -45,6 +61,10 @@ export async function createApp(dependencies: AppDependencies = {}) {
       listVisiblePortfoliosUseCase: portfolioContainer.useCases.listVisiblePortfoliosUseCase,
       searchMarketAssetsUseCase: marketDataContainer.useCases.searchAssetsUseCase,
       requestMarketDataRefreshUseCase: marketDataContainer.useCases.requestRefreshUseCase,
+      getPortfolioAnalyticsUseCase:
+        analyticsContainer.useCases.getPortfolioAnalyticsUseCase,
+      requestPortfolioAnalyticsRecomputeUseCase:
+        analyticsContainer.useCases.requestPortfolioAnalyticsRecomputeUseCase,
       listUsersUseCase: adminContainer.useCases.listUsersUseCase,
       loginUseCase: authContainer.useCases.loginUseCase,
       logoutUseCase: authContainer.useCases.logoutUseCase,
@@ -56,6 +76,16 @@ export async function createApp(dependencies: AppDependencies = {}) {
       queue: marketDataContainer.queue,
       worker: marketDataContainer.worker,
       scheduler: marketDataContainer.scheduler
+    },
+    analytics: {
+      repository: analyticsContainer.repository,
+      worker: analyticsContainer.worker
+    },
+    reportsAlerts: {
+      repository: reportsAlertsContainer.repository,
+      reportWorker: reportsAlertsContainer.reportWorker,
+      alertEvaluator: reportsAlertsContainer.alertEvaluator,
+      realtimeHub: reportsAlertsContainer.realtimeHub
     },
     metrics: shared.metrics
   };

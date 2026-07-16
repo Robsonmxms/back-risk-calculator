@@ -1,6 +1,7 @@
 import {
   DateRange,
   Dividend,
+  ExchangeRate,
   HistoricalPrice,
   LatestQuote,
   MarketAsset,
@@ -18,6 +19,11 @@ export interface MarketDataProvider {
   getHistoricalPrices(symbol: string, range: DateRange): Promise<HistoricalPrice[]>;
   getDividends(symbol: string, range: DateRange): Promise<Dividend[]>;
   getSplits(symbol: string, range: DateRange): Promise<Split[]>;
+}
+
+export interface CurrencyRateProvider {
+  readonly name: string;
+  getExchangeRate(from: string, to: string): Promise<ExchangeRate>;
 }
 
 export interface MarketDataCache {

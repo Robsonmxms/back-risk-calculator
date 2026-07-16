@@ -6,10 +6,13 @@ Guidance for AI agents working in the backend project.
 
 `back-risk-calculator` is the TypeScript + Express backend for the Investment Portfolio Analytics
 Platform. Today it owns auth, session lifecycle, RBAC, current-user lookup, admin user listing,
-and account-level analytics summary behavior.
+account access, portfolio ledger, backend-owned market data ingestion, the first analytics risk
+engine behavior, and local in-process reports, alerts, notifications, and realtime delivery.
 
-The wider platform scope in root specs still exists as roadmap, but workers, queues, market data
-ingestion, reports, alerts, and realtime are not implemented in this repository yet.
+The wider platform scope in root specs still exists as roadmap. Durable PostgreSQL runtime
+repositories for every module, external worker/queue infrastructure, production object storage, and
+hardened realtime operations are not implemented in this repository yet. Market-data, analytics,
+and report workers currently run in-process through local containers/tests.
 
 Specs are not local to this project. Before implementation, read the relevant root macro spec in
 `../.specs/features/<feature>/`.
@@ -22,9 +25,11 @@ Specs are not local to this project. Before implementation, read the relevant ro
 | Language | TypeScript |
 | API | Express 5 |
 | Validation | Joi |
-| Persistence in runtime | In-memory identity/session store |
+| Persistence in runtime | In-memory identity/session/portfolio/market-data/analytics/report/alert/notification stores |
 | Persistence prepared | PostgreSQL + Knex migrations/query builder |
 | Auth | JWT access token, refresh token rotation, Google OAuth |
+| Market data | Backend provider adapters behind ports |
+| Workers | In-process market-data, analytics, report, and alert-evaluation workers |
 | Observability | Lightweight logger and metrics adapters |
 | Containers | Docker Compose for API and PostgreSQL |
 | Tests | Vitest and Supertest integration tests |
@@ -41,7 +46,7 @@ Use inward dependencies:
 - Use cases own orchestration, policies, and security decisions.
 - Domain rules must not import Express, Joi, or infrastructure adapters.
 - Repository files expose contracts/ports. The current concrete implementation is an in-memory
-  identity store.
+  identity, portfolio, market-data, and analytics stores.
 
 ## Source Layout
 
@@ -51,11 +56,13 @@ back-risk-calculator/
     01-domain/
       accounts/
       auth/
+      portfolios/
       users/
     02-application/
       accounts/
       auth/
       errors/
+      portfolios/
       ports/
       users/
     03-adapters/
@@ -71,6 +78,10 @@ back-risk-calculator/
       repositories/
       routes/
       server.ts
+    modules/
+      analytics/
+      market-data/
+      reports-alerts/
     app.ts
   scripts/
   tests/
@@ -82,6 +93,6 @@ back-risk-calculator/
 - Do not create `back-risk-calculator/.specs/`.
 - Follow root macro specs for feature scope and acceptance criteria.
 - Do not put business rules in Express routers, Joi schemas, or infrastructure entry points.
-- Keep README, `.codex/AGENTS.md`, and auth-related root specs aligned with the implemented API.
+- Keep README, `AGENTS.md`, and root specs aligned with the implemented API.
 - Mock/fake external providers in tests.
 - Avoid investment-advice language; the backend analyzes risk and explains metrics.

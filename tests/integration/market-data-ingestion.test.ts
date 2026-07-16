@@ -56,7 +56,11 @@ describe("market data ingestion", () => {
       symbol: "MSFT",
       name: "Microsoft Corporation",
       currency: "USD",
-      providerName: "brapi"
+      providerName: "brapi",
+      latestQuote: expect.objectContaining({
+        price: 420.44,
+        currency: "USD"
+      })
     });
 
     const refreshResponse = await request(app)
@@ -70,7 +74,98 @@ describe("market data ingestion", () => {
       symbol: "MSFT"
     });
     await expect(marketData.queue.listJobs()).resolves.toHaveLength(1);
-    expect(provider.latestQuoteCalls).toBe(0);
+    expect(provider.latestQuoteCalls).toBe(1);
+  });
+
+  it("lists supported exchanges and filters search results by exchange", async () => {
+    const provider = new CountingProvider();
+    const { app } = await createApp({
+      marketData: { marketDataProvider: provider, currencyRateProvider: provider }
+    });
+    const token = await login(app);
+
+    const exchangesResponse = await request(app)
+      .get("/api/v1/market-data/exchanges")
+      .set("Authorization", `Bearer ${token}`);
+    expect(exchangesResponse.status).toBe(200);
+    expect(exchangesResponse.body.data.exchanges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "B3",
+          yahooSuffix: ".SA",
+          currency: "BRL"
+        }),
+        expect.objectContaining({
+          code: "NASDAQ",
+          currency: "USD"
+        })
+      ])
+    );
+
+    const b3SearchResponse = await request(app)
+      .get("/api/v1/market-data/assets/search?q=PETR&exchange=B3")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(b3SearchResponse.status).toBe(200);
+    expect(b3SearchResponse.body.meta.exchange).toBe("B3");
+    expect(b3SearchResponse.body.data.assets).toEqual([
+      expect.objectContaining({
+        symbol: "PETR4",
+        exchange: "B3",
+        currency: "BRL",
+        latestQuote: expect.objectContaining({
+          price: 38.16,
+          currency: "BRL"
+        })
+      })
+    ]);
+  });
+
+  it("calculates transaction trade price from provider data", async () => {
+    const now = () => new Date("2026-07-15T12:00:00.000Z");
+    const provider = new CountingProvider(now);
+    const { app } = await createApp({
+      marketData: { marketDataProvider: provider, marketDataNow: now }
+    });
+    const token = await login(app);
+
+    await request(app)
+      .get("/api/v1/market-data/assets/search?q=MSFT")
+      .set("Authorization", `Bearer ${token}`);
+
+    const latestPriceResponse = await request(app)
+      .get("/api/v1/market-data/assets/asset-msft/trade-price?tradeDate=2026-07-15&quantity=3")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(latestPriceResponse.status).toBe(200);
+    expect(latestPriceResponse.body.data.tradePrice).toMatchObject({
+      assetId: "asset-msft",
+      symbol: "MSFT",
+      tradeDate: "2026-07-15",
+      quantity: 3,
+      unitPrice: 420.44,
+      totalAmount: 1261.32,
+      currency: "USD",
+      priceSource: "latest_quote"
+    });
+    expect(latestPriceResponse.body.meta).toMatchObject({
+      providerName: "brapi",
+      priceSource: "latest_quote"
+    });
+
+    const historicalPriceResponse = await request(app)
+      .get("/api/v1/market-data/assets/asset-msft/trade-price?tradeDate=2026-07-14&quantity=2")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(historicalPriceResponse.status).toBe(200);
+    expect(historicalPriceResponse.body.data.tradePrice).toMatchObject({
+      unitPrice: 420.44,
+      totalAmount: 840.88,
+      currency: "USD",
+      priceSource: "historical_close"
+    });
+    expect(provider.latestQuoteCalls).toBe(2);
+    expect(provider.historicalPriceCalls).toBe(1);
   });
 
   it("uses quote and historical caches inside the TTL and keeps historical rows idempotent", async () => {
