@@ -5,6 +5,7 @@ export type PortfolioProcessingState = "ready" | "pending";
 
 export interface Portfolio {
   id: string;
+  officeId: string;
   accountId: string;
   name: string;
   description?: string;
@@ -60,6 +61,7 @@ export interface PortfolioOutboxEvent {
 
 export interface PortfolioSummary {
   id: string;
+  officeId: string;
   accountId: string;
   accountName: string;
   name: string;

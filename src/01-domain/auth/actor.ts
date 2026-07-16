@@ -1,4 +1,5 @@
 import { AccountMembershipSummary } from "../accounts/account";
+import { OfficeMembershipSummary } from "../offices/office";
 import { SafeUser, UserRole } from "../users/user";
 
 export interface Actor {
@@ -6,6 +7,7 @@ export interface Actor {
   email: string;
   name: string;
   role: UserRole;
+  officeMemberships: OfficeMembershipSummary[];
   accountMemberships: AccountMembershipSummary[];
 }
 

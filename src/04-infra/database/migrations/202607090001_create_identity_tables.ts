@@ -12,8 +12,27 @@ export async function up(knex: Knex): Promise<void> {
     table.timestamps(true, true);
   });
 
+  await knex.schema.createTable("offices", (table) => {
+    table.uuid("id").primary();
+    table.string("name").notNullable();
+    table.enu("status", ["active", "disabled"]).notNullable().defaultTo("active");
+    table.timestamps(true, true);
+  });
+
+  await knex.schema.createTable("office_members", (table) => {
+    table.uuid("id").primary();
+    table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
+    table.uuid("user_id").notNullable().references("users.id").onDelete("CASCADE");
+    table
+      .enu("role", ["office_admin", "advisor", "analyst", "assistant", "client"])
+      .notNullable();
+    table.timestamp("created_at").notNullable().defaultTo(knex.fn.now());
+    table.unique(["office_id", "user_id"]);
+  });
+
   await knex.schema.createTable("accounts", (table) => {
     table.uuid("id").primary();
+    table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
     table.string("name").notNullable();
     table.uuid("owner_user_id").notNullable().references("users.id");
     table.timestamps(true, true);
@@ -55,5 +74,7 @@ export async function down(knex: Knex): Promise<void> {
   await knex.schema.dropTableIfExists("refresh_tokens");
   await knex.schema.dropTableIfExists("account_members");
   await knex.schema.dropTableIfExists("accounts");
+  await knex.schema.dropTableIfExists("office_members");
+  await knex.schema.dropTableIfExists("offices");
   await knex.schema.dropTableIfExists("users");
 }

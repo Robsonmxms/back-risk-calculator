@@ -8,12 +8,14 @@ import { PortfolioController } from "../03-adapters/controllers/PortfolioControl
 import { MarketDataController } from "../03-adapters/controllers/MarketDataController";
 import { AnalyticsController } from "../03-adapters/controllers/AnalyticsController";
 import { ReportsAlertsController } from "../03-adapters/controllers/ReportsAlertsController";
+import { OfficeController } from "../03-adapters/controllers/OfficeController";
 import { AuthenticateAccessTokenUseCase } from "../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { registerAccountRoutes } from "./routes/accountRoutes";
 import { registerAdminRoutes } from "./routes/adminRoutes";
 import { registerAnalyticsRoutes } from "./routes/analyticsRoutes";
 import { registerAuthRoutes } from "./routes/authRoutes";
 import { registerMarketDataRoutes } from "./routes/marketDataRoutes";
+import { registerOfficeRoutes } from "./routes/officeRoutes";
 import { registerPortfolioRoutes } from "./routes/portfolioRoutes";
 import { registerReportsAlertsRoutes } from "./routes/reportsAlertsRoutes";
 import { registerUserRoutes } from "./routes/userRoutes";
@@ -27,6 +29,7 @@ export interface ServerDependencies {
   marketDataController: MarketDataController;
   analyticsController: AnalyticsController;
   reportsAlertsController: ReportsAlertsController;
+  officeController: OfficeController;
   authenticateAccessTokenUseCase: AuthenticateAccessTokenUseCase;
 }
 
@@ -51,6 +54,11 @@ export function createServer(dependencies: ServerDependencies) {
   registerAdminRoutes(
     apiRouter,
     dependencies.adminController,
+    dependencies.authenticateAccessTokenUseCase
+  );
+  registerOfficeRoutes(
+    apiRouter,
+    dependencies.officeController,
     dependencies.authenticateAccessTokenUseCase
   );
   registerAccountRoutes(

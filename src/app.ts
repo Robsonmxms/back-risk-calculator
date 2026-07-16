@@ -11,6 +11,7 @@ import { buildPortfolioContainer } from "./04-infra/container/PortfolioContainer
 import { buildMarketDataContainer } from "./04-infra/container/MarketDataContainer";
 import { buildAnalyticsContainer } from "./04-infra/container/AnalyticsContainer";
 import { buildReportsAlertsContainer } from "./04-infra/container/ReportsAlertsContainer";
+import { buildOfficeContainer } from "./04-infra/container/OfficeContainer";
 import { createServer } from "./04-infra/server";
 
 export async function createApp(dependencies: AppDependencies = {}) {
@@ -19,6 +20,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
   const authContainer = buildAuthContainer(shared);
   const userContainer = buildUserContainer(shared);
   const adminContainer = buildAdminContainer(shared);
+  const officeContainer = buildOfficeContainer(shared);
   const accountContainer = buildAccountContainer(shared);
   const portfolioContainer = buildPortfolioContainer(shared);
   const reportsAlertsContainer = buildReportsAlertsContainer(shared, dependencies.reportsAlerts);
@@ -39,6 +41,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
     authController: authContainer.controller,
     userController: userContainer.controller,
     adminController: adminContainer.controller,
+    officeController: officeContainer.controller,
     accountController: accountContainer.controller,
     portfolioController: portfolioContainer.controller,
     marketDataController: marketDataContainer.controller,
@@ -66,6 +69,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
       requestPortfolioAnalyticsRecomputeUseCase:
         analyticsContainer.useCases.requestPortfolioAnalyticsRecomputeUseCase,
       listUsersUseCase: adminContainer.useCases.listUsersUseCase,
+      listOfficesUseCase: officeContainer.useCases.listOfficesUseCase,
       loginUseCase: authContainer.useCases.loginUseCase,
       logoutUseCase: authContainer.useCases.logoutUseCase,
       refreshSessionUseCase: authContainer.useCases.refreshSessionUseCase

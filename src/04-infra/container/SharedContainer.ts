@@ -52,7 +52,11 @@ export async function buildSharedContainer(
   );
   const refreshTokenGenerator = new Sha256RefreshTokenGenerator();
   const googleOAuthVerifier = new ConfigurableGoogleOAuthVerifier(config);
-  const getActorForUserIdUseCase = new GetActorForUserIdUseCase(identityStore, identityStore);
+  const getActorForUserIdUseCase = new GetActorForUserIdUseCase(
+    identityStore,
+    identityStore,
+    identityStore
+  );
   const authenticateAccessTokenUseCase = new AuthenticateAccessTokenUseCase(
     accessTokenService,
     getActorForUserIdUseCase
