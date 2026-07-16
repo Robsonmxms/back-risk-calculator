@@ -125,7 +125,11 @@ export function buildReportsAlertsContainer(
     shared.identityStore,
     notifications
   );
-  const markNotificationReadUseCase = new MarkNotificationReadUseCase(notifications, now);
+  const markNotificationReadUseCase = new MarkNotificationReadUseCase(
+    shared.identityStore,
+    notifications,
+    now
+  );
   const authorizeRealtimeSubscriptionUseCase = new AuthorizeRealtimeSubscriptionUseCase(
     shared.identityStore,
     shared.identityStore

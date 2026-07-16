@@ -47,6 +47,14 @@ export async function up(knex: Knex): Promise<void> {
     table.index(["portfolio_id", "created_at"]);
   });
 
+  await knex.schema.createTable("notification_read_receipts", (table) => {
+    table.uuid("notification_id").notNullable().references("notifications.id").onDelete("CASCADE");
+    table.uuid("user_id").notNullable().references("users.id").onDelete("CASCADE");
+    table.timestamp("read_at", { useTz: true }).notNullable();
+    table.primary(["notification_id", "user_id"]);
+    table.index(["user_id", "read_at"]);
+  });
+
   await knex.schema.createTable("realtime_events", (table) => {
     table.uuid("id").primary();
     table.string("type", 64).notNullable();
@@ -61,6 +69,7 @@ export async function up(knex: Knex): Promise<void> {
 
 export async function down(knex: Knex): Promise<void> {
   await knex.schema.dropTableIfExists("realtime_events");
+  await knex.schema.dropTableIfExists("notification_read_receipts");
   await knex.schema.dropTableIfExists("notifications");
   await knex.schema.dropTableIfExists("alerts");
   await knex.schema.dropTableIfExists("reports");

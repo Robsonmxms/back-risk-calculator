@@ -88,6 +88,7 @@ export class InMemoryRealtimeHub {
     this.metrics.increment("realtime.message.published");
     for (const client of this.clients.values()) {
       if (!this.canReceive(client, saved)) {
+        this.metrics.increment("realtime.message.dropped");
         continue;
       }
       client.response.write(`event: ${saved.type}\n`);
@@ -117,6 +118,9 @@ export class InMemoryRealtimeHub {
   }
 
   private canReceive(client: RealtimeClient, message: RealtimeMessage): boolean {
+    if (message.portfolioId && !client.portfolioId) {
+      return false;
+    }
     if (client.portfolioId && message.portfolioId !== client.portfolioId) {
       return false;
     }

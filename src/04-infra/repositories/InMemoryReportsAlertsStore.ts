@@ -20,6 +20,7 @@ export class InMemoryReportsAlertsStore
   readonly reportFiles = new Map<string, StoredReportFile>();
   readonly alerts = new Map<string, AlertRule>();
   readonly notifications = new Map<string, NotificationRecord>();
+  readonly notificationReadReceipts = new Map<string, Map<string, Date>>();
   readonly realtimeMessages: RealtimeMessage[] = [];
 
   async createReport(job: ReportJob): Promise<ReportJob> {
@@ -184,12 +185,13 @@ export class InMemoryReportsAlertsStore
         return !notification.portfolioId || visiblePortfolioIds.has(notification.portfolioId);
       })
       .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
-      .map((notification) => ({ ...notification }));
+      .map((notification) => this.withActorReadState(notification, input.userId));
   }
 
   async markNotificationRead(
     notificationId: string,
     userId: string,
+    visiblePortfolioIds: string[],
     readAt: Date
   ): Promise<NotificationRecord | undefined> {
     const notification = this.notifications.get(notificationId);
@@ -197,9 +199,23 @@ export class InMemoryReportsAlertsStore
       return undefined;
     }
 
-    notification.status = "read";
-    notification.readAt = readAt;
-    return { ...notification };
+    if (notification.portfolioId && !new Set(visiblePortfolioIds).has(notification.portfolioId)) {
+      return undefined;
+    }
+
+    if (notification.userId) {
+      notification.status = "read";
+      notification.readAt = readAt;
+      return { ...notification };
+    }
+
+    let readReceipts = this.notificationReadReceipts.get(notificationId);
+    if (!readReceipts) {
+      readReceipts = new Map<string, Date>();
+      this.notificationReadReceipts.set(notificationId, readReceipts);
+    }
+    readReceipts.set(userId, readAt);
+    return this.withActorReadState(notification, userId);
   }
 
   async saveRealtimeMessage(message: RealtimeMessage): Promise<RealtimeMessage> {
@@ -212,5 +228,21 @@ export class InMemoryReportsAlertsStore
       ...message,
       payload: { ...message.payload }
     }));
+  }
+
+  private withActorReadState(
+    notification: NotificationRecord,
+    userId: string
+  ): NotificationRecord {
+    if (notification.userId) {
+      return { ...notification };
+    }
+
+    const readAt = this.notificationReadReceipts.get(notification.id)?.get(userId);
+    if (!readAt) {
+      return { ...notification, status: "unread", readAt: undefined };
+    }
+
+    return { ...notification, status: "read", readAt };
   }
 }

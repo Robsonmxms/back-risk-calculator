@@ -182,6 +182,7 @@ export class ListNotificationsUseCase {
 
 export class MarkNotificationReadUseCase {
   constructor(
+    private readonly portfolios: PortfolioRepository,
     private readonly notifications: NotificationRepository,
     private readonly now: () => Date = () => new Date()
   ) {}
@@ -190,6 +191,7 @@ export class MarkNotificationReadUseCase {
     const notification = await this.notifications.markNotificationRead(
       notificationId,
       actor.id,
+      await listVisiblePortfolioIds(actor, this.portfolios),
       this.now()
     );
     if (!notification) {
@@ -210,6 +212,14 @@ export class AuthorizeRealtimeSubscriptionUseCase {
   ) {}
 
   async execute(actor: Actor, portfolioId?: string): Promise<{ portfolioId?: string }> {
+    if (!portfolioId) {
+      throw new ApplicationError(
+        "forbidden",
+        "realtime.portfolio_scope_required",
+        "Realtime subscriptions require a portfolio scope"
+      );
+    }
+
     if (portfolioId) {
       await assertPortfolioReadAccess(actor, portfolioId, this.accounts, this.portfolios);
     }
