@@ -156,6 +156,116 @@ describe("reports, alerts, notifications, and realtime", () => {
     );
   });
 
+  it("denies notification read access for actors without portfolio visibility", async () => {
+    const provider = new ReportsFixtureProvider();
+    const { app, analytics } = await createApp({
+      marketData: { marketDataProvider: provider, currencyRateProvider: provider }
+    });
+    const token = await login(app);
+    const otherToken = await login(app, "other@example.com");
+
+    const alertResponse = await request(app)
+      .post("/api/v1/portfolios/prt_main/alerts")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        title: "Analytics protegido",
+        severity: "medium",
+        condition: { eventType: "analytics.updated" }
+      });
+
+    await request(app)
+      .post("/api/v1/portfolios/prt_main/analytics/recompute")
+      .set("Authorization", `Bearer ${token}`);
+    await analytics.worker.processNext();
+
+    const notificationsResponse = await request(app)
+      .get("/api/v1/notifications")
+      .set("Authorization", `Bearer ${token}`);
+    const notification = notificationsResponse.body.data.notifications.find(
+      (entry: { sourceId: string }) => entry.sourceId === alertResponse.body.data.id
+    );
+
+    const forbiddenResponse = await request(app)
+      .patch(`/api/v1/notifications/${notification.id}/read`)
+      .set("Authorization", `Bearer ${otherToken}`);
+    expect(forbiddenResponse.status).toBe(404);
+    expect(forbiddenResponse.body.error.code).toBe("notification.not_found");
+    expect(forbiddenResponse.body.data).toBeUndefined();
+
+    const afterDeniedResponse = await request(app)
+      .get("/api/v1/notifications")
+      .set("Authorization", `Bearer ${token}`);
+    expect(afterDeniedResponse.body.data.notifications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: notification.id,
+          status: "unread"
+        })
+      ])
+    );
+  });
+
+  it("keeps shared alert notification read state isolated per actor", async () => {
+    const provider = new ReportsFixtureProvider();
+    const { app, analytics } = await createApp({
+      marketData: { marketDataProvider: provider, currencyRateProvider: provider }
+    });
+    const token = await login(app);
+    const analystToken = await login(app, "analyst@example.com");
+
+    const alertResponse = await request(app)
+      .post("/api/v1/portfolios/prt_main/alerts")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        title: "Analytics compartilhado",
+        severity: "medium",
+        condition: { eventType: "analytics.updated" }
+      });
+
+    await request(app)
+      .post("/api/v1/portfolios/prt_main/analytics/recompute")
+      .set("Authorization", `Bearer ${token}`);
+    await analytics.worker.processNext();
+
+    const notificationsResponse = await request(app)
+      .get("/api/v1/notifications")
+      .set("Authorization", `Bearer ${token}`);
+    const notification = notificationsResponse.body.data.notifications.find(
+      (entry: { sourceId: string }) => entry.sourceId === alertResponse.body.data.id
+    );
+
+    const readResponse = await request(app)
+      .patch(`/api/v1/notifications/${notification.id}/read`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(readResponse.status).toBe(200);
+    expect(readResponse.body.data.status).toBe("read");
+
+    const userNotificationsResponse = await request(app)
+      .get("/api/v1/notifications")
+      .set("Authorization", `Bearer ${token}`);
+    expect(userNotificationsResponse.body.data.notifications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: notification.id,
+          status: "read",
+          readAt: expect.any(String)
+        })
+      ])
+    );
+
+    const analystNotificationsResponse = await request(app)
+      .get("/api/v1/notifications")
+      .set("Authorization", `Bearer ${analystToken}`);
+    expect(analystNotificationsResponse.body.data.notifications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: notification.id,
+          status: "unread"
+        })
+      ])
+    );
+  });
+
   it("evaluates alerts after market-data updates for affected portfolios", async () => {
     const provider = new ReportsFixtureProvider();
     const { app, marketData } = await createApp({
@@ -213,6 +323,12 @@ describe("reports, alerts, notifications, and realtime", () => {
       .get("/api/v1/realtime?portfolioId=prt_main&once=true")
       .set("Authorization", `Bearer ${otherToken}`);
     expect(forbiddenResponse.status).toBe(403);
+
+    const unscopedResponse = await request(app)
+      .get("/api/v1/realtime?once=true")
+      .set("Authorization", `Bearer ${token}`);
+    expect(unscopedResponse.status).toBe(403);
+    expect(unscopedResponse.body.error.code).toBe("realtime.portfolio_scope_required");
   });
 });
 

@@ -51,6 +51,7 @@ export interface NotificationRepository {
   markNotificationRead(
     notificationId: string,
     userId: string,
+    visiblePortfolioIds: string[],
     readAt: Date
   ): Promise<NotificationRecord | undefined>;
 }
