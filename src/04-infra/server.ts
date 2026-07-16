@@ -12,6 +12,7 @@ import { OfficeController } from "../03-adapters/controllers/OfficeController";
 import { ClientController } from "../03-adapters/controllers/ClientController";
 import { WorkbenchController } from "../03-adapters/controllers/WorkbenchController";
 import { ComplianceController } from "../03-adapters/controllers/ComplianceController";
+import { ReportDeliveryController } from "../03-adapters/controllers/ReportDeliveryController";
 import { AuthenticateAccessTokenUseCase } from "../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { registerAccountRoutes } from "./routes/accountRoutes";
 import { registerAdminRoutes } from "./routes/adminRoutes";
@@ -22,6 +23,7 @@ import { registerOfficeRoutes } from "./routes/officeRoutes";
 import { registerClientRoutes } from "./routes/clientRoutes";
 import { registerWorkbenchRoutes } from "./routes/workbenchRoutes";
 import { registerComplianceRoutes } from "./routes/complianceRoutes";
+import { registerReportDeliveryRoutes } from "./routes/reportDeliveryRoutes";
 import { registerPortfolioRoutes } from "./routes/portfolioRoutes";
 import { registerReportsAlertsRoutes } from "./routes/reportsAlertsRoutes";
 import { registerUserRoutes } from "./routes/userRoutes";
@@ -39,6 +41,7 @@ export interface ServerDependencies {
   clientController: ClientController;
   workbenchController: WorkbenchController;
   complianceController: ComplianceController;
+  reportDeliveryController: ReportDeliveryController;
   authenticateAccessTokenUseCase: AuthenticateAccessTokenUseCase;
 }
 
@@ -83,6 +86,11 @@ export function createServer(dependencies: ServerDependencies) {
   registerComplianceRoutes(
     apiRouter,
     dependencies.complianceController,
+    dependencies.authenticateAccessTokenUseCase
+  );
+  registerReportDeliveryRoutes(
+    apiRouter,
+    dependencies.reportDeliveryController,
     dependencies.authenticateAccessTokenUseCase
   );
   registerAccountRoutes(
