@@ -387,7 +387,12 @@ export class ConvertCurrencyUseCase {
     const to = input.to.trim().toUpperCase();
     const startedAt = this.now().getTime();
 
-    if (!/^[A-Z]{3}$/.test(from) || !/^[A-Z]{3}$/.test(to) || input.amount <= 0) {
+    if (
+      !/^[A-Z]{3}$/.test(from) ||
+      !/^[A-Z]{3}$/.test(to) ||
+      !Number.isFinite(input.amount) ||
+      input.amount <= 0
+    ) {
       throw new ApplicationError(
         "invalid",
         "market_data.invalid_currency_conversion",

@@ -17,6 +17,7 @@ async function login(app: Parameters<typeof request>[0], email = "user@example.c
 class CountingProvider extends BrapiMarketDataProvider {
   latestQuoteCalls = 0;
   historicalPriceCalls = 0;
+  currencyRateCalls = 0;
   shouldFailLatestQuote = false;
 
   async getLatestQuote(symbol: string) {
@@ -31,6 +32,11 @@ class CountingProvider extends BrapiMarketDataProvider {
   async getHistoricalPrices(symbol: string, range: DateRange) {
     this.historicalPriceCalls += 1;
     return super.getHistoricalPrices(symbol, range);
+  }
+
+  async getExchangeRate(from: string, to: string) {
+    this.currencyRateCalls += 1;
+    return super.getExchangeRate(from, to);
   }
 }
 
@@ -118,6 +124,53 @@ describe("market data ingestion", () => {
           currency: "BRL"
         })
       })
+    ]);
+  });
+
+  it("validates FX conversion amounts before calling providers", async () => {
+    const provider = new CountingProvider();
+    const { app, marketData } = await createApp({
+      marketData: { marketDataProvider: provider, currencyRateProvider: provider }
+    });
+    const token = await login(app);
+
+    const validResponse = await request(app)
+      .get("/api/v1/market-data/fx-rate?from=USD&to=BRL&amount=2.5")
+      .set("Authorization", `Bearer ${token}`);
+    expect(validResponse.status).toBe(200);
+    expect(validResponse.body.data.conversion).toEqual(
+      expect.objectContaining({
+        from: "USD",
+        to: "BRL",
+        amount: 2.5,
+        convertedAmount: expect.any(Number)
+      })
+    );
+
+    const defaultAmountResponse = await request(app)
+      .get("/api/v1/market-data/fx-rate?from=USD&to=BRL")
+      .set("Authorization", `Bearer ${token}`);
+    expect(defaultAmountResponse.status).toBe(200);
+    expect(defaultAmountResponse.body.data.conversion.amount).toBe(1);
+
+    for (const amount of ["abc", "NaN", "Infinity", "0", "-1"]) {
+      const invalidResponse = await request(app)
+        .get(`/api/v1/market-data/fx-rate?from=USD&to=BRL&amount=${amount}`)
+        .set("Authorization", `Bearer ${token}`);
+      expect(invalidResponse.status).toBe(400);
+      expect(invalidResponse.body.error.code).toBe(
+        "market_data.invalid_currency_conversion"
+      );
+    }
+
+    expect(provider.currencyRateCalls).toBe(2);
+    const currencyRequests = (await marketData.repository.listProviderRequests()).filter(
+      (entry) => entry.operation === "currency_rate"
+    );
+    expect(currencyRequests).toHaveLength(2);
+    expect(currencyRequests).toEqual([
+      expect.objectContaining({ status: "succeeded" }),
+      expect.objectContaining({ status: "succeeded" })
     ]);
   });
 
