@@ -20,6 +20,17 @@ import {
   HouseholdStatus
 } from "../../01-domain/clients/client";
 import {
+  AuditEvent,
+  AuditExportFormat,
+  AuditExportJob,
+  AuditOutcome,
+  AuditResourceType,
+  AuditSeverity,
+  SafeAuditMetadata,
+  SupervisionReview,
+  SupervisionReviewStatus
+} from "../../01-domain/compliance/audit";
+import {
   ReviewItem,
   ReviewItemSeverity,
   ReviewItemStatus,
@@ -257,6 +268,85 @@ export interface WorkbenchRepository {
     reviewItemId: string,
     input: UpdateReviewItemInput
   ): Promise<ReviewItem | undefined>;
+}
+
+export interface AuditEventFilters {
+  actorId?: string;
+  action?: string;
+  outcome?: AuditOutcome;
+  severity?: AuditSeverity;
+  resourceType?: AuditResourceType;
+  resourceId?: string;
+  clientId?: string;
+  portfolioId?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AuditEventPage {
+  events: AuditEvent[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AppendAuditEventInput {
+  id: string;
+  officeId: string;
+  actorId?: string;
+  actorName?: string;
+  action: string;
+  resourceType: AuditResourceType;
+  resourceId: string;
+  clientId?: string;
+  portfolioId?: string;
+  outcome: AuditOutcome;
+  severity: AuditSeverity;
+  reviewRequired: boolean;
+  metadata: SafeAuditMetadata;
+  createdAt: Date;
+}
+
+export interface SupervisionReviewFilters {
+  status?: SupervisionReviewStatus;
+  severity?: AuditSeverity;
+  assignedToUserId?: string;
+}
+
+export interface UpdateSupervisionReviewInput {
+  status?: SupervisionReviewStatus;
+  assignedToUserId?: string;
+  resolutionComment?: string;
+  updatedAt: Date;
+  resolvedAt?: Date;
+}
+
+export interface CreateAuditExportInput {
+  id: string;
+  officeId: string;
+  requestedBy: string;
+  format: AuditExportFormat;
+  filters: SafeAuditMetadata;
+  eventCount: number;
+  createdAt: Date;
+}
+
+export interface AuditRepository {
+  listAuditEvents(officeId: string, filters: AuditEventFilters): Promise<AuditEventPage>;
+  findAuditEventById(auditEventId: string): Promise<AuditEvent | undefined>;
+  appendAuditEvent(input: AppendAuditEventInput): Promise<AuditEvent>;
+  listSupervisionReviews(
+    officeId: string,
+    filters: SupervisionReviewFilters
+  ): Promise<SupervisionReview[]>;
+  findSupervisionReviewById(reviewId: string): Promise<SupervisionReview | undefined>;
+  updateSupervisionReview(
+    reviewId: string,
+    input: UpdateSupervisionReviewInput
+  ): Promise<SupervisionReview | undefined>;
+  createAuditExport(input: CreateAuditExportInput): Promise<AuditExportJob>;
 }
 
 export interface CreatePortfolioInput {
