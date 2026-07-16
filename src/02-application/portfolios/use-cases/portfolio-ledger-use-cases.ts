@@ -60,10 +60,11 @@ export class CreatePortfolioUseCase {
     actor: Actor,
     input: { accountId: string; name: string; description?: string; baseCurrency: string }
   ) {
-    await getPortfolioAccess(actor, input.accountId, this.accounts, "manage");
+    const { account } = await getPortfolioAccess(actor, input.accountId, this.accounts, "manage");
 
     const created = await this.portfolios.createPortfolio({
       id: randomUUID(),
+      officeId: account.officeId,
       accountId: input.accountId,
       name: input.name.trim(),
       description: input.description?.trim() || undefined,

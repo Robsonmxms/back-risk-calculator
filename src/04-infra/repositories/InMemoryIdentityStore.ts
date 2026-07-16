@@ -14,6 +14,11 @@ import {
   PortfolioSummary,
   PortfolioTransaction
 } from "../../01-domain/portfolios/portfolio";
+import {
+  Office,
+  OfficeMembership,
+  OfficeMembershipSummary
+} from "../../01-domain/offices/office";
 import { User } from "../../01-domain/users/user";
 import {
   AccountRepository,
@@ -21,6 +26,7 @@ import {
   CreatePortfolioTransactionInput,
   CreateRefreshTokenInput,
   CreateUserInput,
+  OfficeRepository,
   PortfolioRepository,
   PortfolioTransactionIdempotencyRecord,
   RefreshTokenRecord,
@@ -47,12 +53,15 @@ export class InMemoryIdentityStore
   implements
     UserRepository,
     AccountRepository,
+    OfficeRepository,
     RefreshTokenRepository,
     PortfolioRepository,
     PortfolioMarketDataProjection,
     AnalyticsPortfolioProjection
 {
   readonly users = new Map<string, User>();
+  readonly offices = new Map<string, Office>();
+  readonly officeMembers = new Map<string, OfficeMembership>();
   readonly accounts = new Map<string, Account>();
   readonly accountMembers = new Map<string, AccountMember>();
   readonly portfolioSnapshots = new Map<string, PortfolioAccountSnapshot>();
@@ -128,6 +137,7 @@ export class InMemoryIdentityStore
         const account = this.accounts.get(membership.accountId);
         return {
           accountId: membership.accountId,
+          officeId: account?.officeId ?? "ofc_unknown",
           accountName: account?.name ?? "Unknown account",
           role: membership.role
         };
@@ -158,6 +168,90 @@ export class InMemoryIdentityStore
     return this.portfolioSnapshots.get(accountId);
   }
 
+  async listOfficesForUser(
+    userId: string,
+    isAdmin: boolean
+  ): Promise<OfficeMembershipSummary[]> {
+    const visibleOfficeIds = isAdmin
+      ? new Set(this.offices.keys())
+      : new Set(
+          Array.from(this.officeMembers.values())
+            .filter((membership) => membership.userId === userId)
+            .map((membership) => membership.officeId)
+        );
+
+    return Array.from(visibleOfficeIds)
+      .map((officeId) => {
+        const office = this.offices.get(officeId);
+        if (!office) {
+          return undefined;
+        }
+        const membership = Array.from(this.officeMembers.values()).find(
+          (entry) => entry.officeId === officeId && entry.userId === userId
+        );
+        return {
+          officeId,
+          officeName: office.name,
+          role: membership?.role ?? "office_admin"
+        };
+      })
+      .filter((entry): entry is OfficeMembershipSummary => Boolean(entry))
+      .sort((left, right) => left.officeName.localeCompare(right.officeName));
+  }
+
+  async findOfficeById(officeId: string): Promise<Office | undefined> {
+    const office = this.offices.get(officeId);
+    return office ? { ...office } : undefined;
+  }
+
+  async findOfficeMembership(
+    officeId: string,
+    userId: string
+  ): Promise<OfficeMembership | undefined> {
+    const membership = Array.from(this.officeMembers.values()).find(
+      (entry) => entry.officeId === officeId && entry.userId === userId
+    );
+    return membership ? { ...membership } : undefined;
+  }
+
+  async listOfficeMembers(officeId: string): Promise<Array<OfficeMembership & {
+    userName: string;
+    userEmail: string;
+  }>> {
+    return Array.from(this.officeMembers.values())
+      .filter((membership) => membership.officeId === officeId)
+      .map((membership) => {
+        const user = this.users.get(membership.userId);
+        return {
+          ...membership,
+          userName: user?.name ?? "Unknown user",
+          userEmail: user?.email ?? "unknown@example.com"
+        };
+      })
+      .sort((left, right) => left.userName.localeCompare(right.userName));
+  }
+
+  async updateOffice(
+    officeId: string,
+    input: Partial<Pick<Office, "name" | "status" | "updatedAt">>
+  ): Promise<Office | undefined> {
+    const office = this.offices.get(officeId);
+    if (!office) {
+      return undefined;
+    }
+
+    if (input.name !== undefined) {
+      office.name = input.name;
+    }
+    if (input.status !== undefined) {
+      office.status = input.status;
+    }
+    if (input.updatedAt !== undefined) {
+      office.updatedAt = input.updatedAt;
+    }
+    return { ...office };
+  }
+
   async createPortfolio(input: CreatePortfolioInput): Promise<Portfolio> {
     const portfolio: Portfolio = { ...input };
     this.portfolios.set(portfolio.id, portfolio);
@@ -171,6 +265,7 @@ export class InMemoryIdentityStore
     });
     this.rebuildSnapshots(portfolio.id);
     this.pushEvent("PortfolioCreated", portfolio.id, {
+      officeId: portfolio.officeId,
       portfolioId: portfolio.id,
       accountId: portfolio.accountId
     });
@@ -188,7 +283,10 @@ export class InMemoryIdentityStore
     }
     portfolio.description = input.description;
     portfolio.updatedAt = input.updatedAt;
-    this.pushEvent("PortfolioUpdated", portfolio.id, { portfolioId: portfolio.id });
+    this.pushEvent("PortfolioUpdated", portfolio.id, {
+      officeId: portfolio.officeId,
+      portfolioId: portfolio.id
+    });
     return portfolio;
   }
 
@@ -297,19 +395,24 @@ export class InMemoryIdentityStore
     });
     this.rebuildSnapshots(input.portfolioId);
     this.pushEvent("TransactionRecorded", transaction.id, {
+      officeId: portfolio.officeId,
       portfolioId: transaction.portfolioId,
       transactionId: transaction.id
     });
     this.pushEvent("PositionProjectionUpdated", transaction.portfolioId, {
+      officeId: portfolio.officeId,
       portfolioId: transaction.portfolioId
     });
     this.pushEvent("PortfolioSnapshotCreated", transaction.portfolioId, {
+      officeId: portfolio.officeId,
       portfolioId: transaction.portfolioId
     });
     this.pushEvent("AnalyticsRequested", transaction.portfolioId, {
+      officeId: portfolio.officeId,
       portfolioId: transaction.portfolioId
     });
     this.pushEvent("MarketDataRequested", transaction.portfolioId, {
+      officeId: portfolio.officeId,
       portfolioId: transaction.portfolioId
     });
 
@@ -546,6 +649,7 @@ export class InMemoryIdentityStore
 
     return {
       id: portfolio.id,
+      officeId: portfolio.officeId,
       accountId: portfolio.accountId,
       accountName: account?.name ?? "Unknown account",
       name: portfolio.name,
@@ -735,8 +839,60 @@ export async function createSeededIdentityStore(
     store.users.set(user.id, user);
   }
 
+  store.offices.set("ofc_main", {
+    id: "ofc_main",
+    name: "Orion Advisory",
+    status: "active",
+    createdAt: now,
+    updatedAt: now
+  });
+  store.offices.set("ofc_private", {
+    id: "ofc_private",
+    name: "Private Allocation Desk",
+    status: "active",
+    createdAt: now,
+    updatedAt: now
+  });
+
+  store.officeMembers.set("ofm_admin_main", {
+    id: "ofm_admin_main",
+    officeId: "ofc_main",
+    userId: "usr_admin",
+    role: "office_admin",
+    createdAt: now
+  });
+  store.officeMembers.set("ofm_user_main", {
+    id: "ofm_user_main",
+    officeId: "ofc_main",
+    userId: "usr_user",
+    role: "office_admin",
+    createdAt: now
+  });
+  store.officeMembers.set("ofm_analyst_main", {
+    id: "ofm_analyst_main",
+    officeId: "ofc_main",
+    userId: "usr_analyst",
+    role: "analyst",
+    createdAt: now
+  });
+  store.officeMembers.set("ofm_analyst_private", {
+    id: "ofm_analyst_private",
+    officeId: "ofc_private",
+    userId: "usr_analyst",
+    role: "analyst",
+    createdAt: now
+  });
+  store.officeMembers.set("ofm_other_private", {
+    id: "ofm_other_private",
+    officeId: "ofc_private",
+    userId: "usr_other",
+    role: "office_admin",
+    createdAt: now
+  });
+
   store.addAccount({
     id: "acct_main",
+    officeId: "ofc_main",
     name: "Main Portfolio Account",
     ownerUserId: "usr_user",
     createdAt: now,
@@ -744,6 +900,7 @@ export async function createSeededIdentityStore(
   });
   store.addAccount({
     id: "acct_private",
+    officeId: "ofc_private",
     name: "Private Account",
     ownerUserId: "usr_other",
     createdAt: now,
@@ -751,6 +908,7 @@ export async function createSeededIdentityStore(
   });
   store.addAccount({
     id: "acct_income",
+    officeId: "ofc_private",
     name: "Income Sleeve",
     ownerUserId: "usr_other",
     createdAt: now,
@@ -788,6 +946,7 @@ export async function createSeededIdentityStore(
 
   store.addPortfolioSnapshot({
     accountId: "acct_main",
+    officeId: "ofc_main",
     accountName: "Main Portfolio Account",
     membershipRole: "owner",
     currency: "USD",
@@ -932,6 +1091,7 @@ export async function createSeededIdentityStore(
 
   store.addPortfolioSnapshot({
     accountId: "acct_income",
+    officeId: "ofc_private",
     accountName: "Income Sleeve",
     membershipRole: "analyst",
     currency: "USD",
@@ -1060,6 +1220,7 @@ export async function createSeededIdentityStore(
   store.addLedgerPortfolio(
     {
       id: "prt_main",
+      officeId: "ofc_main",
       accountId: "acct_main",
       name: "Core Growth",
       description: "Long-term core allocation with ETFs and large-cap equities.",
@@ -1120,6 +1281,7 @@ export async function createSeededIdentityStore(
   store.addLedgerPortfolio(
     {
       id: "prt_income",
+      officeId: "ofc_private",
       accountId: "acct_income",
       name: "Income Sleeve",
       description: "Dividend and bond sleeve monitored by the analyst team.",

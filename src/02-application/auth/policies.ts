@@ -25,6 +25,8 @@ export function assertCanReadAccountAnalytics(
     throw new ApplicationError("not_found", "account.not_found", "Account not found");
   }
 
+  assertOfficeAccess(actor, account);
+
   if (account.ownerUserId === actor.id) {
     return;
   }
@@ -53,6 +55,8 @@ export function assertCanReadAccountLedger(
     throw new ApplicationError("not_found", "account.not_found", "Account not found");
   }
 
+  assertOfficeAccess(actor, account);
+
   if (account.ownerUserId === actor.id || membership) {
     return;
   }
@@ -77,6 +81,8 @@ export function assertCanManageAccountLedger(
     throw new ApplicationError("not_found", "account.not_found", "Account not found");
   }
 
+  assertOfficeAccess(actor, account);
+
   if (account.ownerUserId === actor.id || membership?.role === "owner") {
     return;
   }
@@ -85,5 +91,21 @@ export function assertCanManageAccountLedger(
     "forbidden",
     "auth.account_write_denied",
     "Account write access denied"
+  );
+}
+
+function assertOfficeAccess(actor: Actor, account: Account): void {
+  if (actor.role === "admin") {
+    return;
+  }
+
+  if (actor.officeMemberships.some((membership) => membership.officeId === account.officeId)) {
+    return;
+  }
+
+  throw new ApplicationError(
+    "forbidden",
+    "auth.office_access_denied",
+    "Office access denied"
   );
 }

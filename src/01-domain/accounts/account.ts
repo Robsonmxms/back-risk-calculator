@@ -6,6 +6,7 @@ export type AlertSeverity = "low" | "medium" | "high";
 
 export interface Account {
   id: string;
+  officeId: string;
   name: string;
   ownerUserId: string;
   createdAt: Date;
@@ -22,6 +23,7 @@ export interface AccountMember {
 
 export interface AccountMembershipSummary {
   accountId: string;
+  officeId: string;
   accountName: string;
   role: AccountMemberRole;
 }
@@ -91,6 +93,7 @@ export interface AlertSummary {
 
 export interface PortfolioAccountSnapshot {
   accountId: string;
+  officeId: string;
   accountName: string;
   membershipRole: AccountMemberRole;
   currency: string;

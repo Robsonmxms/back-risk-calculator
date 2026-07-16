@@ -1,11 +1,12 @@
 import { Actor } from "../../../01-domain/auth/actor";
 import { ApplicationError } from "../../errors/application-error";
-import { AccountRepository, UserRepository } from "../../ports/repositories";
+import { AccountRepository, OfficeRepository, UserRepository } from "../../ports/repositories";
 
 export class GetActorForUserIdUseCase {
   constructor(
     private readonly users: UserRepository,
-    private readonly accounts: AccountRepository
+    private readonly accounts: AccountRepository,
+    private readonly offices: OfficeRepository
   ) {}
 
   async execute(userId: string): Promise<Actor> {
@@ -23,6 +24,7 @@ export class GetActorForUserIdUseCase {
       email: user.email,
       name: user.name,
       role: user.role,
+      officeMemberships: await this.offices.listOfficesForUser(user.id, user.role === "admin"),
       accountMemberships: await this.accounts.listMembershipsForUser(user.id)
     };
   }

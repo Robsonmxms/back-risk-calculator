@@ -14,6 +14,11 @@ import {
   PortfolioSummary,
   PortfolioTransaction
 } from "../../01-domain/portfolios/portfolio";
+import {
+  Office,
+  OfficeMembership,
+  OfficeMembershipSummary
+} from "../../01-domain/offices/office";
 
 export interface CreateUserInput {
   id: string;
@@ -44,8 +49,26 @@ export interface AccountRepository {
   findPortfolioSnapshotByAccountId(accountId: string): Promise<PortfolioAccountSnapshot | undefined>;
 }
 
+export interface OfficeRepository {
+  listOfficesForUser(userId: string, isAdmin: boolean): Promise<OfficeMembershipSummary[]>;
+  findOfficeById(officeId: string): Promise<Office | undefined>;
+  findOfficeMembership(
+    officeId: string,
+    userId: string
+  ): Promise<OfficeMembership | undefined>;
+  listOfficeMembers(officeId: string): Promise<Array<OfficeMembership & {
+    userName: string;
+    userEmail: string;
+  }>>;
+  updateOffice(
+    officeId: string,
+    input: Partial<Pick<Office, "name" | "status" | "updatedAt">>
+  ): Promise<Office | undefined>;
+}
+
 export interface CreatePortfolioInput {
   id: string;
+  officeId: string;
   accountId: string;
   name: string;
   description?: string;
