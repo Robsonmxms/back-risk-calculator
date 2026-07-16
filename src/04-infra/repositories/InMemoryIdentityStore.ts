@@ -18,6 +18,14 @@ import {
   ClientSummary,
   Household
 } from "../../01-domain/clients/client";
+import {
+  AuditEvent,
+  AuditExportJob,
+  AuditResourceType,
+  AuditSeverity,
+  SafeAuditMetadata,
+  SupervisionReview
+} from "../../01-domain/compliance/audit";
 import { ReviewItem } from "../../01-domain/workbench/workbench";
 import {
   Portfolio,
@@ -36,9 +44,14 @@ import {
 import { User } from "../../01-domain/users/user";
 import {
   AccountRepository,
+  AppendAuditEventInput,
   AdvisoryTeamRepository,
+  AuditEventFilters,
+  AuditEventPage,
+  AuditRepository,
   ClientFilters,
   ClientRepository,
+  CreateAuditExportInput,
   CreateClientInput,
   CreateHouseholdInput,
   CreateReviewItemInput,
@@ -54,10 +67,12 @@ import {
   RefreshTokenRecord,
   RefreshTokenRepository,
   RefreshTokenRevocationReason,
+  SupervisionReviewFilters,
   UpdateAdvisoryTeamInput,
   UpdateClientInput,
   UpdateHouseholdInput,
   UpdateReviewItemInput,
+  UpdateSupervisionReviewInput,
   UpdatePortfolioInput,
   UserRepository,
   WorkbenchRepository,
@@ -86,6 +101,7 @@ export class InMemoryIdentityStore
     AdvisoryTeamRepository,
     ClientRepository,
     WorkbenchRepository,
+    AuditRepository,
     RefreshTokenRepository,
     PortfolioRepository,
     PortfolioMarketDataProjection,
@@ -100,6 +116,9 @@ export class InMemoryIdentityStore
   readonly households = new Map<string, Household>();
   readonly clients = new Map<string, ClientProfile>();
   readonly reviewItems = new Map<string, ReviewItem>();
+  readonly auditEvents = new Map<string, AuditEvent>();
+  readonly supervisionReviews = new Map<string, SupervisionReview>();
+  readonly auditExports = new Map<string, AuditExportJob>();
   readonly accounts = new Map<string, Account>();
   readonly accountMembers = new Map<string, AccountMember>();
   readonly portfolioSnapshots = new Map<string, PortfolioAccountSnapshot>();
@@ -637,6 +656,113 @@ export class InMemoryIdentityStore
       severity: item.severity
     });
     return { ...item };
+  }
+
+  async listAuditEvents(
+    officeId: string,
+    filters: AuditEventFilters
+  ): Promise<AuditEventPage> {
+    const page = Math.max(1, filters.page ?? 1);
+    const pageSize = Math.min(Math.max(1, filters.pageSize ?? 25), 100);
+    const fromTime = filters.from ? new Date(filters.from).getTime() : undefined;
+    const toTime = filters.to ? new Date(filters.to).getTime() : undefined;
+    const action = filters.action?.trim().toLowerCase();
+    const filtered = Array.from(this.auditEvents.values())
+      .filter((event) => event.officeId === officeId)
+      .filter((event) => !filters.actorId || event.actorId === filters.actorId)
+      .filter((event) => !action || event.action.toLowerCase().includes(action))
+      .filter((event) => !filters.outcome || event.outcome === filters.outcome)
+      .filter((event) => !filters.severity || event.severity === filters.severity)
+      .filter((event) => !filters.resourceType || event.resourceType === filters.resourceType)
+      .filter((event) => !filters.resourceId || event.resourceId === filters.resourceId)
+      .filter((event) => !filters.clientId || event.clientId === filters.clientId)
+      .filter((event) => !filters.portfolioId || event.portfolioId === filters.portfolioId)
+      .filter((event) => fromTime === undefined || event.createdAt.getTime() >= fromTime)
+      .filter((event) => toTime === undefined || event.createdAt.getTime() <= toTime)
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+    const start = (page - 1) * pageSize;
+
+    return {
+      events: filtered.slice(start, start + pageSize).map((event) => this.copyAuditEvent(event)),
+      total: filtered.length,
+      page,
+      pageSize
+    };
+  }
+
+  async findAuditEventById(auditEventId: string): Promise<AuditEvent | undefined> {
+    const event = this.auditEvents.get(auditEventId);
+    return event ? this.copyAuditEvent(event) : undefined;
+  }
+
+  async appendAuditEvent(input: AppendAuditEventInput): Promise<AuditEvent> {
+    return this.appendStoredAuditEvent(input);
+  }
+
+  async listSupervisionReviews(
+    officeId: string,
+    filters: SupervisionReviewFilters
+  ): Promise<SupervisionReview[]> {
+    return Array.from(this.supervisionReviews.values())
+      .filter((review) => review.officeId === officeId)
+      .filter((review) => !filters.status || review.status === filters.status)
+      .filter((review) => !filters.severity || review.severity === filters.severity)
+      .filter(
+        (review) => !filters.assignedToUserId || review.assignedToUserId === filters.assignedToUserId
+      )
+      .map((review) => ({ ...review }))
+      .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
+  }
+
+  async findSupervisionReviewById(reviewId: string): Promise<SupervisionReview | undefined> {
+    const review = this.supervisionReviews.get(reviewId);
+    return review ? { ...review } : undefined;
+  }
+
+  async updateSupervisionReview(
+    reviewId: string,
+    input: UpdateSupervisionReviewInput
+  ): Promise<SupervisionReview | undefined> {
+    const review = this.supervisionReviews.get(reviewId);
+    if (!review) {
+      return undefined;
+    }
+
+    if (input.status !== undefined) {
+      review.status = input.status;
+    }
+    if (input.assignedToUserId !== undefined) {
+      review.assignedToUserId = input.assignedToUserId || undefined;
+      if (review.assignedToUserId && review.status === "open") {
+        review.status = "assigned";
+      }
+    }
+    if (input.resolutionComment !== undefined) {
+      review.resolutionComment = input.resolutionComment;
+    }
+    review.updatedAt = input.updatedAt;
+    if (input.resolvedAt) {
+      review.resolvedAt = input.resolvedAt;
+    }
+    return { ...review };
+  }
+
+  async createAuditExport(input: CreateAuditExportInput): Promise<AuditExportJob> {
+    const completedAt = new Date(input.createdAt.getTime() + 1000);
+    const exportJob: AuditExportJob = {
+      id: input.id,
+      officeId: input.officeId,
+      requestedBy: input.requestedBy,
+      format: input.format,
+      status: "completed",
+      eventCount: input.eventCount,
+      filters: { ...input.filters },
+      downloadUrl: `/api/v1/offices/${input.officeId}/audit-exports/${input.id}.${input.format}`,
+      createdAt: input.createdAt,
+      completedAt
+    };
+    this.auditExports.set(exportJob.id, exportJob);
+    return { ...exportJob, filters: { ...exportJob.filters } };
   }
 
   async createPortfolio(input: CreatePortfolioInput): Promise<Portfolio> {
@@ -1279,19 +1405,174 @@ export class InMemoryIdentityStore
     this.ledgerSnapshots.set(portfolioId, snapshots);
   }
 
+  private appendStoredAuditEvent(input: AppendAuditEventInput): AuditEvent {
+    const event: AuditEvent = {
+      ...input,
+      metadata: { ...input.metadata }
+    };
+    this.auditEvents.set(event.id, event);
+
+    if (event.reviewRequired) {
+      const alreadyQueued = Array.from(this.supervisionReviews.values()).some(
+        (review) => review.auditEventId === event.id
+      );
+      if (!alreadyQueued) {
+        this.supervisionReviews.set(`sv_${event.id}`, {
+          id: `sv_${event.id}`,
+          officeId: event.officeId,
+          auditEventId: event.id,
+          status: "open",
+          severity: event.severity,
+          createdAt: event.createdAt,
+          updatedAt: event.createdAt
+        });
+      }
+    }
+
+    return this.copyAuditEvent(event);
+  }
+
+  private copyAuditEvent(event: AuditEvent): AuditEvent {
+    return {
+      ...event,
+      metadata: { ...event.metadata }
+    };
+  }
+
   private pushEvent(
     topic: string,
     aggregateId: string,
     payload: Record<string, unknown>
   ): void {
+    const createdAt = new Date();
     this.outboxEvents.push({
       id: randomUUID(),
       topic,
       aggregateId,
       payload,
-      createdAt: new Date()
+      createdAt
+    });
+    this.appendAuditEventForOutbox(topic, aggregateId, payload, createdAt);
+  }
+
+  private appendAuditEventForOutbox(
+    topic: string,
+    aggregateId: string,
+    payload: Record<string, unknown>,
+    createdAt: Date
+  ): void {
+    const officeId = typeof payload.officeId === "string" ? payload.officeId : undefined;
+    if (!officeId) {
+      return;
+    }
+
+    this.appendStoredAuditEvent({
+      id: randomUUID(),
+      officeId,
+      actorId: typeof payload.actorId === "string" ? payload.actorId : undefined,
+      action: auditActionForTopic(topic),
+      resourceType: auditResourceTypeForTopic(topic),
+      resourceId: aggregateId,
+      clientId: typeof payload.clientId === "string" ? payload.clientId : undefined,
+      portfolioId: typeof payload.portfolioId === "string" ? payload.portfolioId : undefined,
+      outcome: "success",
+      severity: auditSeverityForTopic(topic),
+      reviewRequired: auditReviewRequiredForTopic(topic),
+      metadata: safeAuditMetadataFromPayload({ ...payload, topic }),
+      createdAt
     });
   }
+}
+
+function auditActionForTopic(topic: string): string {
+  const actions: Record<string, string> = {
+    AdvisoryTeamCreated: "permission.team.created",
+    AdvisoryTeamUpdated: "permission.team.updated",
+    AdvisoryAssignmentCreated: "permission.assignment.created",
+    AdvisoryAssignmentRevoked: "permission.assignment.revoked",
+    ClientCreated: "client.created",
+    ClientUpdated: "client.updated",
+    ClientArchived: "client.archived",
+    HouseholdCreated: "household.created",
+    HouseholdUpdated: "household.updated",
+    ReviewItemCreated: "review.item.created",
+    ReviewItemUpdated: "review.item.updated",
+    PortfolioCreated: "portfolio.created",
+    PortfolioUpdated: "portfolio.updated",
+    TransactionRecorded: "ledger.transaction.recorded",
+    PositionProjectionUpdated: "ledger.position_projection.updated",
+    PortfolioSnapshotCreated: "ledger.snapshot.created",
+    AnalyticsRequested: "analytics.recompute.requested",
+    MarketDataRequested: "market_data.refresh.requested"
+  };
+  return actions[topic] ?? `domain.${topic}`;
+}
+
+function auditResourceTypeForTopic(topic: string): AuditResourceType {
+  if (topic.startsWith("Advisory")) {
+    return "permission";
+  }
+  if (topic.startsWith("Client")) {
+    return "client";
+  }
+  if (topic.startsWith("Household")) {
+    return "household";
+  }
+  if (topic.startsWith("ReviewItem")) {
+    return "review";
+  }
+  if (topic.startsWith("Portfolio") && !topic.includes("Snapshot")) {
+    return "portfolio";
+  }
+  if (topic.startsWith("Transaction") || topic.includes("Snapshot") || topic.includes("Projection")) {
+    return "ledger";
+  }
+  if (topic.startsWith("Analytics")) {
+    return "analytics";
+  }
+  if (topic.startsWith("MarketData")) {
+    return "market_data";
+  }
+  return "office";
+}
+
+function auditSeverityForTopic(topic: string): AuditSeverity {
+  if (topic.includes("Revoked") || topic.includes("Archived")) {
+    return "warning";
+  }
+  if (topic === "AnalyticsRequested" || topic === "MarketDataRequested") {
+    return "warning";
+  }
+  return "info";
+}
+
+function auditReviewRequiredForTopic(topic: string): boolean {
+  return [
+    "AdvisoryAssignmentCreated",
+    "AdvisoryAssignmentRevoked",
+    "AnalyticsRequested",
+    "MarketDataRequested"
+  ].includes(topic);
+}
+
+function safeAuditMetadataFromPayload(payload: Record<string, unknown>): SafeAuditMetadata {
+  const metadata: SafeAuditMetadata = {};
+  const blockedPattern = /(token|secret|password|credential|accountNumber|document|email|phone)/i;
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (blockedPattern.test(key) || value === undefined) {
+      continue;
+    }
+    if (typeof value === "string") {
+      metadata[key] = value.length > 160 ? `${value.slice(0, 157)}...` : value;
+    } else if (typeof value === "number" && Number.isFinite(value)) {
+      metadata[key] = value;
+    } else if (typeof value === "boolean" || value === null) {
+      metadata[key] = value;
+    }
+  }
+
+  return metadata;
 }
 
 export async function createSeededIdentityStore(
@@ -1616,6 +1897,128 @@ export async function createSeededIdentityStore(
     createdBy: "usr_other",
     createdAt: now,
     updatedAt: now
+  });
+
+  store.auditEvents.set("aud_client_created", {
+    id: "aud_client_created",
+    officeId: "ofc_main",
+    actorId: "usr_user",
+    actorName: "Portfolio User",
+    action: "client.created",
+    resourceType: "client",
+    resourceId: "client_main",
+    clientId: "client_main",
+    outcome: "success",
+    severity: "info",
+    reviewRequired: false,
+    metadata: {
+      onboardingStatus: "complete",
+      householdId: "hh_main_silva"
+    },
+    createdAt: new Date("2026-07-09T10:00:00.000Z")
+  });
+  store.auditEvents.set("aud_permission_assignment", {
+    id: "aud_permission_assignment",
+    officeId: "ofc_main",
+    actorId: "usr_user",
+    actorName: "Portfolio User",
+    action: "permission.assignment.created",
+    resourceType: "permission",
+    resourceId: "asn_core_client_main",
+    clientId: "client_main",
+    outcome: "success",
+    severity: "warning",
+    reviewRequired: true,
+    metadata: {
+      resourceType: "client",
+      resourceId: "client_main",
+      permissionCount: 4
+    },
+    createdAt: new Date("2026-07-09T10:10:00.000Z")
+  });
+  store.auditEvents.set("aud_ledger_transaction", {
+    id: "aud_ledger_transaction",
+    officeId: "ofc_main",
+    actorId: "usr_advisor",
+    actorName: "Advisor User",
+    action: "ledger.transaction.recorded",
+    resourceType: "ledger",
+    resourceId: "pltxn_001",
+    clientId: "client_main",
+    portfolioId: "prt_main",
+    outcome: "success",
+    severity: "info",
+    reviewRequired: false,
+    metadata: {
+      assetSymbol: "MSFT",
+      transactionType: "buy"
+    },
+    createdAt: new Date("2026-07-12T12:00:00.000Z")
+  });
+  store.auditEvents.set("aud_report_delivery_failed", {
+    id: "aud_report_delivery_failed",
+    officeId: "ofc_main",
+    actorId: "usr_advisor",
+    actorName: "Advisor User",
+    action: "delivery.report.failed",
+    resourceType: "delivery",
+    resourceId: "rpt_001",
+    clientId: "client_main",
+    portfolioId: "prt_main",
+    outcome: "failure",
+    severity: "critical",
+    reviewRequired: true,
+    metadata: {
+      failureCode: "delivery_timeout",
+      channel: "portal"
+    },
+    createdAt: new Date("2026-07-15T15:30:00.000Z")
+  });
+  store.auditEvents.set("aud_private_market_data", {
+    id: "aud_private_market_data",
+    officeId: "ofc_private",
+    actorId: "usr_analyst",
+    actorName: "Analyst User",
+    action: "market_data.refresh.failed",
+    resourceType: "market_data",
+    resourceId: "prt_income",
+    clientId: "client_private",
+    portfolioId: "prt_income",
+    outcome: "failure",
+    severity: "warning",
+    reviewRequired: true,
+    metadata: {
+      failureCode: "provider_delayed"
+    },
+    createdAt: new Date("2026-07-15T16:00:00.000Z")
+  });
+  store.supervisionReviews.set("sv_aud_permission_assignment", {
+    id: "sv_aud_permission_assignment",
+    officeId: "ofc_main",
+    auditEventId: "aud_permission_assignment",
+    status: "open",
+    severity: "warning",
+    createdAt: new Date("2026-07-09T10:10:00.000Z"),
+    updatedAt: new Date("2026-07-09T10:10:00.000Z")
+  });
+  store.supervisionReviews.set("sv_aud_report_delivery_failed", {
+    id: "sv_aud_report_delivery_failed",
+    officeId: "ofc_main",
+    auditEventId: "aud_report_delivery_failed",
+    status: "open",
+    severity: "critical",
+    assignedToUserId: "usr_user",
+    createdAt: new Date("2026-07-15T15:30:00.000Z"),
+    updatedAt: new Date("2026-07-15T15:35:00.000Z")
+  });
+  store.supervisionReviews.set("sv_aud_private_market_data", {
+    id: "sv_aud_private_market_data",
+    officeId: "ofc_private",
+    auditEventId: "aud_private_market_data",
+    status: "open",
+    severity: "warning",
+    createdAt: new Date("2026-07-15T16:00:00.000Z"),
+    updatedAt: new Date("2026-07-15T16:00:00.000Z")
   });
 
   store.addAccount({
