@@ -25,8 +25,8 @@ describe("client household management", () => {
     expect(searchResponse.body.data.clients[0]).toMatchObject({
       id: "client_main",
       name: "Marina Silva",
-      householdName: "Silva Family",
-      advisorName: "Advisor User",
+      householdName: "Família Silva",
+      advisorName: "Assessor",
       accountCount: 1,
       portfolioCount: 1
     });
@@ -49,7 +49,7 @@ describe("client household management", () => {
     expect(clientResponse.status).toBe(200);
     expect(clientResponse.body.data).toMatchObject({
       id: "client_main",
-      household: { id: "hh_main_silva", name: "Silva Family" },
+      household: { id: "hh_main_silva", name: "Família Silva" },
       accounts: [expect.objectContaining({ id: "acct_main" })],
       portfolios: [
         expect.objectContaining({
@@ -68,7 +68,7 @@ describe("client household management", () => {
       id: "prt_main",
       clientId: "client_main",
       clientName: "Marina Silva",
-      householdName: "Silva Family"
+      householdName: "Família Silva"
     });
   });
 

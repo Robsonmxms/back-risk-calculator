@@ -22,13 +22,13 @@ describe("client portal report delivery", () => {
       .set("Authorization", `Bearer ${advisorToken}`)
       .send({
         title: "Board-ready summary",
-        summaryNotes: "Read-only summary for the next client review.",
-        internalNotes: "Internal follow-up remains staff-only.",
+        summaryNotes: "Resumo somente leitura para a próxima revisão do cliente.",
+        internalNotes: "Acompanhamento interno permanece restrito à equipe.",
         submitForApproval: true,
         items: [
           {
             type: "portfolio_summary",
-            title: "Core Growth overview",
+            title: "Visão geral Core Growth",
             portfolioId: "prt_main",
             status: "ready"
           }
@@ -36,7 +36,7 @@ describe("client portal report delivery", () => {
       });
     expect(createResponse.status).toBe(201);
     expect(createResponse.body.data.status).toBe("pending_approval");
-    expect(createResponse.body.data.internalNotes).toBe("Internal follow-up remains staff-only.");
+    expect(createResponse.body.data.internalNotes).toBe("Acompanhamento interno permanece restrito à equipe.");
 
     const deniedDelivery = await request(app)
       .post(`/api/v1/report-packages/${createResponse.body.data.id}/deliver`)
@@ -100,7 +100,7 @@ describe("client portal report delivery", () => {
       expect.objectContaining({
         id: "rpkg_delivered_main",
         status: "viewed",
-        title: "July risk summary",
+        title: "Resumo de risco de julho",
         portfolios: [expect.objectContaining({ id: "prt_main" })]
       })
     ]);
