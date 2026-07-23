@@ -98,6 +98,13 @@ interface PortfolioRuntimeMeta {
   warnings: string[];
 }
 
+const legacyDevEmailAliases = new Map<string, string>([
+  ["admin@example.com", "admin@risk.local"],
+  ["analyst@example.com", "analyst@risk.local"],
+  ["user@example.com", "user@risk.local"],
+  ["other@example.com", "other@risk.local"]
+]);
+
 export class InMemoryIdentityStore
   implements
     UserRepository,
@@ -158,8 +165,11 @@ export class InMemoryIdentityStore
   }
 
   async findByEmail(email: string): Promise<User | undefined> {
+    const normalizedEmail = email.toLowerCase();
+    const canonicalEmail = legacyDevEmailAliases.get(normalizedEmail) ?? normalizedEmail;
+
     return Array.from(this.users.values()).find(
-      (user) => user.email.toLowerCase() === email.toLowerCase()
+      (user) => user.email.toLowerCase() === canonicalEmail
     );
   }
 
@@ -1676,8 +1686,8 @@ export async function createSeededIdentityStore(
   const users: User[] = [
     {
       id: "usr_admin",
-      email: "admin@example.com",
-      name: "Admin User",
+      email: "admin@risk.local",
+      name: "Administrador",
       role: "admin",
       status: "active",
       passwordHash,
@@ -1686,8 +1696,8 @@ export async function createSeededIdentityStore(
     },
     {
       id: "usr_analyst",
-      email: "analyst@example.com",
-      name: "Analyst User",
+      email: "analyst@risk.local",
+      name: "Analista",
       role: "analyst",
       status: "active",
       passwordHash,
@@ -1697,7 +1707,7 @@ export async function createSeededIdentityStore(
     {
       id: "usr_advisor",
       email: "advisor@example.com",
-      name: "Advisor User",
+      name: "Assessor",
       role: "user",
       status: "active",
       passwordHash,
@@ -1707,7 +1717,7 @@ export async function createSeededIdentityStore(
     {
       id: "usr_assistant",
       email: "assistant@example.com",
-      name: "Assistant User",
+      name: "Assistente",
       role: "user",
       status: "active",
       passwordHash,
@@ -1717,7 +1727,7 @@ export async function createSeededIdentityStore(
     {
       id: "usr_client",
       email: "client@example.com",
-      name: "Client Viewer",
+      name: "Cliente",
       role: "user",
       status: "active",
       passwordHash,
@@ -1726,8 +1736,8 @@ export async function createSeededIdentityStore(
     },
     {
       id: "usr_user",
-      email: "user@example.com",
-      name: "Portfolio User",
+      email: "user@risk.local",
+      name: "Usuário do Portfólio",
       role: "user",
       status: "active",
       passwordHash,
@@ -1736,8 +1746,8 @@ export async function createSeededIdentityStore(
     },
     {
       id: "usr_other",
-      email: "other@example.com",
-      name: "Other User",
+      email: "other@risk.local",
+      name: "Usuário Secundário",
       role: "user",
       status: "active",
       passwordHash,
@@ -1874,7 +1884,7 @@ export async function createSeededIdentityStore(
   store.households.set("hh_main_silva", {
     id: "hh_main_silva",
     officeId: "ofc_main",
-    name: "Silva Family",
+    name: "Família Silva",
     status: "active",
     createdAt: now,
     updatedAt: now
@@ -1882,7 +1892,7 @@ export async function createSeededIdentityStore(
   store.households.set("hh_main_founders", {
     id: "hh_main_founders",
     officeId: "ofc_main",
-    name: "Founders Group",
+    name: "Grupo Founders",
     status: "active",
     createdAt: now,
     updatedAt: now
@@ -1890,7 +1900,7 @@ export async function createSeededIdentityStore(
   store.households.set("hh_private_allocation", {
     id: "hh_private_allocation",
     officeId: "ofc_private",
-    name: "Private Allocation Household",
+    name: "Grupo de Alocação Reservada",
     status: "active",
     createdAt: now,
     updatedAt: now
@@ -1903,12 +1913,12 @@ export async function createSeededIdentityStore(
     name: "Marina Silva",
     email: "marina.silva@example.com",
     phone: "+55 11 99999-0101",
-    documentLabel: "CPF ending 0123",
+    documentLabel: "CPF final 0123",
     status: "active",
     onboardingStatus: "complete",
     advisorUserId: "usr_advisor",
-    riskProfileDescriptor: "Balanced growth profile",
-    notes: "Prefers monthly risk reporting.",
+    riskProfileDescriptor: "Perfil balanceado de crescimento",
+    notes: "Prefere relatórios mensais de risco.",
     createdAt: now,
     updatedAt: now
   });
@@ -1919,11 +1929,11 @@ export async function createSeededIdentityStore(
     name: "Renato Silva",
     email: "renato.silva@example.com",
     phone: "+55 11 99999-0102",
-    documentLabel: "CPF ending 0456",
+    documentLabel: "CPF final 0456",
     status: "active",
     onboardingStatus: "onboarding",
     advisorUserId: "usr_advisor",
-    riskProfileDescriptor: "Income-oriented profile",
+    riskProfileDescriptor: "Perfil orientado a renda",
     createdAt: now,
     updatedAt: now
   });
@@ -1933,11 +1943,11 @@ export async function createSeededIdentityStore(
     householdId: "hh_main_founders",
     name: "Alice Founder",
     email: "alice.founder@example.com",
-    documentLabel: "Passport ending 7788",
+    documentLabel: "Passaporte final 7788",
     status: "inactive",
     onboardingStatus: "paused",
     advisorUserId: "usr_advisor",
-    riskProfileDescriptor: "Concentrated equity exposure",
+    riskProfileDescriptor: "Exposição concentrada em ações",
     createdAt: now,
     updatedAt: now
   });
@@ -1945,13 +1955,13 @@ export async function createSeededIdentityStore(
     id: "client_private",
     officeId: "ofc_private",
     householdId: "hh_private_allocation",
-    name: "Private Client",
+    name: "Cliente Reservado",
     email: "private.client@example.com",
-    documentLabel: "CPF ending 9999",
+    documentLabel: "CPF final 9999",
     status: "active",
     onboardingStatus: "complete",
     advisorUserId: "usr_other",
-    riskProfileDescriptor: "Capital preservation profile",
+    riskProfileDescriptor: "Perfil de preservação de capital",
     createdAt: now,
     updatedAt: now
   });
@@ -1959,7 +1969,7 @@ export async function createSeededIdentityStore(
   store.reviewItems.set("rev_main_report", {
     id: "rev_main_report",
     officeId: "ofc_main",
-    title: "Review monthly risk pack before client meeting",
+    title: "Revisar pacote mensal de risco antes da reunião com o cliente",
     severity: "medium",
     status: "open",
     resourceType: "client",
@@ -1967,7 +1977,7 @@ export async function createSeededIdentityStore(
     clientId: "client_main",
     assignedToUserId: "usr_advisor",
     dueDate: "2026-07-20",
-    notes: "Confirm stale-data warnings are clear before delivery.",
+    notes: "Confirmar se os avisos de dados defasados estão claros antes da entrega.",
     createdBy: "usr_user",
     createdAt: now,
     updatedAt: now
@@ -1994,7 +2004,7 @@ export async function createSeededIdentityStore(
     id: "aud_client_created",
     officeId: "ofc_main",
     actorId: "usr_user",
-    actorName: "Portfolio User",
+    actorName: "Usuário do Portfólio",
     action: "client.created",
     resourceType: "client",
     resourceId: "client_main",
@@ -2012,7 +2022,7 @@ export async function createSeededIdentityStore(
     id: "aud_permission_assignment",
     officeId: "ofc_main",
     actorId: "usr_user",
-    actorName: "Portfolio User",
+    actorName: "Usuário do Portfólio",
     action: "permission.assignment.created",
     resourceType: "permission",
     resourceId: "asn_core_client_main",
@@ -2031,7 +2041,7 @@ export async function createSeededIdentityStore(
     id: "aud_ledger_transaction",
     officeId: "ofc_main",
     actorId: "usr_advisor",
-    actorName: "Advisor User",
+    actorName: "Assessor",
     action: "ledger.transaction.recorded",
     resourceType: "ledger",
     resourceId: "pltxn_001",
@@ -2050,7 +2060,7 @@ export async function createSeededIdentityStore(
     id: "aud_report_delivery_failed",
     officeId: "ofc_main",
     actorId: "usr_advisor",
-    actorName: "Advisor User",
+    actorName: "Assessor",
     action: "delivery.report.failed",
     resourceType: "delivery",
     resourceId: "rpt_001",
@@ -2069,7 +2079,7 @@ export async function createSeededIdentityStore(
     id: "aud_private_market_data",
     officeId: "ofc_private",
     actorId: "usr_analyst",
-    actorName: "Analyst User",
+    actorName: "Analista",
     action: "market_data.refresh.failed",
     resourceType: "market_data",
     resourceId: "prt_income",
@@ -2116,22 +2126,22 @@ export async function createSeededIdentityStore(
     officeId: "ofc_main",
     clientId: "client_main",
     householdId: "hh_main_silva",
-    title: "July risk summary",
-    summaryNotes: "Portfolio summary prepared for the July review cycle.",
-    internalNotes: "Confirm next meeting agenda before follow-up.",
+    title: "Resumo de risco de julho",
+    summaryNotes: "Resumo do portfólio preparado para o ciclo de revisão de julho.",
+    internalNotes: "Confirmar a pauta da próxima reunião antes do acompanhamento.",
     status: "delivered",
     items: [
       {
         id: "rpkg_item_main_summary",
         type: "portfolio_summary",
-        title: "Core Growth overview",
+        title: "Visão geral Core Growth",
         portfolioId: "prt_main",
         status: "ready"
       },
       {
         id: "rpkg_item_main_analytics",
         type: "analytics_snapshot",
-        title: "Risk metric snapshot",
+        title: "Retrato das métricas de risco",
         portfolioId: "prt_main",
         analyticsSnapshotId: "analytics_prt_main_latest",
         format: "json",
@@ -2151,15 +2161,15 @@ export async function createSeededIdentityStore(
     officeId: "ofc_main",
     clientId: "client_main",
     householdId: "hh_main_silva",
-    title: "Pending allocation review",
-    summaryNotes: "Draft package waiting for office approval.",
-    internalNotes: "Pending final report generation.",
+    title: "Revisão de alocação pendente",
+    summaryNotes: "Rascunho aguardando aprovação do escritório.",
+    internalNotes: "Aguardando geração final do relatório.",
     status: "pending_approval",
     items: [
       {
         id: "rpkg_item_pending_report",
         type: "report",
-        title: "Monthly risk pack",
+        title: "Pacote mensal de risco",
         portfolioId: "prt_main",
         reportId: "rpt_001",
         format: "pdf",
@@ -2175,14 +2185,14 @@ export async function createSeededIdentityStore(
     officeId: "ofc_private",
     clientId: "client_private",
     householdId: "hh_private_allocation",
-    title: "Private income sleeve update",
-    summaryNotes: "Read-only update for the income sleeve.",
+    title: "Atualização da carteira de renda reservada",
+    summaryNotes: "Atualização somente leitura da carteira de renda.",
     status: "delivered",
     items: [
       {
         id: "rpkg_item_private_summary",
         type: "portfolio_summary",
-        title: "Income sleeve overview",
+        title: "Visão geral da carteira de renda",
         portfolioId: "prt_income",
         status: "ready"
       }
@@ -2199,7 +2209,7 @@ export async function createSeededIdentityStore(
     id: "aud_report_package_delivered",
     officeId: "ofc_main",
     actorId: "usr_user",
-    actorName: "Portfolio User",
+    actorName: "Usuário do Portfólio",
     action: "report_package.delivered",
     resourceType: "delivery",
     resourceId: "rpkg_delivered_main",
@@ -2220,7 +2230,7 @@ export async function createSeededIdentityStore(
     officeId: "ofc_main",
     clientId: "client_main",
     householdId: "hh_main_silva",
-    name: "Main Portfolio Account",
+    name: "Conta Principal de Portfólio",
     ownerUserId: "usr_user",
     createdAt: now,
     updatedAt: now
@@ -2230,7 +2240,7 @@ export async function createSeededIdentityStore(
     officeId: "ofc_private",
     clientId: "client_private",
     householdId: "hh_private_allocation",
-    name: "Private Account",
+    name: "Conta Reservada",
     ownerUserId: "usr_other",
     createdAt: now,
     updatedAt: now
@@ -2240,7 +2250,7 @@ export async function createSeededIdentityStore(
     officeId: "ofc_private",
     clientId: "client_private",
     householdId: "hh_private_allocation",
-    name: "Income Sleeve",
+    name: "Carteira de Renda",
     ownerUserId: "usr_other",
     createdAt: now,
     updatedAt: now
@@ -2278,7 +2288,7 @@ export async function createSeededIdentityStore(
   store.addPortfolioSnapshot({
     accountId: "acct_main",
     officeId: "ofc_main",
-    accountName: "Main Portfolio Account",
+    accountName: "Conta Principal de Portfólio",
     membershipRole: "owner",
     currency: "USD",
     marketValue: 245800,
@@ -2295,15 +2305,15 @@ export async function createSeededIdentityStore(
       maxDrawdownPercent: 8.7,
       diversificationScore: 78,
       notes: [
-        "Risk score is moderate relative to the current allocation.",
-        "Sector concentration remains below the internal alert threshold."
+        "A pontuação de risco está moderada em relação à alocação atual.",
+        "A concentração setorial permanece abaixo do limite interno de alerta."
       ]
     },
     allocation: [
-      { label: "Equities", weightPercent: 54 },
+      { label: "Ações", weightPercent: 54 },
       { label: "ETFs", weightPercent: 28 },
-      { label: "Fixed income", weightPercent: 12 },
-      { label: "Cash", weightPercent: 6 }
+      { label: "Renda fixa", weightPercent: 12 },
+      { label: "Caixa", weightPercent: 6 }
     ],
     performance: [
       { label: "Jan", returnPercent: 1.2 },
@@ -2317,7 +2327,7 @@ export async function createSeededIdentityStore(
       {
         symbol: "MSFT",
         name: "Microsoft",
-        assetClass: "Equity",
+        assetClass: "Ações",
         quantity: 120,
         weightPercent: 22,
         marketValue: 54000,
@@ -2335,7 +2345,7 @@ export async function createSeededIdentityStore(
       {
         symbol: "IEF",
         name: "iShares 7-10 Year Treasury Bond ETF",
-        assetClass: "Fixed income",
+        assetClass: "Renda fixa",
         quantity: 180,
         weightPercent: 12,
         marketValue: 29400,
@@ -2344,7 +2354,7 @@ export async function createSeededIdentityStore(
       {
         symbol: "NVDA",
         name: "NVIDIA",
-        assetClass: "Equity",
+        assetClass: "Ações",
         quantity: 55,
         weightPercent: 18,
         marketValue: 44200,
@@ -2356,7 +2366,7 @@ export async function createSeededIdentityStore(
         id: "txn_001",
         tradeDate: "2026-07-12",
         type: "buy",
-        description: "Added VTI after cash inflow",
+        description: "VTI incluído após entrada de caixa",
         quantity: 25,
         amount: 5750,
         currency: "USD",
@@ -2366,7 +2376,7 @@ export async function createSeededIdentityStore(
         id: "txn_002",
         tradeDate: "2026-07-10",
         type: "rebalance",
-        description: "Reduced single-name exposure",
+        description: "Exposição individual reduzida",
         quantity: 12,
         amount: 3980,
         currency: "USD",
@@ -2376,7 +2386,7 @@ export async function createSeededIdentityStore(
         id: "txn_003",
         tradeDate: "2026-07-08",
         type: "dividend",
-        description: "Quarterly ETF dividend",
+        description: "Dividendo trimestral de ETF",
         quantity: 0,
         amount: 210,
         currency: "USD",
@@ -2386,14 +2396,14 @@ export async function createSeededIdentityStore(
     reports: [
       {
         id: "rpt_001",
-        name: "Monthly risk pack",
+        name: "Pacote mensal de risco",
         asOf: "2026-07-11T18:30:00.000Z",
         status: "ready",
         format: "pdf"
       },
       {
         id: "rpt_002",
-        name: "Exposure export",
+        name: "Exportação de exposição",
         asOf: "2026-07-12T12:00:00.000Z",
         status: "ready",
         format: "csv"
@@ -2408,8 +2418,8 @@ export async function createSeededIdentityStore(
       }
     ],
     insights: [
-      "Current equity concentration is elevated but still within the internal risk budget.",
-      "Cash coverage remains adequate for expected short-term withdrawals."
+      "A concentração em ações está elevada, mas permanece dentro do orçamento interno de risco.",
+      "A cobertura de caixa segue adequada para retiradas esperadas no curto prazo."
     ],
     meta: {
       status: "ready",
@@ -2423,7 +2433,7 @@ export async function createSeededIdentityStore(
   store.addPortfolioSnapshot({
     accountId: "acct_income",
     officeId: "ofc_private",
-    accountName: "Income Sleeve",
+    accountName: "Carteira de Renda",
     membershipRole: "analyst",
     currency: "USD",
     marketValue: 128400,
@@ -2440,15 +2450,15 @@ export async function createSeededIdentityStore(
       maxDrawdownPercent: 6.2,
       diversificationScore: 61,
       notes: [
-        "Latest factor model run is partial because one market data source is delayed.",
-        "Duration exposure is above the target band for this sleeve."
+        "A execução mais recente do modelo fatorial está parcial porque uma fonte de dados de mercado está atrasada.",
+        "A exposição à duration está acima da faixa-alvo desta carteira."
       ]
     },
     allocation: [
-      { label: "Fixed income", weightPercent: 58 },
-      { label: "Dividend equities", weightPercent: 24 },
+      { label: "Renda fixa", weightPercent: 58 },
+      { label: "Ações de dividendos", weightPercent: 24 },
       { label: "REITs", weightPercent: 10 },
-      { label: "Cash", weightPercent: 8 }
+      { label: "Caixa", weightPercent: 8 }
     ],
     performance: [
       { label: "Jan", returnPercent: 0.6 },
@@ -2462,7 +2472,7 @@ export async function createSeededIdentityStore(
       {
         symbol: "LQD",
         name: "iShares iBoxx $ Investment Grade Corporate Bond ETF",
-        assetClass: "Fixed income",
+        assetClass: "Renda fixa",
         quantity: 410,
         weightPercent: 30,
         marketValue: 38500,
@@ -2492,7 +2502,7 @@ export async function createSeededIdentityStore(
         id: "txn_101",
         tradeDate: "2026-07-13",
         type: "buy",
-        description: "Added SCHD for dividend coverage",
+        description: "SCHD incluído para cobertura de dividendos",
         quantity: 18,
         amount: 1490,
         currency: "USD",
@@ -2502,7 +2512,7 @@ export async function createSeededIdentityStore(
         id: "txn_102",
         tradeDate: "2026-07-09",
         type: "sell",
-        description: "Reduced long-duration treasury exposure",
+        description: "Exposição a títulos longos reduzida",
         quantity: 22,
         amount: 2415,
         currency: "USD",
@@ -2512,7 +2522,7 @@ export async function createSeededIdentityStore(
     reports: [
       {
         id: "rpt_101",
-        name: "Income sleeve monitoring",
+        name: "Monitoramento da carteira de renda",
         asOf: "2026-07-14T07:45:00.000Z",
         status: "generating",
         format: "pdf"
@@ -2521,20 +2531,20 @@ export async function createSeededIdentityStore(
     alerts: [
       {
         id: "alt_101",
-        title: "Market data refresh delayed for one bond venue",
+        title: "Atualização de dados de mercado atrasada para uma praça de renda fixa",
         severity: "high",
         status: "open"
       },
       {
         id: "alt_102",
-        title: "Duration exposure above target band",
+        title: "Exposição à duration acima da faixa-alvo",
         severity: "medium",
         status: "monitoring"
       }
     ],
     insights: [
-      "This sleeve is showing stale market inputs for one source, so risk metrics are directional only.",
-      "Income concentration is acceptable, but duration risk should be monitored before reallocating."
+      "Esta carteira mostra dados de mercado defasados para uma fonte; as métricas de risco são apenas direcionais.",
+      "A concentração de renda está dentro dos parâmetros, mas o risco de duration deve permanecer em monitoramento."
     ],
     meta: {
       status: "degraded",
@@ -2542,8 +2552,8 @@ export async function createSeededIdentityStore(
       asOf: "2026-07-13T22:40:00.000Z",
       lastSuccessfulSyncAt: "2026-07-13T18:05:00.000Z",
       warnings: [
-        "Fixed-income market data is partially delayed.",
-        "Report generation is still running for the latest snapshot."
+        "Os dados de mercado de renda fixa estão parcialmente atrasados.",
+        "A geração de relatório ainda está em execução para o snapshot mais recente."
       ]
     }
   });
@@ -2556,7 +2566,7 @@ export async function createSeededIdentityStore(
       clientId: "client_main",
       householdId: "hh_main_silva",
       name: "Core Growth",
-      description: "Long-term core allocation with ETFs and large-cap equities.",
+      description: "Alocação central de longo prazo com ETFs e ações de alta capitalização.",
       baseCurrency: "USD",
       createdAt: now,
       updatedAt: new Date("2026-07-12T00:00:00.000Z")
@@ -2579,7 +2589,7 @@ export async function createSeededIdentityStore(
         unitPrice: 410,
         totalAmount: 49200,
         currency: "USD",
-        notes: "Initial core position",
+        notes: "Posição inicial da carteira principal",
         createdAt: new Date("2026-07-08T10:00:00.000Z")
       },
       {
@@ -2592,7 +2602,7 @@ export async function createSeededIdentityStore(
         unitPrice: 229.33,
         totalAmount: 68799,
         currency: "USD",
-        notes: "Broad market allocation",
+        notes: "Alocação ampla de mercado",
         createdAt: new Date("2026-07-10T10:00:00.000Z")
       },
       {
@@ -2605,7 +2615,7 @@ export async function createSeededIdentityStore(
         unitPrice: 803.64,
         totalAmount: 44200.2,
         currency: "USD",
-        notes: "AI growth sleeve",
+        notes: "Carteira de crescimento em IA",
         createdAt: new Date("2026-07-12T10:00:00.000Z")
       }
     ]
@@ -2618,8 +2628,8 @@ export async function createSeededIdentityStore(
       accountId: "acct_income",
       clientId: "client_private",
       householdId: "hh_private_allocation",
-      name: "Income Sleeve",
-      description: "Dividend and bond sleeve monitored by the analyst team.",
+      name: "Carteira de Renda",
+      description: "Carteira de dividendos e renda fixa acompanhada pela equipe de análise.",
       baseCurrency: "USD",
       createdAt: now,
       updatedAt: new Date("2026-07-13T00:00:00.000Z")
@@ -2630,8 +2640,8 @@ export async function createSeededIdentityStore(
       analyticsState: "pending",
       marketDataState: "pending",
       warnings: [
-        "Fixed-income market data is partially delayed.",
-        "Analytics refresh is pending for the latest trade."
+        "Os dados de mercado de renda fixa estão parcialmente atrasados.",
+        "O recálculo das análises está pendente para a transação mais recente."
       ]
     },
     [
@@ -2645,7 +2655,7 @@ export async function createSeededIdentityStore(
         unitPrice: 93.9,
         totalAmount: 38499,
         currency: "USD",
-        notes: "Investment grade exposure",
+        notes: "Exposição a crédito grau de investimento",
         createdAt: new Date("2026-07-09T10:00:00.000Z")
       },
       {
@@ -2658,7 +2668,7 @@ export async function createSeededIdentityStore(
         unitPrice: 78.75,
         totalAmount: 12600,
         currency: "USD",
-        notes: "REIT income sleeve",
+        notes: "Carteira de renda com REITs",
         createdAt: new Date("2026-07-10T10:00:00.000Z")
       },
       {
@@ -2671,7 +2681,7 @@ export async function createSeededIdentityStore(
         unitPrice: 106.21,
         totalAmount: 30800.9,
         currency: "USD",
-        notes: "Dividend coverage",
+        notes: "Cobertura de dividendos",
         createdAt: new Date("2026-07-13T10:00:00.000Z")
       }
     ]

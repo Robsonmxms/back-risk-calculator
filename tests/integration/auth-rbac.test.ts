@@ -13,16 +13,26 @@ async function login(email: string) {
 
 describe("auth and RBAC", () => {
   it("returns an auth session for valid credentials", async () => {
-    const { response } = await login("user@example.com");
+    const { response } = await login("user@risk.local");
 
     expect(response.status).toBe(200);
     expect(response.body.data.accessToken).toEqual(expect.any(String));
     expect(response.body.data.refreshToken).toEqual(expect.any(String));
     expect(response.body.data.actor).toMatchObject({
-      email: "user@example.com",
+      email: "user@risk.local",
       role: "user"
     });
     expect(response.body.data.actor.passwordHash).toBeUndefined();
+  });
+
+  it("keeps legacy local example.com credentials working as aliases", async () => {
+    const { response } = await login("user@example.com");
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.actor).toMatchObject({
+      email: "user@risk.local",
+      role: "user"
+    });
   });
 
   it("returns a stable safe error for invalid credentials", async () => {
@@ -86,7 +96,7 @@ describe("auth and RBAC", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data.actor).toMatchObject({
-      email: "analyst@example.com",
+      email: "analyst@risk.local",
       role: "analyst"
     });
     expect(response.body.data.user.passwordHash).toBeUndefined();
@@ -159,7 +169,7 @@ describe("auth and RBAC", () => {
     });
     expect(response.body.data).toMatchObject({
       accountId: "acct_income",
-      accountName: "Income Sleeve",
+      accountName: "Carteira de Renda",
       membershipRole: "analyst"
     });
     expect(response.body.data.holdings).toHaveLength(3);
