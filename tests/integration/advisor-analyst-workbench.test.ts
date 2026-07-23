@@ -67,7 +67,7 @@ describe("advisor analyst workbench", () => {
     expect(closedResponse.body.data.closedAt).toEqual(expect.any(String));
   });
 
-  it("keeps review items isolated by office and assignment", async () => {
+  it("keeps review items isolated by office and blocks client access to staff workbench", async () => {
     const { app } = await createApp();
     const clientToken = await login(app, "client@example.com");
     const userToken = await login(app, "user@example.com");
@@ -75,13 +75,34 @@ describe("advisor analyst workbench", () => {
     const clientWorkbench = await request(app)
       .get("/api/v1/offices/ofc_main/workbench")
       .set("Authorization", `Bearer ${clientToken}`);
-    expect(clientWorkbench.status).toBe(200);
-    expect(clientWorkbench.body.data.assignedClients).toEqual([
-      expect.objectContaining({ id: "client_main" })
-    ]);
-    expect(clientWorkbench.body.data.reviewItems).toEqual(
-      expect.arrayContaining([expect.objectContaining({ clientId: "client_main" })])
-    );
+    expect(clientWorkbench.status).toBe(403);
+    expect(clientWorkbench.body.error.code).toBe("auth.permission_denied");
+
+    const clientReviewItems = await request(app)
+      .get("/api/v1/offices/ofc_main/review-items")
+      .set("Authorization", `Bearer ${clientToken}`);
+    expect(clientReviewItems.status).toBe(403);
+    expect(clientReviewItems.body.error.code).toBe("auth.permission_denied");
+
+    const clientCreateReviewItem = await request(app)
+      .post("/api/v1/offices/ofc_main/review-items")
+      .set("Authorization", `Bearer ${clientToken}`)
+      .send({
+        title: "Client should not create staff review items",
+        severity: "medium",
+        resourceType: "client",
+        resourceId: "client_main",
+        clientId: "client_main"
+      });
+    expect(clientCreateReviewItem.status).toBe(403);
+    expect(clientCreateReviewItem.body.error.code).toBe("auth.permission_denied");
+
+    const clientUpdateReviewItem = await request(app)
+      .patch("/api/v1/review-items/rev_main_report")
+      .set("Authorization", `Bearer ${clientToken}`)
+      .send({ status: "closed" });
+    expect(clientUpdateReviewItem.status).toBe(403);
+    expect(clientUpdateReviewItem.body.error.code).toBe("auth.permission_denied");
 
     const crossOfficeResponse = await request(app)
       .get("/api/v1/offices/ofc_private/workbench")

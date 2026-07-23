@@ -7,7 +7,11 @@ import {
   ReviewResourceType,
   StaffWorkbench
 } from "../../../01-domain/workbench/workbench";
-import { ROLE_PERMISSION_MATRIX, PermissionService } from "../../auth/permission-service";
+import {
+  PermissionEvaluation,
+  ROLE_PERMISSION_MATRIX,
+  PermissionService
+} from "../../auth/permission-service";
 import { ApplicationError } from "../../errors/application-error";
 import {
   ClientRepository,
@@ -40,6 +44,7 @@ export class GetWorkbenchUseCase {
 
   async execute(actor: Actor, officeId: string): Promise<StaffWorkbench> {
     const evaluation = await this.permissions.evaluate(actor, officeId);
+    assertStaffWorkbenchAccess(evaluation);
     const canReadOffice = ROLE_PERMISSION_MATRIX[evaluation.role].includes("client.read");
     const visibleClientIds = canReadOffice
       ? undefined
@@ -106,6 +111,7 @@ export class ListReviewItemsUseCase {
 
   async execute(actor: Actor, officeId: string, filters: ReviewItemFilters): Promise<ReviewItem[]> {
     const evaluation = await this.permissions.evaluate(actor, officeId);
+    assertStaffWorkbenchAccess(evaluation);
     const canReadOffice = ROLE_PERMISSION_MATRIX[evaluation.role].includes("client.read");
     return this.workbench.listReviewItems(
       officeId,
@@ -137,7 +143,8 @@ export class CreateReviewItemUseCase {
       notes?: string;
     }
   ): Promise<ReviewItem> {
-    await this.permissions.assertPermission(actor, officeId, "client.read");
+    const evaluation = await this.permissions.assertPermission(actor, officeId, "client.read");
+    assertStaffWorkbenchAccess(evaluation);
     const createdAt = this.now();
     return this.workbench.createReviewItem({
       id: randomUUID(),
@@ -183,7 +190,8 @@ export class UpdateReviewItemUseCase {
       throw new ApplicationError("not_found", "review_item.not_found", "Review item not found");
     }
 
-    await this.permissions.assertPermission(actor, item.officeId, "client.read");
+    const evaluation = await this.permissions.assertPermission(actor, item.officeId, "client.read");
+    assertStaffWorkbenchAccess(evaluation);
     const updated = await this.workbench.updateReviewItem(reviewItemId, {
       title: input.title?.trim(),
       severity: input.severity,
@@ -199,4 +207,16 @@ export class UpdateReviewItemUseCase {
     }
     return updated;
   }
+}
+
+function assertStaffWorkbenchAccess(evaluation: PermissionEvaluation): void {
+  if (evaluation.role !== "client") {
+    return;
+  }
+
+  throw new ApplicationError(
+    "forbidden",
+    "auth.permission_denied",
+    "Staff workbench access is restricted"
+  );
 }

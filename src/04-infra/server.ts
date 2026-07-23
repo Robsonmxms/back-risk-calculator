@@ -49,9 +49,11 @@ export function createServer(dependencies: ServerDependencies) {
   const app = express();
   const apiRouter = express.Router();
 
+  app.disable("etag");
   app.use(corsMiddleware);
   app.use(express.json());
   app.get("/health", (_request, response) => response.json({ status: "ok" }));
+  apiRouter.use(apiCachePolicyMiddleware);
 
   registerAuthRoutes(
     apiRouter,
@@ -139,6 +141,15 @@ function corsMiddleware(request: Request, response: Response, next: NextFunction
   if (request.method === "OPTIONS") {
     return response.sendStatus(204);
   }
+
+  return next();
+}
+
+function apiCachePolicyMiddleware(_request: Request, response: Response, next: NextFunction) {
+  response.header("Cache-Control", "no-store");
+  response.header("Pragma", "no-cache");
+  response.header("Expires", "0");
+  response.vary("Authorization");
 
   return next();
 }
