@@ -1,10 +1,18 @@
 import { AnalyticsController } from "../../03-adapters/controllers/AnalyticsController";
+import { PermissionService } from "../../02-application/auth/permission-service";
+import { InMemoryAnalystChartJobStore } from "../repositories/InMemoryAnalystChartJobStore";
 import { InMemoryAnalyticsStore } from "../repositories/InMemoryAnalyticsStore";
 import {
   AnalyticsEventPublisher,
   AnalyticsPortfolioProjection,
   AnalyticsRepository
 } from "../../modules/analytics/ports";
+import { AnalystChartJobRepository } from "../../modules/analytics/analyst-chart-types";
+import {
+  CreateAnalystChartJobUseCase,
+  GetAnalystChartJobUseCase,
+  GetAnalystChartsUseCase
+} from "../../modules/analytics/analyst-chart-use-cases";
 import {
   GetPortfolioAnalyticsUseCase,
   ListPortfolioAnalyticsHistoryUseCase,
@@ -17,6 +25,7 @@ import type { MarketDataContainer } from "./MarketDataContainer";
 
 export interface AnalyticsContainerDependencies {
   analyticsRepository?: AnalyticsRepository;
+  analystChartJobRepository?: AnalystChartJobRepository;
   analyticsEventPublisher?: AnalyticsEventPublisher;
   analyticsPortfolioProjection?: AnalyticsPortfolioProjection;
   analyticsNow?: () => Date;
@@ -26,11 +35,15 @@ export interface AnalyticsContainer {
   controller: AnalyticsController;
   worker: AnalyticsCalculationWorker;
   repository: AnalyticsRepository;
+  analystChartJobRepository: AnalystChartJobRepository;
   useCases: {
     getPortfolioAnalyticsUseCase: GetPortfolioAnalyticsUseCase;
     requestPortfolioAnalyticsRecomputeUseCase: RequestPortfolioAnalyticsRecomputeUseCase;
     listPortfolioAnalyticsHistoryUseCase: ListPortfolioAnalyticsHistoryUseCase;
     getPortfolioChartsUseCase: GetPortfolioChartsUseCase;
+    getAnalystChartsUseCase: GetAnalystChartsUseCase;
+    createAnalystChartJobUseCase: CreateAnalystChartJobUseCase;
+    getAnalystChartJobUseCase: GetAnalystChartJobUseCase;
   };
 }
 
@@ -41,6 +54,8 @@ export function buildAnalyticsContainer(
 ): AnalyticsContainer {
   const now = dependencies.analyticsNow ?? (() => new Date());
   const repository = dependencies.analyticsRepository ?? new InMemoryAnalyticsStore();
+  const analystChartJobRepository =
+    dependencies.analystChartJobRepository ?? new InMemoryAnalystChartJobStore();
   const events =
     dependencies.analyticsEventPublisher ??
     ({
@@ -50,6 +65,7 @@ export function buildAnalyticsContainer(
     } satisfies AnalyticsEventPublisher);
   const portfolioProjection =
     dependencies.analyticsPortfolioProjection ?? shared.identityStore;
+  const permissionService = new PermissionService(shared.identityStore, shared.identityStore);
 
   const getPortfolioAnalyticsUseCase = new GetPortfolioAnalyticsUseCase(
     shared.identityStore,
@@ -79,6 +95,30 @@ export function buildAnalyticsContainer(
     shared.metrics,
     now
   );
+  const getAnalystChartsUseCase = new GetAnalystChartsUseCase(
+    shared.identityStore,
+    shared.identityStore,
+    shared.identityStore,
+    repository,
+    marketData.repository,
+    permissionService,
+    shared.logger,
+    shared.metrics,
+    now
+  );
+  const createAnalystChartJobUseCase = new CreateAnalystChartJobUseCase(
+    shared.identityStore,
+    analystChartJobRepository,
+    permissionService,
+    events,
+    shared.metrics,
+    now
+  );
+  const getAnalystChartJobUseCase = new GetAnalystChartJobUseCase(
+    analystChartJobRepository,
+    permissionService,
+    now
+  );
   const worker = new AnalyticsCalculationWorker(
     repository,
     shared.identityStore,
@@ -95,18 +135,25 @@ export function buildAnalyticsContainer(
     getPortfolioAnalyticsUseCase,
     requestPortfolioAnalyticsRecomputeUseCase,
     listPortfolioAnalyticsHistoryUseCase,
-    getPortfolioChartsUseCase
+    getPortfolioChartsUseCase,
+    getAnalystChartsUseCase,
+    createAnalystChartJobUseCase,
+    getAnalystChartJobUseCase
   );
 
   return {
     controller,
     worker,
     repository,
+    analystChartJobRepository,
     useCases: {
       getPortfolioAnalyticsUseCase,
       requestPortfolioAnalyticsRecomputeUseCase,
       listPortfolioAnalyticsHistoryUseCase,
-      getPortfolioChartsUseCase
+      getPortfolioChartsUseCase,
+      getAnalystChartsUseCase,
+      createAnalystChartJobUseCase,
+      getAnalystChartJobUseCase
     }
   };
 }
