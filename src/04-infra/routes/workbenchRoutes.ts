@@ -2,6 +2,7 @@ import { Router } from "express";
 import { AuthenticateAccessTokenUseCase } from "../../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { WorkbenchController } from "../../03-adapters/controllers/WorkbenchController";
 import {
+  advisorChartsQuerySchema,
   createReviewItemSchema,
   listReviewItemsQuerySchema,
   updateReviewItemSchema
@@ -18,6 +19,12 @@ export function registerWorkbenchRoutes(
   const auth = authMiddleware(authenticateAccessTokenUseCase);
 
   router.get("/offices/:officeId/workbench", auth, asyncHandler(controller.getWorkbench));
+  router.get(
+    "/offices/:officeId/advisor/charts",
+    auth,
+    validateQuery(advisorChartsQuerySchema),
+    asyncHandler(controller.getAdvisorCharts)
+  );
   router.get(
     "/offices/:officeId/review-items",
     auth,

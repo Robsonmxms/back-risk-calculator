@@ -26,7 +26,6 @@ export async function createApp(dependencies: AppDependencies = {}) {
   const adminContainer = buildAdminContainer(shared);
   const officeContainer = buildOfficeContainer(shared);
   const clientContainer = buildClientContainer(shared);
-  const workbenchContainer = buildWorkbenchContainer(shared);
   const complianceContainer = buildComplianceContainer(shared);
   const accountContainer = buildAccountContainer(shared);
   const portfolioContainer = buildPortfolioContainer(shared);
@@ -47,6 +46,10 @@ export async function createApp(dependencies: AppDependencies = {}) {
       ...dependencies.analytics
     }
   );
+  const workbenchContainer = buildWorkbenchContainer(shared, {
+    analyticsRepository: analyticsContainer.repository,
+    alertRepository: reportsAlertsContainer.alertRepository
+  });
 
   const app = createServer({
     authController: authContainer.controller,

@@ -39,6 +39,7 @@ export interface ReportsAlertsContainer {
   eventPublisher: ApplicationEventPublisher;
   realtimeHub: InMemoryRealtimeHub;
   repository: InMemoryReportsAlertsStore | ReportRepository;
+  alertRepository: AlertRepository;
   useCases: {
     requestReportUseCase: RequestReportUseCase;
     listReportsUseCase: ListReportsUseCase;
@@ -164,6 +165,7 @@ export function buildReportsAlertsContainer(
     eventPublisher,
     realtimeHub,
     repository: reports,
+    alertRepository: alerts,
     useCases: {
       requestReportUseCase,
       listReportsUseCase,

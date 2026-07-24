@@ -1,17 +1,20 @@
 import { Request, Response } from "express";
 import { ReviewItem, StaffWorkbench } from "../../01-domain/workbench/workbench";
 import { ReviewItemFilters } from "../../02-application/ports/repositories";
+import { GetAdvisorChartsUseCase } from "../../02-application/workbench/use-cases/advisor-chart-use-case";
 import {
   CreateReviewItemUseCase,
   GetWorkbenchUseCase,
   ListReviewItemsUseCase,
   UpdateReviewItemUseCase
 } from "../../02-application/workbench/use-cases/workbench-use-cases";
+import { AdvisorChartsQuery } from "../../02-application/workbench/use-cases/advisor-chart-types";
 import { ApiError, ok } from "../http";
 import { AuthenticatedRequest } from "../request";
 
 export class WorkbenchController {
   constructor(
+    private readonly getAdvisorChartsUseCase: GetAdvisorChartsUseCase,
     private readonly getWorkbenchUseCase: GetWorkbenchUseCase,
     private readonly listReviewItemsUseCase: ListReviewItemsUseCase,
     private readonly createReviewItemUseCase: CreateReviewItemUseCase,
@@ -22,6 +25,18 @@ export class WorkbenchController {
     const actor = (request as AuthenticatedRequest).actor;
     const workbench = await this.getWorkbenchUseCase.execute(actor, requireOfficeId(request));
     return ok(response, serializeWorkbench(workbench));
+  };
+
+  getAdvisorCharts = async (request: Request, response: Response) => {
+    const actor = (request as AuthenticatedRequest).actor;
+    const result = await this.getAdvisorChartsUseCase.execute(
+      actor,
+      requireOfficeId(request),
+      ((request as Request & { validatedQuery?: AdvisorChartsQuery }).validatedQuery ?? {
+        range: "90d"
+      }) as AdvisorChartsQuery
+    );
+    return ok(response, result.data, result.meta);
   };
 
   listReviewItems = async (request: Request, response: Response) => {
