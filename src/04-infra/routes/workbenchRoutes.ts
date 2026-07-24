@@ -6,7 +6,7 @@ import {
   createReviewItemSchema,
   listReviewItemsQuerySchema,
   updateReviewItemSchema
-} from "../../03-adapters/controllers/workbench-schemas";
+} from "../../03-adapters/schemas/WorkbenchSchema";
 import { asyncHandler } from "../../03-adapters/http";
 import { authMiddleware } from "../../03-adapters/middlewares/AuthMiddleware";
 import { validateBody, validateQuery } from "../../03-adapters/validation";

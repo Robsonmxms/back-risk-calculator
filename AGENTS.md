@@ -43,6 +43,9 @@ Use inward dependencies:
 ```
 
 - Routers parse HTTP, apply middleware/validation, call controllers, and map responses.
+- Keep request/validation schemas in `src/03-adapters/schemas`, not in `controllers`. Schema files
+  must follow the `DomainSchema.ts` pattern, such as `AuthSchema.ts`, `PortfolioSchema.ts`, or
+  `OperationalChartSchema.ts`.
 - Use cases own orchestration, policies, and security decisions.
 - Domain rules must not import Express, Joi, or infrastructure adapters.
 - Repository files expose contracts/ports. The current concrete implementation is an in-memory
@@ -67,6 +70,7 @@ back-risk-calculator/
       users/
     03-adapters/
       controllers/
+      schemas/
       middlewares/
       oauth/
       observability/

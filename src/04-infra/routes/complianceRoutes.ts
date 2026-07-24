@@ -6,7 +6,7 @@ import {
   listAuditEventsQuerySchema,
   listSupervisionReviewsQuerySchema,
   updateSupervisionReviewSchema
-} from "../../03-adapters/controllers/compliance-schemas";
+} from "../../03-adapters/schemas/ComplianceSchema";
 import { asyncHandler } from "../../03-adapters/http";
 import { authMiddleware } from "../../03-adapters/middlewares/AuthMiddleware";
 import { validateBody, validateQuery } from "../../03-adapters/validation";

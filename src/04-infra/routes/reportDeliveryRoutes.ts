@@ -5,7 +5,7 @@ import {
   createReportPackageSchema,
   listReportPackagesQuerySchema,
   updateReportPackageSchema
-} from "../../03-adapters/controllers/report-delivery-schemas";
+} from "../../03-adapters/schemas/ReportDeliverySchema";
 import { asyncHandler } from "../../03-adapters/http";
 import { authMiddleware } from "../../03-adapters/middlewares/AuthMiddleware";
 import { validateBody, validateQuery } from "../../03-adapters/validation";

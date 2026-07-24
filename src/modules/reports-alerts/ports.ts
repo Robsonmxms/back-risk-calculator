@@ -44,6 +44,7 @@ export interface AlertRepository {
 
 export interface NotificationRepository {
   createNotification(notification: NotificationRecord): Promise<NotificationRecord>;
+  listNotificationsByPortfolioIds(portfolioIds: string[]): Promise<NotificationRecord[]>;
   listNotifications(input: {
     userId: string;
     visiblePortfolioIds: string[];

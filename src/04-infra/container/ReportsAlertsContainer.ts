@@ -40,6 +40,7 @@ export interface ReportsAlertsContainer {
   realtimeHub: InMemoryRealtimeHub;
   repository: InMemoryReportsAlertsStore | ReportRepository;
   alertRepository: AlertRepository;
+  notificationRepository: NotificationRepository;
   useCases: {
     requestReportUseCase: RequestReportUseCase;
     listReportsUseCase: ListReportsUseCase;
@@ -166,6 +167,7 @@ export function buildReportsAlertsContainer(
     realtimeHub,
     repository: reports,
     alertRepository: alerts,
+    notificationRepository: notifications,
     useCases: {
       requestReportUseCase,
       listReportsUseCase,
