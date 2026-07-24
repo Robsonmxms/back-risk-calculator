@@ -33,7 +33,8 @@ export async function createApp(dependencies: AppDependencies = {}) {
   const reportsAlertsContainer = buildReportsAlertsContainer(shared, dependencies.reportsAlerts);
   const reportDeliveryContainer = buildReportDeliveryContainer(
     shared,
-    reportsAlertsContainer.repository
+    reportsAlertsContainer.repository,
+    reportsAlertsContainer.notificationRepository
   );
   const marketDataContainer = buildMarketDataContainer(shared, {
     marketDataEventPublisher: reportsAlertsContainer.eventPublisher,
@@ -106,6 +107,8 @@ export async function createApp(dependencies: AppDependencies = {}) {
       getPlatformAdminChartsUseCase:
         operationalChartsContainer.useCases.getPlatformAdminChartsUseCase,
       listAuditEventsUseCase: complianceContainer.useCases.listAuditEventsUseCase,
+      getComplianceChartsUseCase: complianceContainer.useCases.getComplianceChartsUseCase,
+      getDeliveryChartsUseCase: reportDeliveryContainer.useCases.getDeliveryChartsUseCase,
       getClientPortalUseCase: reportDeliveryContainer.useCases.getClientPortalUseCase,
       loginUseCase: authContainer.useCases.loginUseCase,
       logoutUseCase: authContainer.useCases.logoutUseCase,

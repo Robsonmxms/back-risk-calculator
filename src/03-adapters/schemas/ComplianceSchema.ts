@@ -19,6 +19,8 @@ const auditResourceTypes = [
   "review"
 ];
 
+const chartRanges = ["7d", "30d", "90d", "ytd", "1y", "all"];
+
 export const listAuditEventsQuerySchema = Joi.object({
   actorId: Joi.string().trim().min(1),
   action: Joi.string().trim().min(1).max(120),
@@ -49,4 +51,13 @@ export const updateSupervisionReviewSchema = Joi.object({
 export const createAuditExportSchema = Joi.object({
   format: Joi.string().valid("csv", "json").required(),
   filters: listAuditEventsQuerySchema
+});
+
+export const complianceChartsQuerySchema = Joi.object({
+  range: Joi.string().valid(...chartRanges).default("30d"),
+  resourceType: Joi.string().valid(...auditResourceTypes),
+  action: Joi.string().trim().min(1).max(120),
+  severity: Joi.string().valid("info", "warning", "critical"),
+  status: Joi.string().valid("open", "assigned", "resolved"),
+  assigneeUserId: Joi.string().trim().min(1)
 });

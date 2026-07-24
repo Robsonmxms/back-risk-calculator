@@ -1,5 +1,15 @@
 import Joi from "joi";
 
+const chartRanges = ["7d", "30d", "90d", "ytd", "1y", "all"];
+const packageStatuses = [
+  "draft",
+  "pending_approval",
+  "approved",
+  "delivered",
+  "viewed",
+  "revoked"
+];
+
 const packageItemSchema = Joi.object({
   id: Joi.string().trim().min(1),
   type: Joi.string().valid("report", "analytics_snapshot", "portfolio_summary").required(),
@@ -12,14 +22,7 @@ const packageItemSchema = Joi.object({
 });
 
 export const listReportPackagesQuerySchema = Joi.object({
-  status: Joi.string().valid(
-    "draft",
-    "pending_approval",
-    "approved",
-    "delivered",
-    "viewed",
-    "revoked"
-  )
+  status: Joi.string().valid(...packageStatuses)
 });
 
 export const createReportPackageSchema = Joi.object({
@@ -37,3 +40,23 @@ export const updateReportPackageSchema = Joi.object({
   status: Joi.string().valid("draft", "pending_approval"),
   items: Joi.array().items(packageItemSchema).min(1)
 }).min(1);
+
+export const deliveryChartsQuerySchema = Joi.object({
+  range: Joi.string().valid(...chartRanges).default("30d"),
+  packageStatus: Joi.string().valid(...packageStatuses),
+  deliveryStatus: Joi.string().valid(
+    ...packageStatuses,
+    "pending",
+    "running",
+    "ready",
+    "failed",
+    "unread",
+    "read",
+    "success",
+    "failure"
+  ),
+  channel: Joi.string().trim().min(1).max(80),
+  clientId: Joi.string().trim().min(1),
+  householdId: Joi.string().trim().min(1),
+  advisorUserId: Joi.string().trim().min(1)
+});
