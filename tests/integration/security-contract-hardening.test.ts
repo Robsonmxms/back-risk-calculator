@@ -1,7 +1,7 @@
 import request from "supertest";
 import type { Response } from "supertest";
 import { describe, expect, it } from "vitest";
-import { createApp } from "../../src/app";
+import { createSeededTestApp as createApp } from "../helpers/testApp";
 
 async function login(app: Parameters<typeof request>[0], email: string) {
   const response = await request(app).post("/api/v1/auth/login").send({

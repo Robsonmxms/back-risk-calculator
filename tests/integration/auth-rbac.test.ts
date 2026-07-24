@@ -1,6 +1,6 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { createApp } from "../../src/app";
+import { createSeededTestApp as createApp } from "../helpers/testApp";
 
 async function login(email: string) {
   const { app } = await createApp();

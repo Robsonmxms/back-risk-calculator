@@ -97,6 +97,11 @@ back-risk-calculator/
 - Do not create `back-risk-calculator/.specs/`.
 - Follow root macro specs for feature scope and acceptance criteria.
 - Do not put business rules in Express routers, Joi schemas, or infrastructure entry points.
+- Runtime startup must not seed users, offices, clients, accounts, portfolios, reports, alerts,
+  notifications, audit events, assignments, quotes, analytics, or any other business records.
+- Keep fake providers, seeded identity stores, and business fixtures in `tests/` helpers or
+  explicit operator seed scripts only; never import them from app boot, containers, routers,
+  controllers, or production providers.
 - Keep README, `AGENTS.md`, and root specs aligned with the implemented API.
 - Mock/fake external providers in tests.
 - Avoid investment-advice language; the backend analyzes risk and explains metrics.
