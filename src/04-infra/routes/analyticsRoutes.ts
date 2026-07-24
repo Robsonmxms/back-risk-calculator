@@ -1,10 +1,14 @@
 import { Router } from "express";
 import { AuthenticateAccessTokenUseCase } from "../../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { AnalyticsController } from "../../03-adapters/controllers/AnalyticsController";
-import { portfolioChartsQuerySchema } from "../../03-adapters/controllers/analytics-schemas";
+import {
+  analystChartJobSchema,
+  analystChartsQuerySchema,
+  portfolioChartsQuerySchema
+} from "../../03-adapters/controllers/analytics-schemas";
 import { asyncHandler } from "../../03-adapters/http";
 import { authMiddleware } from "../../03-adapters/middlewares/AuthMiddleware";
-import { validateQuery } from "../../03-adapters/validation";
+import { validateBody, validateQuery } from "../../03-adapters/validation";
 
 export function registerAnalyticsRoutes(
   router: Router,
@@ -13,6 +17,23 @@ export function registerAnalyticsRoutes(
 ): void {
   const auth = authMiddleware(authenticateAccessTokenUseCase);
 
+  router.get(
+    "/offices/:officeId/analytics/charts",
+    auth,
+    validateQuery(analystChartsQuerySchema),
+    asyncHandler(controller.getAnalystCharts)
+  );
+  router.post(
+    "/offices/:officeId/analytics/chart-jobs",
+    auth,
+    validateBody(analystChartJobSchema),
+    asyncHandler(controller.createAnalystChartJob)
+  );
+  router.get(
+    "/offices/:officeId/analytics/chart-jobs/:jobId",
+    auth,
+    asyncHandler(controller.getAnalystChartJob)
+  );
   router.get(
     "/portfolios/:portfolioId/charts",
     auth,
