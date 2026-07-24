@@ -11,10 +11,7 @@ import { AppConfig } from "../config/env";
 import type { AnalyticsContainerDependencies } from "./AnalyticsContainer";
 import type { MarketDataContainerDependencies } from "./MarketDataContainer";
 import type { ReportsAlertsContainerDependencies } from "./ReportsAlertsContainer";
-import {
-  createSeededIdentityStore,
-  InMemoryIdentityStore
-} from "../repositories/InMemoryIdentityStore";
+import { InMemoryIdentityStore } from "../repositories/InMemoryIdentityStore";
 
 export interface AppDependencies {
   identityStore?: InMemoryIdentityStore;
@@ -45,8 +42,7 @@ export async function buildSharedContainer(
   dependencies: AppDependencies = {}
 ): Promise<SharedContainer> {
   const passwordHasher = new ScryptPasswordHasher();
-  const identityStore =
-    dependencies.identityStore ?? (await createSeededIdentityStore(passwordHasher));
+  const identityStore = dependencies.identityStore ?? new InMemoryIdentityStore();
   const logger = new Logger();
   const metrics = new Metrics();
   const accessTokenService = new HmacJwtAccessTokenService(

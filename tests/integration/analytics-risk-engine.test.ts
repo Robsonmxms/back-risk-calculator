@@ -1,6 +1,6 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { createApp } from "../../src/app";
+import { createSeededTestApp as createApp } from "../helpers/testApp";
 import { ApplicationError } from "../../src/02-application/errors/application-error";
 import { InMemoryAnalyticsStore } from "../../src/04-infra/repositories/InMemoryAnalyticsStore";
 import {

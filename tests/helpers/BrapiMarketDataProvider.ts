@@ -1,8 +1,8 @@
-import { ApplicationError } from "../../../02-application/errors/application-error";
+import { ApplicationError } from "../../src/02-application/errors/application-error";
 import {
   CurrencyRateProvider,
   MarketDataProvider
-} from "../../../modules/market-data/ports";
+} from "../../src/modules/market-data/ports";
 import {
   DateRange,
   Dividend,
@@ -11,7 +11,7 @@ import {
   LatestQuote,
   MarketAssetCandidate,
   Split
-} from "../../../modules/market-data/types";
+} from "../../src/modules/market-data/types";
 
 interface BrapiAssetPayload {
   stock: string;

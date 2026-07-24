@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "check:runtime-data": "node scripts/check-runtime-mock-data.mjs",
     "lint-staged": "lint-staged",
     "prepare": "husky",
     "db:migrate:dev": "tsx scripts/migrate-dev-database.ts",

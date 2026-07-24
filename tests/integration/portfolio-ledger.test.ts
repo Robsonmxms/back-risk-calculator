@@ -1,7 +1,7 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { createApp } from "../../src/app";
-import { createSeededIdentityStore } from "../../src/04-infra/repositories/InMemoryIdentityStore";
+import { createSeededTestApp as createApp } from "../helpers/testApp";
+import { createSeededIdentityStore } from "../helpers/seededIdentityStore";
 
 async function login(app: Parameters<typeof request>[0], email: string) {
   const response = await request(app).post("/api/v1/auth/login").send({

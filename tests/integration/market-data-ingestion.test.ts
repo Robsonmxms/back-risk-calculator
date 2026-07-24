@@ -1,9 +1,9 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { createApp } from "../../src/app";
+import { createSeededTestApp as createApp } from "../helpers/testApp";
 import type { DateRange } from "../../src/modules/market-data/types";
-import { BrapiMarketDataProvider } from "../../src/04-infra/providers/market-data/BrapiMarketDataProvider";
-import { createSeededIdentityStore } from "../../src/04-infra/repositories/InMemoryIdentityStore";
+import { BrapiMarketDataProvider } from "../helpers/BrapiMarketDataProvider";
+import { createSeededIdentityStore } from "../helpers/seededIdentityStore";
 
 async function login(app: Parameters<typeof request>[0], email = "user@example.com") {
   const response = await request(app).post("/api/v1/auth/login").send({
