@@ -4,6 +4,8 @@ import {
   ListPortfolioAnalyticsHistoryUseCase,
   RequestPortfolioAnalyticsRecomputeUseCase
 } from "../../modules/analytics/use-cases";
+import { GetPortfolioChartsUseCase } from "../../modules/analytics/chart-use-cases";
+import { PortfolioChartsQuery } from "../../modules/analytics/chart-types";
 import { AuthenticatedRequest } from "../request";
 import { ApiError, ok } from "../http";
 
@@ -11,7 +13,8 @@ export class AnalyticsController {
   constructor(
     private readonly getPortfolioAnalyticsUseCase: GetPortfolioAnalyticsUseCase,
     private readonly requestPortfolioAnalyticsRecomputeUseCase: RequestPortfolioAnalyticsRecomputeUseCase,
-    private readonly listPortfolioAnalyticsHistoryUseCase: ListPortfolioAnalyticsHistoryUseCase
+    private readonly listPortfolioAnalyticsHistoryUseCase: ListPortfolioAnalyticsHistoryUseCase,
+    private readonly getPortfolioChartsUseCase: GetPortfolioChartsUseCase
   ) {}
 
   getPortfolioAnalytics = async (request: Request, response: Response) => {
@@ -54,6 +57,23 @@ export class AnalyticsController {
     const snapshots = await this.listPortfolioAnalyticsHistoryUseCase.execute(actor, portfolioId);
 
     return ok(response, { snapshots }, { count: snapshots.length });
+  };
+
+  getPortfolioCharts = async (request: Request, response: Response) => {
+    const actor = (request as AuthenticatedRequest).actor;
+    const portfolioId = requirePortfolioId(request);
+    const query = (request as Request & { validatedQuery?: PortfolioChartsQuery })
+      .validatedQuery ?? {
+      range: "1y",
+      interval: "daily"
+    };
+    const chartResponse = await this.getPortfolioChartsUseCase.execute(
+      actor,
+      portfolioId,
+      query
+    );
+
+    return ok(response, chartResponse.data, chartResponse.meta);
   };
 }
 

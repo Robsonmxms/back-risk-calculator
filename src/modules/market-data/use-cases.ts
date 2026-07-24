@@ -317,6 +317,57 @@ export class GetMarketAssetUseCase {
   }
 }
 
+export interface AssetHistoryQuery {
+  from?: string;
+  to?: string;
+  interval?: "daily" | "weekly" | "monthly";
+}
+
+export class GetAssetHistoryUseCase {
+  constructor(private readonly repository: MarketDataRepository) {}
+
+  async execute(assetId: string, query: AssetHistoryQuery = {}) {
+    const asset = await this.repository.findAssetById(assetId);
+    if (!asset) {
+      throw new ApplicationError("not_found", "market_data.asset_not_found", "Asset not found");
+    }
+
+    const history = compactHistoricalPrices(
+      (await this.repository.listHistoricalPrices(asset.id)).filter((price) => {
+        return (!query.from || price.date >= query.from) && (!query.to || price.date <= query.to);
+      }),
+      query.interval ?? "daily"
+    );
+
+    return {
+      asset: {
+        id: asset.id,
+        symbol: asset.symbol,
+        name: asset.name,
+        exchange: asset.exchange,
+        currency: asset.currency,
+        assetType: asset.assetType,
+        providerName: asset.providerName,
+        updatedAt: asset.updatedAt
+      },
+      history,
+      dataQuality: {
+        status: history.length > 0 ? "complete" : "partial",
+        issues:
+          history.length > 0
+            ? []
+            : [
+                {
+                  code: "market_data.history_unavailable",
+                  severity: "warning",
+                  message: "No stored historical prices are available for this asset."
+                }
+              ]
+      }
+    };
+  }
+}
+
 export class RequestMarketDataRefreshUseCase {
   constructor(
     private readonly repository: MarketDataRepository,
@@ -496,4 +547,32 @@ function latestPriceOnOrBefore(
 
 function roundMoney(value: number): number {
   return Number(value.toFixed(2));
+}
+
+function compactHistoricalPrices(
+  prices: HistoricalPrice[],
+  interval: "daily" | "weekly" | "monthly"
+): HistoricalPrice[] {
+  const sorted = [...prices].sort((left, right) => left.date.localeCompare(right.date));
+  if (interval === "daily") {
+    return sorted;
+  }
+
+  const byPeriod = new Map<string, HistoricalPrice>();
+  for (const price of sorted) {
+    byPeriod.set(historyPeriodKey(price.date, interval), price);
+  }
+
+  return Array.from(byPeriod.values()).sort((left, right) => left.date.localeCompare(right.date));
+}
+
+function historyPeriodKey(date: string, interval: "weekly" | "monthly"): string {
+  if (interval === "monthly") {
+    return date.slice(0, 7);
+  }
+
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  const yearStart = new Date(Date.UTC(parsed.getUTCFullYear(), 0, 1));
+  const dayOfYear = Math.floor((parsed.getTime() - yearStart.getTime()) / 86_400_000);
+  return `${parsed.getUTCFullYear()}-${Math.floor(dayOfYear / 7)}`;
 }

@@ -4,6 +4,7 @@ import { InMemoryMarketDataCache } from "../repositories/InMemoryMarketDataCache
 import { InMemoryMarketDataStore } from "../repositories/InMemoryMarketDataStore";
 import {
   ConvertCurrencyUseCase,
+  GetAssetHistoryUseCase,
   GetMarketAssetUseCase,
   GetMarketDataProviderStatusUseCase,
   GetTradePriceUseCase,
@@ -49,6 +50,7 @@ export interface MarketDataContainer {
     convertCurrencyUseCase: ConvertCurrencyUseCase;
     listMarketExchangesUseCase: ListMarketExchangesUseCase;
     getTradePriceUseCase: GetTradePriceUseCase;
+    getAssetHistoryUseCase: GetAssetHistoryUseCase;
   };
 }
 
@@ -101,6 +103,7 @@ export function buildMarketDataContainer(
     shared.metrics,
     now
   );
+  const getAssetHistoryUseCase = new GetAssetHistoryUseCase(repository);
   const worker = new MarketDataIngestionWorker(
     provider,
     repository,
@@ -120,7 +123,8 @@ export function buildMarketDataContainer(
     getProviderStatusUseCase,
     convertCurrencyUseCase,
     listMarketExchangesUseCase,
-    getTradePriceUseCase
+    getTradePriceUseCase,
+    getAssetHistoryUseCase
   );
 
   return {
@@ -139,7 +143,8 @@ export function buildMarketDataContainer(
       getProviderStatusUseCase,
       convertCurrencyUseCase,
       listMarketExchangesUseCase,
-      getTradePriceUseCase
+      getTradePriceUseCase,
+      getAssetHistoryUseCase
     }
   };
 }

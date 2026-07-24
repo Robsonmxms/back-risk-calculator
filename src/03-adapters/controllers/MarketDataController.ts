@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import {
   ConvertCurrencyUseCase,
+  GetAssetHistoryUseCase,
   GetMarketAssetUseCase,
   GetMarketDataProviderStatusUseCase,
   GetTradePriceUseCase,
@@ -19,7 +20,8 @@ export class MarketDataController {
     private readonly getProviderStatusUseCase: GetMarketDataProviderStatusUseCase,
     private readonly convertCurrencyUseCase: ConvertCurrencyUseCase,
     private readonly listMarketExchangesUseCase: ListMarketExchangesUseCase,
-    private readonly getTradePriceUseCase: GetTradePriceUseCase
+    private readonly getTradePriceUseCase: GetTradePriceUseCase,
+    private readonly getAssetHistoryUseCase: GetAssetHistoryUseCase
   ) {}
 
   searchAssets = async (request: Request, response: Response) => {
@@ -52,6 +54,19 @@ export class MarketDataController {
 
     return ok(response, data, {
       freshness: data.latestQuote?.freshness ?? "stale"
+    });
+  };
+
+  getAssetHistory = async (request: Request, response: Response) => {
+    const assetId = requireAssetId(request);
+    const query = (request as Request & {
+      validatedQuery?: { from?: string; to?: string; interval?: "daily" | "weekly" | "monthly" };
+    }).validatedQuery;
+    const data = await this.getAssetHistoryUseCase.execute(assetId, query);
+
+    return ok(response, data, {
+      count: data.history.length,
+      providerName: data.asset.providerName
     });
   };
 
