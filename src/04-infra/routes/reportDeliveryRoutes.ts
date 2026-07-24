@@ -3,6 +3,7 @@ import { AuthenticateAccessTokenUseCase } from "../../02-application/auth/use-ca
 import { ReportDeliveryController } from "../../03-adapters/controllers/ReportDeliveryController";
 import {
   createReportPackageSchema,
+  deliveryChartsQuerySchema,
   listReportPackagesQuerySchema,
   updateReportPackageSchema
 } from "../../03-adapters/schemas/ReportDeliverySchema";
@@ -17,6 +18,12 @@ export function registerReportDeliveryRoutes(
 ): void {
   const auth = authMiddleware(authenticateAccessTokenUseCase);
 
+  router.get(
+    "/offices/:officeId/delivery/charts",
+    auth,
+    validateQuery(deliveryChartsQuerySchema),
+    asyncHandler(controller.getDeliveryCharts)
+  );
   router.post(
     "/clients/:clientId/report-packages",
     auth,

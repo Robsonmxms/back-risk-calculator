@@ -12,6 +12,12 @@ import {
   UpdateSupervisionReviewUseCase
 } from "../../02-application/compliance/use-cases/compliance-use-cases";
 import {
+  GetComplianceChartsUseCase
+} from "../../02-application/compliance/use-cases/compliance-delivery-chart-use-cases";
+import {
+  ComplianceChartsQuery
+} from "../../02-application/compliance/use-cases/compliance-delivery-chart-types";
+import {
   AuditEventFilters,
   SupervisionReviewFilters
 } from "../../02-application/ports/repositories";
@@ -24,7 +30,8 @@ export class ComplianceController {
     private readonly getAuditEventUseCase: GetAuditEventUseCase,
     private readonly listSupervisionReviewsUseCase: ListSupervisionReviewsUseCase,
     private readonly updateSupervisionReviewUseCase: UpdateSupervisionReviewUseCase,
-    private readonly requestAuditExportUseCase: RequestAuditExportUseCase
+    private readonly requestAuditExportUseCase: RequestAuditExportUseCase,
+    private readonly getComplianceChartsUseCase: GetComplianceChartsUseCase
   ) {}
 
   listAuditEvents = async (request: Request, response: Response) => {
@@ -80,6 +87,18 @@ export class ComplianceController {
       request.body
     );
     return ok(response.status(202), serializeAuditExport(exportJob));
+  };
+
+  getComplianceCharts = async (request: Request, response: Response) => {
+    const actor = (request as AuthenticatedRequest).actor;
+    const result = await this.getComplianceChartsUseCase.execute(
+      actor,
+      requireOfficeId(request),
+      ((request as Request & { validatedQuery?: ComplianceChartsQuery }).validatedQuery ?? {
+        range: "30d"
+      })
+    );
+    return ok(response, result.data, result.meta);
   };
 }
 

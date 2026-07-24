@@ -2,6 +2,7 @@ import { Router } from "express";
 import { AuthenticateAccessTokenUseCase } from "../../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { ComplianceController } from "../../03-adapters/controllers/ComplianceController";
 import {
+  complianceChartsQuerySchema,
   createAuditExportSchema,
   listAuditEventsQuerySchema,
   listSupervisionReviewsQuerySchema,
@@ -18,6 +19,12 @@ export function registerComplianceRoutes(
 ): void {
   const auth = authMiddleware(authenticateAccessTokenUseCase);
 
+  router.get(
+    "/offices/:officeId/compliance/charts",
+    auth,
+    validateQuery(complianceChartsQuerySchema),
+    asyncHandler(controller.getComplianceCharts)
+  );
   router.get(
     "/offices/:officeId/audit-events",
     auth,

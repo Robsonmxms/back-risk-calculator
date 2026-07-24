@@ -6,6 +6,7 @@ import {
   RequestAuditExportUseCase,
   UpdateSupervisionReviewUseCase
 } from "../../02-application/compliance/use-cases/compliance-use-cases";
+import { GetComplianceChartsUseCase } from "../../02-application/compliance/use-cases/compliance-delivery-chart-use-cases";
 import { ComplianceController } from "../../03-adapters/controllers/ComplianceController";
 import type { SharedContainer } from "./SharedContainer";
 
@@ -33,6 +34,12 @@ export function buildComplianceContainer(shared: SharedContainer) {
     permissionService,
     shared.metrics
   );
+  const getComplianceChartsUseCase = new GetComplianceChartsUseCase(
+    shared.identityStore,
+    permissionService,
+    shared.logger,
+    shared.metrics
+  );
 
   return {
     controller: new ComplianceController(
@@ -40,14 +47,16 @@ export function buildComplianceContainer(shared: SharedContainer) {
       getAuditEventUseCase,
       listSupervisionReviewsUseCase,
       updateSupervisionReviewUseCase,
-      requestAuditExportUseCase
+      requestAuditExportUseCase,
+      getComplianceChartsUseCase
     ),
     useCases: {
       listAuditEventsUseCase,
       getAuditEventUseCase,
       listSupervisionReviewsUseCase,
       updateSupervisionReviewUseCase,
-      requestAuditExportUseCase
+      requestAuditExportUseCase,
+      getComplianceChartsUseCase
     }
   };
 }

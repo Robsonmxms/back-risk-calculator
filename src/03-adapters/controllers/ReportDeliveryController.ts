@@ -14,6 +14,8 @@ import {
   RevokeReportPackageUseCase,
   UpdateReportPackageUseCase
 } from "../../02-application/delivery/use-cases/report-delivery-use-cases";
+import { GetDeliveryChartsUseCase } from "../../02-application/compliance/use-cases/compliance-delivery-chart-use-cases";
+import { DeliveryChartsQuery } from "../../02-application/compliance/use-cases/compliance-delivery-chart-types";
 import { ReportPackageFilters } from "../../02-application/ports/repositories";
 import { ApiError, ok } from "../http";
 import { AuthenticatedRequest } from "../request";
@@ -27,7 +29,8 @@ export class ReportDeliveryController {
     private readonly approveReportPackageUseCase: ApproveReportPackageUseCase,
     private readonly deliverReportPackageUseCase: DeliverReportPackageUseCase,
     private readonly revokeReportPackageUseCase: RevokeReportPackageUseCase,
-    private readonly getClientPortalUseCase: GetClientPortalUseCase
+    private readonly getClientPortalUseCase: GetClientPortalUseCase,
+    private readonly getDeliveryChartsUseCase: GetDeliveryChartsUseCase
   ) {}
 
   listClientReportPackages = async (request: Request, response: Response) => {
@@ -104,6 +107,18 @@ export class ReportDeliveryController {
     const actor = (request as AuthenticatedRequest).actor;
     const portal = await this.getClientPortalUseCase.execute(actor);
     return ok(response, serializeClientPortal(portal));
+  };
+
+  getDeliveryCharts = async (request: Request, response: Response) => {
+    const actor = (request as AuthenticatedRequest).actor;
+    const result = await this.getDeliveryChartsUseCase.execute(
+      actor,
+      requireParam(request, "officeId"),
+      ((request as Request & { validatedQuery?: DeliveryChartsQuery }).validatedQuery ?? {
+        range: "30d"
+      })
+    );
+    return ok(response, result.data, result.meta);
   };
 }
 

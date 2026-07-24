@@ -9,13 +9,18 @@ import {
   RevokeReportPackageUseCase,
   UpdateReportPackageUseCase
 } from "../../02-application/delivery/use-cases/report-delivery-use-cases";
+import { GetDeliveryChartsUseCase } from "../../02-application/compliance/use-cases/compliance-delivery-chart-use-cases";
 import { ReportDeliveryController } from "../../03-adapters/controllers/ReportDeliveryController";
-import { ReportRepository } from "../../modules/reports-alerts/ports";
+import {
+  NotificationRepository,
+  ReportRepository
+} from "../../modules/reports-alerts/ports";
 import type { SharedContainer } from "./SharedContainer";
 
 export function buildReportDeliveryContainer(
   shared: SharedContainer,
-  reports: ReportRepository
+  reports: ReportRepository,
+  notifications: NotificationRepository
 ) {
   const permissionService = new PermissionService(shared.identityStore, shared.identityStore);
   const listClientReportPackagesUseCase = new ListClientReportPackagesUseCase(
@@ -64,6 +69,18 @@ export function buildReportDeliveryContainer(
     permissionService,
     shared.identityStore
   );
+  const getDeliveryChartsUseCase = new GetDeliveryChartsUseCase(
+    shared.identityStore,
+    shared.identityStore,
+    shared.identityStore,
+    shared.identityStore,
+    reports,
+    notifications,
+    shared.identityStore,
+    permissionService,
+    shared.logger,
+    shared.metrics
+  );
 
   return {
     controller: new ReportDeliveryController(
@@ -74,7 +91,8 @@ export function buildReportDeliveryContainer(
       approveReportPackageUseCase,
       deliverReportPackageUseCase,
       revokeReportPackageUseCase,
-      getClientPortalUseCase
+      getClientPortalUseCase,
+      getDeliveryChartsUseCase
     ),
     useCases: {
       listClientReportPackagesUseCase,
@@ -84,7 +102,8 @@ export function buildReportDeliveryContainer(
       approveReportPackageUseCase,
       deliverReportPackageUseCase,
       revokeReportPackageUseCase,
-      getClientPortalUseCase
+      getClientPortalUseCase,
+      getDeliveryChartsUseCase
     }
   };
 }
