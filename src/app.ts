@@ -16,6 +16,7 @@ import { buildClientContainer } from "./04-infra/container/ClientContainer";
 import { buildWorkbenchContainer } from "./04-infra/container/WorkbenchContainer";
 import { buildComplianceContainer } from "./04-infra/container/ComplianceContainer";
 import { buildReportDeliveryContainer } from "./04-infra/container/ReportDeliveryContainer";
+import { buildOperationalChartsContainer } from "./04-infra/container/OperationalChartsContainer";
 import { createServer } from "./04-infra/server";
 
 export async function createApp(dependencies: AppDependencies = {}) {
@@ -46,6 +47,15 @@ export async function createApp(dependencies: AppDependencies = {}) {
       ...dependencies.analytics
     }
   );
+  const operationalChartsContainer = buildOperationalChartsContainer(shared, {
+    analyticsRepository: analyticsContainer.repository,
+    marketDataRepository: marketDataContainer.repository,
+    marketDataJobQueue: marketDataContainer.queue,
+    reportRepository: reportsAlertsContainer.repository,
+    alertRepository: reportsAlertsContainer.alertRepository,
+    notificationRepository: reportsAlertsContainer.notificationRepository,
+    operationalChartsNow: dependencies.operationalCharts?.operationalChartsNow
+  });
   const workbenchContainer = buildWorkbenchContainer(shared, {
     analyticsRepository: analyticsContainer.repository,
     alertRepository: reportsAlertsContainer.alertRepository
@@ -57,6 +67,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
     adminController: adminContainer.controller,
     officeController: officeContainer.controller,
     clientController: clientContainer.controller,
+    operationalChartsController: operationalChartsContainer.controller,
     workbenchController: workbenchContainer.controller,
     complianceController: complianceContainer.controller,
     reportDeliveryController: reportDeliveryContainer.controller,
@@ -90,6 +101,10 @@ export async function createApp(dependencies: AppDependencies = {}) {
       listOfficesUseCase: officeContainer.useCases.listOfficesUseCase,
       listClientsUseCase: clientContainer.useCases.listClientsUseCase,
       getWorkbenchUseCase: workbenchContainer.useCases.getWorkbenchUseCase,
+      getOfficeAdminChartsUseCase:
+        operationalChartsContainer.useCases.getOfficeAdminChartsUseCase,
+      getPlatformAdminChartsUseCase:
+        operationalChartsContainer.useCases.getPlatformAdminChartsUseCase,
       listAuditEventsUseCase: complianceContainer.useCases.listAuditEventsUseCase,
       getClientPortalUseCase: reportDeliveryContainer.useCases.getClientPortalUseCase,
       loginUseCase: authContainer.useCases.loginUseCase,

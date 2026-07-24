@@ -13,6 +13,7 @@ import { ClientController } from "../03-adapters/controllers/ClientController";
 import { WorkbenchController } from "../03-adapters/controllers/WorkbenchController";
 import { ComplianceController } from "../03-adapters/controllers/ComplianceController";
 import { ReportDeliveryController } from "../03-adapters/controllers/ReportDeliveryController";
+import { OperationalChartsController } from "../03-adapters/controllers/OperationalChartsController";
 import { AuthenticateAccessTokenUseCase } from "../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { registerAccountRoutes } from "./routes/accountRoutes";
 import { registerAdminRoutes } from "./routes/adminRoutes";
@@ -21,6 +22,7 @@ import { registerAuthRoutes } from "./routes/authRoutes";
 import { registerMarketDataRoutes } from "./routes/marketDataRoutes";
 import { registerOfficeRoutes } from "./routes/officeRoutes";
 import { registerClientRoutes } from "./routes/clientRoutes";
+import { registerOperationalChartRoutes } from "./routes/operationalChartRoutes";
 import { registerWorkbenchRoutes } from "./routes/workbenchRoutes";
 import { registerComplianceRoutes } from "./routes/complianceRoutes";
 import { registerReportDeliveryRoutes } from "./routes/reportDeliveryRoutes";
@@ -39,6 +41,7 @@ export interface ServerDependencies {
   reportsAlertsController: ReportsAlertsController;
   officeController: OfficeController;
   clientController: ClientController;
+  operationalChartsController: OperationalChartsController;
   workbenchController: WorkbenchController;
   complianceController: ComplianceController;
   reportDeliveryController: ReportDeliveryController;
@@ -78,6 +81,11 @@ export function createServer(dependencies: ServerDependencies) {
   registerClientRoutes(
     apiRouter,
     dependencies.clientController,
+    dependencies.authenticateAccessTokenUseCase
+  );
+  registerOperationalChartRoutes(
+    apiRouter,
+    dependencies.operationalChartsController,
     dependencies.authenticateAccessTokenUseCase
   );
   registerWorkbenchRoutes(

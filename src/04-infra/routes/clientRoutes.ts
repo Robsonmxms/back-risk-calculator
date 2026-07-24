@@ -7,7 +7,7 @@ import {
   listClientsQuerySchema,
   updateClientSchema,
   updateHouseholdSchema
-} from "../../03-adapters/controllers/client-schemas";
+} from "../../03-adapters/schemas/ClientSchema";
 import { asyncHandler } from "../../03-adapters/http";
 import { authMiddleware } from "../../03-adapters/middlewares/AuthMiddleware";
 import { validateBody, validateQuery } from "../../03-adapters/validation";

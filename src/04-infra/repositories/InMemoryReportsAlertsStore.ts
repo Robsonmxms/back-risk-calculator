@@ -172,6 +172,16 @@ export class InMemoryReportsAlertsStore
     return { ...notification };
   }
 
+  async listNotificationsByPortfolioIds(portfolioIds: string[]): Promise<NotificationRecord[]> {
+    const visiblePortfolioIds = new Set(portfolioIds);
+    return Array.from(this.notifications.values())
+      .filter((notification) =>
+        notification.portfolioId ? visiblePortfolioIds.has(notification.portfolioId) : false
+      )
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+      .map((notification) => ({ ...notification }));
+  }
+
   async listNotifications(input: {
     userId: string;
     visiblePortfolioIds: string[];

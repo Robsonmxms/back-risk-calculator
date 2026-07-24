@@ -5,7 +5,7 @@ import {
   createPortfolioSchema,
   createPortfolioTransactionSchema,
   updatePortfolioSchema
-} from "../../03-adapters/controllers/portfolio-schemas";
+} from "../../03-adapters/schemas/PortfolioSchema";
 import { asyncHandler } from "../../03-adapters/http";
 import { authMiddleware } from "../../03-adapters/middlewares/AuthMiddleware";
 import { validateBody } from "../../03-adapters/validation";

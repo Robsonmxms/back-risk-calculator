@@ -21,6 +21,9 @@ export interface AppDependencies {
   marketData?: MarketDataContainerDependencies;
   analytics?: AnalyticsContainerDependencies;
   reportsAlerts?: ReportsAlertsContainerDependencies;
+  operationalCharts?: {
+    operationalChartsNow?: () => Date;
+  };
 }
 
 export interface SharedContainer {

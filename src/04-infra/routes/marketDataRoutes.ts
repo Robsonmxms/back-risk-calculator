@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { AuthenticateAccessTokenUseCase } from "../../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { MarketDataController } from "../../03-adapters/controllers/MarketDataController";
-import { assetHistoryQuerySchema } from "../../03-adapters/controllers/market-data-schemas";
+import { assetHistoryQuerySchema } from "../../03-adapters/schemas/MarketDataSchema";
 import { asyncHandler } from "../../03-adapters/http";
 import { authMiddleware } from "../../03-adapters/middlewares/AuthMiddleware";
 import { validateQuery } from "../../03-adapters/validation";

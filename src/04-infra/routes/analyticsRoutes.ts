@@ -5,7 +5,7 @@ import {
   analystChartJobSchema,
   analystChartsQuerySchema,
   portfolioChartsQuerySchema
-} from "../../03-adapters/controllers/analytics-schemas";
+} from "../../03-adapters/schemas/AnalyticsSchema";
 import { asyncHandler } from "../../03-adapters/http";
 import { authMiddleware } from "../../03-adapters/middlewares/AuthMiddleware";
 import { validateBody, validateQuery } from "../../03-adapters/validation";

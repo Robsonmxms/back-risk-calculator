@@ -5,7 +5,7 @@ import {
   loginSchema,
   logoutSchema,
   refreshSchema
-} from "../../03-adapters/controllers/AuthSchemas";
+} from "../../03-adapters/schemas/AuthSchema";
 import { asyncHandler } from "../../03-adapters/http";
 import { authMiddleware } from "../../03-adapters/middlewares/AuthMiddleware";
 import { validateBody } from "../../03-adapters/validation";
