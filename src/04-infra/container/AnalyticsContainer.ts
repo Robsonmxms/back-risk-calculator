@@ -10,6 +10,7 @@ import {
   ListPortfolioAnalyticsHistoryUseCase,
   RequestPortfolioAnalyticsRecomputeUseCase
 } from "../../modules/analytics/use-cases";
+import { GetPortfolioChartsUseCase } from "../../modules/analytics/chart-use-cases";
 import { AnalyticsCalculationWorker } from "../../modules/analytics/worker";
 import type { SharedContainer } from "./SharedContainer";
 import type { MarketDataContainer } from "./MarketDataContainer";
@@ -29,6 +30,7 @@ export interface AnalyticsContainer {
     getPortfolioAnalyticsUseCase: GetPortfolioAnalyticsUseCase;
     requestPortfolioAnalyticsRecomputeUseCase: RequestPortfolioAnalyticsRecomputeUseCase;
     listPortfolioAnalyticsHistoryUseCase: ListPortfolioAnalyticsHistoryUseCase;
+    getPortfolioChartsUseCase: GetPortfolioChartsUseCase;
   };
 }
 
@@ -68,6 +70,15 @@ export function buildAnalyticsContainer(
       shared.identityStore,
       repository
     );
+  const getPortfolioChartsUseCase = new GetPortfolioChartsUseCase(
+    shared.identityStore,
+    shared.identityStore,
+    repository,
+    marketData.repository,
+    shared.logger,
+    shared.metrics,
+    now
+  );
   const worker = new AnalyticsCalculationWorker(
     repository,
     shared.identityStore,
@@ -83,7 +94,8 @@ export function buildAnalyticsContainer(
   const controller = new AnalyticsController(
     getPortfolioAnalyticsUseCase,
     requestPortfolioAnalyticsRecomputeUseCase,
-    listPortfolioAnalyticsHistoryUseCase
+    listPortfolioAnalyticsHistoryUseCase,
+    getPortfolioChartsUseCase
   );
 
   return {
@@ -93,7 +105,8 @@ export function buildAnalyticsContainer(
     useCases: {
       getPortfolioAnalyticsUseCase,
       requestPortfolioAnalyticsRecomputeUseCase,
-      listPortfolioAnalyticsHistoryUseCase
+      listPortfolioAnalyticsHistoryUseCase,
+      getPortfolioChartsUseCase
     }
   };
 }

@@ -476,6 +476,7 @@ export class AnalyticsCalculationWorker {
     range: { from: string; to: string },
     issues: DataQualityIssue[]
   ): Promise<number[]> {
+    const benchmarkAsset = await this.resolveAsset(BENCHMARK_SYMBOL);
     const prices = await this.marketDataProvider
       .getHistoricalPrices(BENCHMARK_SYMBOL, range)
       .catch(() => undefined);
@@ -491,7 +492,15 @@ export class AnalyticsCalculationWorker {
       return [];
     }
 
-    return calculatePeriodicReturns(prices.map((price) => price.adjustedClose));
+    const normalizedPrices = prices.map((price) => ({
+      ...price,
+      assetId: benchmarkAsset?.id ?? price.assetId,
+      symbol: benchmarkAsset?.symbol ?? price.symbol,
+      updatedAt: this.now()
+    }));
+    await this.marketData.upsertHistoricalPrices(normalizedPrices);
+
+    return calculatePeriodicReturns(normalizedPrices.map((price) => price.adjustedClose));
   }
 
   private toAnalyticsPositions(resolvedPositions: ResolvedPosition[]): AnalyticsPosition[] {

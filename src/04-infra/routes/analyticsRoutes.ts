@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { AuthenticateAccessTokenUseCase } from "../../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { AnalyticsController } from "../../03-adapters/controllers/AnalyticsController";
+import { portfolioChartsQuerySchema } from "../../03-adapters/controllers/analytics-schemas";
 import { asyncHandler } from "../../03-adapters/http";
 import { authMiddleware } from "../../03-adapters/middlewares/AuthMiddleware";
+import { validateQuery } from "../../03-adapters/validation";
 
 export function registerAnalyticsRoutes(
   router: Router,
@@ -11,6 +13,12 @@ export function registerAnalyticsRoutes(
 ): void {
   const auth = authMiddleware(authenticateAccessTokenUseCase);
 
+  router.get(
+    "/portfolios/:portfolioId/charts",
+    auth,
+    validateQuery(portfolioChartsQuerySchema),
+    asyncHandler(controller.getPortfolioCharts)
+  );
   router.get(
     "/portfolios/:portfolioId/analytics",
     auth,
