@@ -77,7 +77,8 @@ export async function createApp(dependencies: AppDependencies = {}) {
     marketDataController: marketDataContainer.controller,
     analyticsController: analyticsContainer.controller,
     reportsAlertsController: reportsAlertsContainer.controller,
-    authenticateAccessTokenUseCase: shared.authenticateAccessTokenUseCase
+    authenticateAccessTokenUseCase: shared.authenticateAccessTokenUseCase,
+    corsAllowedOrigins: config.corsAllowedOrigins
   });
 
   return {

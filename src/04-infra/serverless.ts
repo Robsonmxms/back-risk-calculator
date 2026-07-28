@@ -1,10 +1,14 @@
 import serverless from "serverless-http";
-import { APIGatewayProxyEventV2, Context } from "aws-lambda";
+import { APIGatewayProxyEvent, APIGatewayProxyEventV2, Context } from "aws-lambda";
 import { createApp } from "../app";
 
 const serverlessAppPromise = createApp().then(({ app }) => serverless(app));
 
-export async function handler(event: APIGatewayProxyEventV2, context: Context) {
+export async function handler(
+  event: APIGatewayProxyEvent | APIGatewayProxyEventV2,
+  context: Context
+) {
+  context.callbackWaitsForEmptyEventLoop = false;
   const serverlessApp = await serverlessAppPromise;
   return serverlessApp(event, context);
 }

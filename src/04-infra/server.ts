@@ -46,6 +46,7 @@ export interface ServerDependencies {
   complianceController: ComplianceController;
   reportDeliveryController: ReportDeliveryController;
   authenticateAccessTokenUseCase: AuthenticateAccessTokenUseCase;
+  corsAllowedOrigins?: string[];
 }
 
 export function createServer(dependencies: ServerDependencies) {
@@ -53,6 +54,7 @@ export function createServer(dependencies: ServerDependencies) {
   const apiRouter = express.Router();
 
   app.disable("etag");
+  app.set("corsAllowedOrigins", dependencies.corsAllowedOrigins ?? []);
   app.use(corsMiddleware);
   app.use(express.json());
   app.get("/health", (_request, response) => response.json({ status: "ok" }));
@@ -137,8 +139,9 @@ export function createServer(dependencies: ServerDependencies) {
 
 function corsMiddleware(request: Request, response: Response, next: NextFunction) {
   const origin = request.headers.origin;
+  const allowedOrigins = request.app.get("corsAllowedOrigins") as string[] | undefined;
 
-  if (origin && isAllowedCorsOrigin(origin)) {
+  if (origin && isAllowedCorsOrigin(origin, allowedOrigins ?? [])) {
     response.header("Access-Control-Allow-Origin", origin);
     response.header("Vary", "Origin");
     response.header("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
@@ -162,7 +165,11 @@ function apiCachePolicyMiddleware(_request: Request, response: Response, next: N
   return next();
 }
 
-function isAllowedCorsOrigin(origin: string): boolean {
+function isAllowedCorsOrigin(origin: string, allowedOrigins: string[]): boolean {
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
   try {
     const url = new URL(origin);
     return url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname);
