@@ -131,6 +131,7 @@ yarn test
 yarn test:coverage
 yarn typecheck
 yarn lint
+yarn aws:package
 yarn offline
 ```
 
@@ -139,8 +140,12 @@ statements, functions e lines no codigo coberto pelo projeto, e trava branch cov
 impedir regressao abaixo do baseline existente. O baseline de branches medido nesta etapa foi
 56.97%; elevar esse indicador para 80% exige expansao dedicada de testes de ramificacao.
 
-`yarn offline` agora usa um bootstrap CommonJS em `src/04-infra/serverless-bootstrap.cjs` para
-carregar o handler TypeScript real sem build previo.
+`yarn offline` e `yarn aws:package` compilam TypeScript antes de chamar Serverless. A
+configuracao Serverless aponta para `dist/src/04-infra/serverless.handler`; o bootstrap com
+`tsx/register` fica apenas como legado local e nao deve ser usado em Lambda de producao.
+
+Detalhes do alvo AWS, runtime Node, CORS, variaveis obrigatorias, limites atuais e responsabilidades
+que ainda precisam sair da memoria estao em [docs/aws-serverless-readiness.md](docs/aws-serverless-readiness.md).
 
 Docker:
 
