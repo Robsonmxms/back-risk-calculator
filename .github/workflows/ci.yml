@@ -2,16 +2,10 @@ name: Backend CI
 
 on:
   pull_request:
-  push:
-    branches:
-      - develop
-      - main
-      - "release/**"
-      - "feat/**"
-      - "fix/**"
-      - "chore/**"
-      - "refactor/**"
-      - "hotfix/**"
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: read
@@ -30,10 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -80,7 +74,7 @@ jobs:
 
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-coverage
           path: coverage/
@@ -113,10 +107,10 @@ jobs:
       DATABASE_URL: postgres://risk_calculator:risk_calculator@127.0.0.1:5432/risk_calculator_ci
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
