@@ -1,0 +1,139 @@
+name: Backend CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+      - main
+      - "release/**"
+      - "feat/**"
+      - "fix/**"
+      - "chore/**"
+      - "refactor/**"
+      - "hotfix/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "26.5.0"
+  YARN_ENABLE_IMMUTABLE_INSTALLS: "true"
+
+jobs:
+  quality:
+    name: Backend Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Runtime data audit
+        run: yarn check:runtime-data
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Test
+        run: yarn test
+
+      - name: Coverage
+        run: yarn test:coverage
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require("node:fs");
+          const coverageSummaryPath = "./coverage/coverage-summary.json";
+          console.log("## Backend Coverage");
+          if (!fs.existsSync(coverageSummaryPath)) {
+            console.log("Coverage summary was not generated.");
+            process.exit(0);
+          }
+          const summary = require(coverageSummaryPath).total;
+          console.log("| Metric | Percent | Covered / Total |");
+          console.log("| --- | ---: | ---: |");
+          for (const key of ["statements", "branches", "functions", "lines"]) {
+            const item = summary[key];
+            console.log(`| ${key} | ${item.pct}% | ${item.covered} / ${item.total} |`);
+          }
+          NODE
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+      - name: Build
+        run: yarn build
+
+      - name: Serverless package smoke
+        run: yarn aws:package
+
+  migrations-and-seed:
+    name: Backend Migrations And Seed
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: risk_calculator_ci
+          POSTGRES_USER: risk_calculator
+          POSTGRES_PASSWORD: risk_calculator
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U risk_calculator -d risk_calculator_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://risk_calculator:risk_calculator@127.0.0.1:5432/risk_calculator_ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Print database target
+        run: node -e "const url = new URL(process.env.DATABASE_URL); console.log(`${url.protocol}//${url.hostname}:${url.port}${url.pathname}`)"
+
+      - name: Run migrations
+        run: yarn db:migrate:dev
+
+      - name: Seed development data
+        run: yarn db:seed:dev
+
+      - name: Verify seed idempotency
+        run: yarn db:seed:dev
