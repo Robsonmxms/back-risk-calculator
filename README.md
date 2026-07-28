@@ -57,25 +57,37 @@ Rotas implementadas:
 - `GET /admin/users`
 - `GET /accounts/:accountId/analytics/summary`
 
-## Dados seed para desenvolvimento
+## Caminho de QA local
 
-Quando a aplicacao sobe com a store em memoria, estes usuarios ficam disponiveis:
+O bootstrap normal da API nao popula registros de negocio. Isso evita que o runtime local ou
+produtivo dependa de fixtures acopladas ao boot da aplicacao.
 
-- `admin@example.com`
-- `analyst@example.com`
-- `user@example.com`
-- `other@example.com`
+Para QA automatizado, os testes usam `tests/helpers/createSeededTestApp` e
+`tests/helpers/seededIdentityStore.ts`. Esse caminho e explicito, test-only e cobre login,
+usuario atual, RBAC, portfolio ledger, analytics, market data, reports, alerts, notifications,
+delivery, compliance e workbench sem importar seed para `src/`.
 
-Senha padrao:
+Usuarios disponiveis no helper de QA:
+
+- `admin@risk.local`
+- `analyst@risk.local`
+- `advisor@example.com`
+- `assistant@example.com`
+- `client@example.com`
+- `user@risk.local`
+- `other@risk.local`
+
+Senha padrao do helper:
 
 ```text
 Password123!
 ```
 
-Contas seed:
+Contas e portfolios principais do helper:
 
 - `acct_main`
-- `acct_private`
+- `acct_income`
+- `prt_main`
 
 ## Estrutura do projeto
 
@@ -116,10 +128,16 @@ Comandos uteis:
 
 ```bash
 yarn test
+yarn test:coverage
 yarn typecheck
 yarn lint
 yarn offline
 ```
+
+`yarn test:coverage` usa Vitest com provider `v8`. O gate atual exige no minimo 80% de
+statements, functions e lines no codigo coberto pelo projeto, e trava branch coverage em 55% para
+impedir regressao abaixo do baseline existente. O baseline de branches medido nesta etapa foi
+56.97%; elevar esse indicador para 80% exige expansao dedicada de testes de ramificacao.
 
 `yarn offline` agora usa um bootstrap CommonJS em `src/04-infra/serverless-bootstrap.cjs` para
 carregar o handler TypeScript real sem build previo.
@@ -147,6 +165,10 @@ yarn db:seed:dev
 
 Esses scripts preparam o PostgreSQL local, mas nao substituem a store em memoria usada pela API
 no bootstrap atual da aplicacao.
+
+Use esses scripts para smoke manual de migracao/seed quando o PostgreSQL local estiver ativo. Se
+`docker compose up -d postgres` nao estiver rodando, `yarn db:migrate:dev` falha com
+`ECONNREFUSED 127.0.0.1:5432`.
 
 ## Variaveis de ambiente
 
