@@ -146,6 +146,8 @@ configuracao Serverless aponta para `dist/src/04-infra/serverless.handler`; o bo
 
 Detalhes do alvo AWS, runtime Node, CORS, variaveis obrigatorias, limites atuais e responsabilidades
 que ainda precisam sair da memoria estao em [docs/aws-serverless-readiness.md](docs/aws-serverless-readiness.md).
+Checks obrigatorios sugeridos para branch protection estao em
+[docs/branch-protection.md](docs/branch-protection.md).
 
 Docker:
 
