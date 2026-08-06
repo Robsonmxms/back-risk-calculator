@@ -67,6 +67,16 @@ Para QA automatizado, os testes usam `tests/helpers/createSeededTestApp` e
 usuario atual, RBAC, portfolio ledger, analytics, market data, reports, alerts, notifications,
 delivery, compliance e workbench sem importar seed para `src/`.
 
+Para QA manual no navegador com a mesma massa semeada e graficos prontos, rode a API com:
+
+```bash
+yarn dev:seeded
+```
+
+Esse script e um bootstrap operacional explicito: ele usa a store semeada de testes, um provider
+de mercado deterministico, recalcula os snapshots de analytics de `prt_main` e `prt_income`, e
+preenche reports, alertas e notificacoes locais antes de abrir a porta `8000`.
+
 Usuarios disponiveis no helper de QA:
 
 - `admin@risk.local`
