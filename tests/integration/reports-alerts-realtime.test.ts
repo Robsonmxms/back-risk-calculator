@@ -18,7 +18,7 @@ import {
 import { ReportStorage } from "../../src/modules/reports-alerts/ports";
 import { StoredReportFile } from "../../src/modules/reports-alerts/types";
 
-async function login(app: Parameters<typeof request>[0], email = "user@example.com") {
+async function login(app: Parameters<typeof request>[0], email = "user@risk.local") {
   const response = await request(app).post("/api/v1/auth/login").send({
     email,
     password: "Password123!"
@@ -67,7 +67,7 @@ describe("reports, alerts, notifications, and realtime", () => {
     expect(downloadResponse.header["x-report-file-key"]).toBe(report.fileKey);
     expect(downloadResponse.text).toContain("symbol,name,quantity");
 
-    const otherToken = await login(app, "other@example.com");
+    const otherToken = await login(app, "other@risk.local");
     const forbiddenResponse = await request(app)
       .get(`/api/v1/reports/${report.id}/download`)
       .set("Authorization", `Bearer ${otherToken}`);
@@ -162,7 +162,7 @@ describe("reports, alerts, notifications, and realtime", () => {
       marketData: { marketDataProvider: provider, currencyRateProvider: provider }
     });
     const token = await login(app);
-    const otherToken = await login(app, "other@example.com");
+    const otherToken = await login(app, "other@risk.local");
 
     const alertResponse = await request(app)
       .post("/api/v1/portfolios/prt_main/alerts")
@@ -211,7 +211,7 @@ describe("reports, alerts, notifications, and realtime", () => {
       marketData: { marketDataProvider: provider, currencyRateProvider: provider }
     });
     const token = await login(app);
-    const analystToken = await login(app, "analyst@example.com");
+    const analystToken = await login(app, "analyst@risk.local");
 
     const alertResponse = await request(app)
       .post("/api/v1/portfolios/prt_main/alerts")
@@ -318,7 +318,7 @@ describe("reports, alerts, notifications, and realtime", () => {
     );
     expect(anonymousResponse.status).toBe(401);
 
-    const otherToken = await login(app, "other@example.com");
+    const otherToken = await login(app, "other@risk.local");
     const forbiddenResponse = await request(app)
       .get("/api/v1/realtime?portfolioId=prt_main&once=true")
       .set("Authorization", `Bearer ${otherToken}`);

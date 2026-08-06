@@ -26,7 +26,7 @@ describe("auth and RBAC", () => {
   });
 
   it("keeps legacy local example.com credentials working as aliases", async () => {
-    const { response } = await login("user@example.com");
+    const { response } = await login("user@risk.local");
 
     expect(response.status).toBe(200);
     expect(response.body.data.actor).toMatchObject({
@@ -38,7 +38,7 @@ describe("auth and RBAC", () => {
   it("returns a stable safe error for invalid credentials", async () => {
     const { app } = await createApp();
     const response = await request(app).post("/api/v1/auth/login").send({
-      email: "user@example.com",
+      email: "user@risk.local",
       password: "wrong-password"
     });
 
@@ -64,7 +64,7 @@ describe("auth and RBAC", () => {
   });
 
   it("rotates refresh tokens and revokes the family when a rotated token is reused", async () => {
-    const { app, response: loginResponse } = await login("user@example.com");
+    const { app, response: loginResponse } = await login("user@risk.local");
     const firstRefreshToken = loginResponse.body.data.refreshToken;
 
     const refreshResponse = await request(app).post("/api/v1/auth/refresh").send({
@@ -87,7 +87,7 @@ describe("auth and RBAC", () => {
   });
 
   it("revokes the active refresh token on logout", async () => {
-    const { app, response: loginResponse } = await login("user@example.com");
+    const { app, response: loginResponse } = await login("user@risk.local");
     const { accessToken, refreshToken } = loginResponse.body.data;
 
     const logoutResponse = await request(app)
@@ -104,7 +104,7 @@ describe("auth and RBAC", () => {
   });
 
   it("returns the current actor without sensitive fields", async () => {
-    const { app, response: loginResponse } = await login("analyst@example.com");
+    const { app, response: loginResponse } = await login("analyst@risk.local");
 
     const response = await request(app)
       .get("/api/v1/users/me")
@@ -119,7 +119,7 @@ describe("auth and RBAC", () => {
   });
 
   it("forbids non-admin actors from admin operations", async () => {
-    const { app, response: loginResponse } = await login("user@example.com");
+    const { app, response: loginResponse } = await login("user@risk.local");
 
     const response = await request(app)
       .get("/api/v1/admin/users")
@@ -130,7 +130,7 @@ describe("auth and RBAC", () => {
   });
 
   it("allows assigned analysts and blocks analysts without account access", async () => {
-    const { app, response: loginResponse } = await login("analyst@example.com");
+    const { app, response: loginResponse } = await login("analyst@risk.local");
     const token = loginResponse.body.data.accessToken;
 
     const allowedResponse = await request(app)
@@ -146,7 +146,7 @@ describe("auth and RBAC", () => {
   });
 
   it("lists portfolio workspaces for the authenticated actor", async () => {
-    const { app, response: loginResponse } = await login("analyst@example.com");
+    const { app, response: loginResponse } = await login("analyst@risk.local");
 
     const response = await request(app)
       .get("/api/v1/accounts")
@@ -159,12 +159,12 @@ describe("auth and RBAC", () => {
         expect.objectContaining({
           accountId: "acct_main",
           membershipRole: "analyst",
-          freshness: "fresh",
-          status: "ready"
+          freshness: "stale",
+          status: "degraded"
         }),
         expect.objectContaining({
           accountId: "acct_income",
-          freshness: "partial",
+          freshness: "stale",
           status: "degraded"
         })
       ])
@@ -172,7 +172,7 @@ describe("auth and RBAC", () => {
   });
 
   it("returns a portfolio dashboard with freshness metadata", async () => {
-    const { app, response: loginResponse } = await login("analyst@example.com");
+    const { app, response: loginResponse } = await login("analyst@risk.local");
 
     const response = await request(app)
       .get("/api/v1/accounts/acct_income/dashboard")
@@ -180,7 +180,7 @@ describe("auth and RBAC", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.meta).toMatchObject({
-      freshness: "partial",
+      freshness: "stale",
       status: "degraded"
     });
     expect(response.body.data).toMatchObject({

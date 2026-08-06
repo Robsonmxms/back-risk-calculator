@@ -507,7 +507,7 @@ function buildAllocationBreakdown(sources: PortfolioChartSource[]): AdvisorAlloc
       : [
           {
             symbol: "UNCLASSIFIED",
-            name: "Nao classificado",
+            name: "Não classificado",
             weightPercent: 100,
             marketValueUsd: source.portfolio.totalCostBasis
           }
@@ -783,7 +783,7 @@ function metricValue(metric: { value?: number; status?: string } | undefined): n
 function fallbackSectorExposure(source: PortfolioChartSource): SectorExposurePoint[] {
   return [
     {
-      sector: "Nao classificado",
+      sector: "Não classificado",
       weightPercent: 100,
       marketValueUsd: source.portfolio.totalCostBasis
     }
@@ -840,13 +840,13 @@ function uniqueIssues(issues: DataQualityIssue[]): DataQualityIssue[] {
 
 function staleReason(source: PortfolioChartSource): string {
   if (source.portfolio.marketDataState !== "ready") {
-    return "Atualizacao de dados de mercado pendente";
+    return "Atualização de dados de mercado pendente";
   }
   if (source.portfolio.analyticsState !== "ready" || !source.snapshot) {
-    return "Snapshot analitico pendente";
+    return "Retrato analítico pendente";
   }
   if (source.snapshot.status === "partial") {
-    return "Snapshot analitico parcial";
+    return "Retrato analítico parcial";
   }
   return "Carteira com frescor parcial";
 }

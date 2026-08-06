@@ -23,8 +23,8 @@ function expectProtectedNoStore(response: Response) {
 describe("security contract hardening", () => {
   it("returns deliberate no-store headers on representative protected JSON endpoints", async () => {
     const { app } = await createApp();
-    const adminToken = await login(app, "admin@example.com");
-    const userToken = await login(app, "user@example.com");
+    const adminToken = await login(app, "admin@risk.local");
+    const userToken = await login(app, "user@risk.local");
 
     const protectedEndpoints = [
       { path: "/api/v1/users/me", token: userToken },
@@ -53,7 +53,7 @@ describe("security contract hardening", () => {
 
   it("does not return 304 for protected JSON conditional requests", async () => {
     const { app } = await createApp();
-    const userToken = await login(app, "user@example.com");
+    const userToken = await login(app, "user@risk.local");
 
     const response = await request(app)
       .get("/api/v1/portfolios/prt_main/positions")
@@ -66,7 +66,7 @@ describe("security contract hardening", () => {
 
   it("keeps stable no-store error envelopes for protected authorization failures", async () => {
     const { app } = await createApp();
-    const userToken = await login(app, "user@example.com");
+    const userToken = await login(app, "user@risk.local");
 
     const response = await request(app)
       .get("/api/v1/admin/users")

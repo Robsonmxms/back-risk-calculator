@@ -13,6 +13,10 @@ import {
   MarketAssetType,
   Split
 } from "../../../modules/market-data/types";
+import {
+  classifyFreshness,
+  MARKET_DATA_FRESHNESS_POLICY
+} from "../../../modules/market-data/freshness";
 
 interface YahooSearchResponse {
   quotes?: YahooSearchQuote[];
@@ -128,18 +132,16 @@ export class YahooFinanceMarketDataProvider
     const price = meta?.regularMarketPrice;
     const currency = meta?.currency;
 
-    if (!price || !currency) {
+    if (!price || !currency || !meta?.regularMarketTime) {
       throw new ApplicationError(
         "unavailable",
         "market_data.quote_unavailable",
-        "Yahoo Finance did not return a latest quote"
+        "Yahoo Finance did not return a complete latest quote"
       );
     }
 
     const normalizedSymbol = normalizeSymbol(meta?.symbol ?? symbol);
-    const asOf = meta?.regularMarketTime
-      ? new Date(meta.regularMarketTime * 1000)
-      : this.now();
+    const asOf = new Date(meta.regularMarketTime * 1000);
 
     return {
       assetId: assetIdFor(normalizedSymbol),
@@ -148,7 +150,7 @@ export class YahooFinanceMarketDataProvider
       currency: normalizeCurrency(currency),
       price,
       asOf,
-      freshness: "fresh",
+      freshness: classifyFreshness(asOf, this.now(), MARKET_DATA_FRESHNESS_POLICY.quote),
       updatedAt: this.now()
     };
   }

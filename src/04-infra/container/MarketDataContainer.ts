@@ -95,6 +95,7 @@ export function buildMarketDataContainer(
     currencyRateProvider,
     repository,
     shared.metrics,
+    shared.logger,
     now
   );
   const getTradePriceUseCase = new GetTradePriceUseCase(

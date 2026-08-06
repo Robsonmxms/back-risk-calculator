@@ -2,7 +2,12 @@ import { randomUUID } from "crypto";
 import { Actor } from "../../01-domain/auth/actor";
 import { assertAdmin } from "../../02-application/auth/policies";
 import { ApplicationError } from "../../02-application/errors/application-error";
-import { MetricsPort } from "../../02-application/ports/observability";
+import { LoggerPort, MetricsPort } from "../../02-application/ports/observability";
+import {
+  ageInSeconds,
+  classifyFreshness,
+  MARKET_DATA_FRESHNESS_POLICY
+} from "./freshness";
 import {
   assetMatchesExchange,
   findMarketExchange,
@@ -427,13 +432,22 @@ export class ConvertCurrencyUseCase {
     private readonly provider: CurrencyRateProvider,
     private readonly repository: MarketDataRepository,
     private readonly metrics: MetricsPort,
+    private readonly logger: LoggerPort,
     private readonly now: () => Date = () => new Date()
   ) {}
 
   async execute(
     input: { from: string; to: string; amount: number },
     correlationId: string = randomUUID()
-  ): Promise<ExchangeRate & { amount: number; convertedAmount: number }> {
+  ): Promise<
+    ExchangeRate & {
+      amount: number;
+      convertedAmount: number;
+      freshness: "fresh" | "partial" | "stale";
+      sourceAgeSeconds: number;
+      sourceType: "live" | "fallback" | "deterministic";
+    }
+  > {
     const from = input.from.trim().toUpperCase();
     const to = input.to.trim().toUpperCase();
     const startedAt = this.now().getTime();
@@ -464,11 +478,38 @@ export class ConvertCurrencyUseCase {
         requestedAt: this.now()
       });
       this.metrics.increment("market_data.provider.currency_rate.success");
+      const sourceType = currencySourceType(rate.providerName, this.provider.name);
+      const freshness = classifyFreshness(
+        rate.asOf,
+        this.now(),
+        MARKET_DATA_FRESHNESS_POLICY.quote
+      );
+      const sourceAgeSeconds = ageInSeconds(rate.asOf, this.now());
+      this.metrics.increment(`market_data.currency_rate.source.${rate.providerName}`);
+      if (sourceType === "fallback") {
+        this.metrics.increment("market_data.currency_rate.fallback");
+      }
+      if (freshness !== "fresh") {
+        this.metrics.increment(`market_data.currency_rate.${freshness}`);
+      }
+      this.logger.info("market_data.currency_rate.resolved", {
+        correlationId,
+        pair: `${from}/${to}`,
+        providerName: rate.providerName,
+        sourceType,
+        freshness,
+        sourceAgeSeconds,
+        asOf: rate.asOf.toISOString(),
+        updatedAt: rate.updatedAt.toISOString()
+      });
 
       return {
         ...rate,
         amount: input.amount,
-        convertedAmount: Number((input.amount * rate.rate).toFixed(8))
+        convertedAmount: Number((input.amount * rate.rate).toFixed(8)),
+        freshness,
+        sourceAgeSeconds,
+        sourceType
       };
     } catch (error) {
       await this.repository.recordProviderRequest({
@@ -484,6 +525,12 @@ export class ConvertCurrencyUseCase {
         requestedAt: this.now()
       });
       this.metrics.increment("market_data.provider.currency_rate.failure");
+      this.logger.warn("market_data.currency_rate.failed", {
+        correlationId,
+        pair: `${from}/${to}`,
+        providerName: this.provider.name,
+        errorCode: providerErrorCode(error)
+      });
 
       throw new ApplicationError(
         "unavailable",
@@ -492,6 +539,17 @@ export class ConvertCurrencyUseCase {
       );
     }
   }
+}
+
+function currencySourceType(
+  providerName: string,
+  configuredProviderName: string
+): "live" | "fallback" | "deterministic" {
+  if (/(seed|fixture|mock|deterministic|local)/i.test(providerName)) {
+    return "deterministic";
+  }
+
+  return providerName === configuredProviderName ? "live" : "fallback";
 }
 
 function providerErrorCode(error: unknown): string {

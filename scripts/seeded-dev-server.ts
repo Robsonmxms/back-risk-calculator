@@ -329,7 +329,7 @@ async function seedReportsAlerts(store: ReportsAlertsSeedStore) {
       id: "local_ntf_prt_main_alert",
       portfolioId: "prt_main",
       title: "Analytics atualizado",
-      body: "O snapshot de analytics foi recalculado com dados completos.",
+      body: "O retrato analítico foi recalculado com dados completos.",
       severity: "medium",
       status: "read",
       sourceType: "alert",

@@ -49,6 +49,9 @@ jobs:
       - name: Test
         run: yarn test
 
+      - name: Risk-based regression
+        run: yarn test:risk
+
       - name: Coverage
         run: yarn test:coverage
 
@@ -59,6 +62,8 @@ jobs:
           const fs = require("node:fs");
           const coverageSummaryPath = "./coverage/coverage-summary.json";
           console.log("## Backend Coverage");
+          console.log("Threshold scope: runtime application modules except entrypoint boot files; scripts, generated dist output, and test fixtures are excluded.");
+          console.log("Analytics samples, freshness, provider fallback, realtime authorization, and security contracts also run in the focused risk-based regression step.");
           if (!fs.existsSync(coverageSummaryPath)) {
             console.log("Coverage summary was not generated.");
             process.exit(0);

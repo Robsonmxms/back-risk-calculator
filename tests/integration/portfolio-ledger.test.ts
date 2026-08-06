@@ -15,7 +15,7 @@ async function login(app: Parameters<typeof request>[0], email: string) {
 describe("portfolio ledger", () => {
   it("lists only portfolios visible to the authenticated actor", async () => {
     const { app } = await createApp();
-    const token = await login(app, "analyst@example.com");
+    const token = await login(app, "analyst@risk.local");
 
     const response = await request(app)
       .get("/api/v1/portfolios")
@@ -42,7 +42,7 @@ describe("portfolio ledger", () => {
   it("creates a portfolio for an owned account and emits an outbox event", async () => {
     const identityStore = await createSeededIdentityStore();
     const { app } = await createApp({ identityStore });
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const response = await request(app)
       .post("/api/v1/portfolios")
@@ -67,7 +67,7 @@ describe("portfolio ledger", () => {
 
   it("records transactions idempotently and rebuilds positions plus snapshots", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const firstResponse = await request(app)
       .post("/api/v1/portfolios/prt_main/transactions")
@@ -123,7 +123,7 @@ describe("portfolio ledger", () => {
   it("rejects reused idempotency keys with a different transaction payload", async () => {
     const identityStore = await createSeededIdentityStore();
     const { app } = await createApp({ identityStore });
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const firstResponse = await request(app)
       .post("/api/v1/portfolios/prt_main/transactions")
@@ -173,7 +173,7 @@ describe("portfolio ledger", () => {
 
   it("keeps missing idempotency keys non-idempotent", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
     const payload = {
       assetSymbol: "AMZN",
       assetName: "Amazon",
@@ -200,7 +200,7 @@ describe("portfolio ledger", () => {
 
   it("scopes idempotency keys to each portfolio", async () => {
     const { app } = await createApp();
-    const adminToken = await login(app, "admin@example.com");
+    const adminToken = await login(app, "admin@risk.local");
 
     const mainResponse = await request(app)
       .post("/api/v1/portfolios/prt_main/transactions")
@@ -236,7 +236,7 @@ describe("portfolio ledger", () => {
 
   it("rejects sell transactions that would create a negative position", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const response = await request(app)
       .post("/api/v1/portfolios/prt_main/transactions")
@@ -257,7 +257,7 @@ describe("portfolio ledger", () => {
 
   it("reconstructs positions for a selected date", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const response = await request(app)
       .get("/api/v1/portfolios/prt_main/positions?asOf=2026-07-09")

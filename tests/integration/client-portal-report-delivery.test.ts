@@ -15,7 +15,7 @@ describe("client portal report delivery", () => {
   it("lets staff create, approve, and deliver ready report packages", async () => {
     const { app } = await createApp();
     const advisorToken = await login(app, "advisor@example.com");
-    const approverToken = await login(app, "user@example.com");
+    const approverToken = await login(app, "user@risk.local");
 
     const createResponse = await request(app)
       .post("/api/v1/clients/client_main/report-packages")
@@ -71,7 +71,7 @@ describe("client portal report delivery", () => {
 
   it("blocks delivery until required package items are ready", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const approveResponse = await request(app)
       .post("/api/v1/report-packages/rpkg_pending_main/approve")
@@ -121,7 +121,7 @@ describe("client portal report delivery", () => {
 
   it("hides revoked packages from the client portal", async () => {
     const { app } = await createApp();
-    const officeToken = await login(app, "user@example.com");
+    const officeToken = await login(app, "user@risk.local");
     const clientToken = await login(app, "client@example.com");
 
     const revokeResponse = await request(app)

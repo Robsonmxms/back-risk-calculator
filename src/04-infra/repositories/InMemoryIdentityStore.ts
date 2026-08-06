@@ -87,6 +87,10 @@ import { ApplicationError } from "../../02-application/errors/application-error"
 import { ROLE_PERMISSION_MATRIX } from "../../02-application/auth/permission-service";
 import { AnalyticsPortfolioProjection } from "../../modules/analytics/ports";
 import { PortfolioMarketDataProjection } from "../../modules/market-data/ports";
+import {
+  classifyFreshness,
+  MARKET_DATA_FRESHNESS_POLICY
+} from "../../modules/market-data/freshness";
 
 interface PortfolioRuntimeMeta {
   status: "ready" | "syncing" | "degraded";
@@ -94,14 +98,9 @@ interface PortfolioRuntimeMeta {
   analyticsState: "ready" | "pending";
   marketDataState: "ready" | "pending";
   warnings: string[];
+  marketDataAsOf?: Date;
+  analyticsAsOf?: Date;
 }
-
-const legacyDevEmailAliases = new Map<string, string>([
-  ["admin@example.com", "admin@risk.local"],
-  ["analyst@example.com", "analyst@risk.local"],
-  ["user@example.com", "user@risk.local"],
-  ["other@example.com", "other@risk.local"]
-]);
 
 export class InMemoryIdentityStore
   implements
@@ -118,6 +117,8 @@ export class InMemoryIdentityStore
     PortfolioMarketDataProjection,
     AnalyticsPortfolioProjection
 {
+  constructor(private readonly now: () => Date = () => new Date()) {}
+
   readonly users = new Map<string, User>();
   readonly offices = new Map<string, Office>();
   readonly officeMembers = new Map<string, OfficeMembership>();
@@ -164,10 +165,9 @@ export class InMemoryIdentityStore
 
   async findByEmail(email: string): Promise<User | undefined> {
     const normalizedEmail = email.toLowerCase();
-    const canonicalEmail = legacyDevEmailAliases.get(normalizedEmail) ?? normalizedEmail;
 
     return Array.from(this.users.values()).find(
-      (user) => user.email.toLowerCase() === canonicalEmail
+      (user) => user.email.toLowerCase() === normalizedEmail
     );
   }
 
@@ -208,11 +208,11 @@ export class InMemoryIdentityStore
           return undefined;
         }
 
-        return {
+        return this.withAccountSnapshotFreshness({
           ...snapshot,
           membershipRole: membership.role,
           accountName: membership.accountName
-        };
+        });
       })
       .filter((snapshot): snapshot is PortfolioAccountSnapshot => Boolean(snapshot));
   }
@@ -220,7 +220,8 @@ export class InMemoryIdentityStore
   async findPortfolioSnapshotByAccountId(
     accountId: string
   ): Promise<PortfolioAccountSnapshot | undefined> {
-    return this.portfolioSnapshots.get(accountId);
+    const snapshot = this.portfolioSnapshots.get(accountId);
+    return snapshot ? this.withAccountSnapshotFreshness(snapshot) : undefined;
   }
 
   async listOfficesForUser(
@@ -1059,7 +1060,7 @@ export class InMemoryIdentityStore
       .map((portfolio) => portfolio.id);
   }
 
-  async markMarketDataRefreshSucceeded(symbol: string, _refreshedAt: Date): Promise<void> {
+  async markMarketDataRefreshSucceeded(symbol: string, refreshedAt: Date): Promise<void> {
     for (const portfolioId of await this.listPortfolioIdsHoldingAsset(symbol)) {
       const meta = this.portfolioRuntimeMeta.get(portfolioId);
       if (!meta) {
@@ -1067,6 +1068,7 @@ export class InMemoryIdentityStore
       }
 
       meta.marketDataState = "ready";
+      meta.marketDataAsOf = refreshedAt;
       meta.status = meta.analyticsState === "pending" ? "syncing" : "ready";
       meta.freshness = meta.analyticsState === "pending" ? "partial" : "fresh";
       meta.warnings = meta.warnings.filter(
@@ -1098,13 +1100,14 @@ export class InMemoryIdentityStore
     }
   }
 
-  async markAnalyticsSucceeded(portfolioId: string, _refreshedAt: Date): Promise<void> {
+  async markAnalyticsSucceeded(portfolioId: string, refreshedAt: Date): Promise<void> {
     const meta = this.portfolioRuntimeMeta.get(portfolioId);
     if (!meta) {
       return;
     }
 
     meta.analyticsState = "ready";
+    meta.analyticsAsOf = refreshedAt;
     meta.status = meta.marketDataState === "pending" ? "syncing" : "ready";
     meta.freshness = meta.marketDataState === "pending" ? "partial" : "fresh";
     meta.warnings = meta.warnings.filter(
@@ -1369,11 +1372,57 @@ export class InMemoryIdentityStore
       holdingsCount: positions.length,
       transactionCount: transactions.length,
       totalCostBasis,
-      freshness: meta.freshness,
+      freshness: this.resolvePortfolioFreshness(meta),
       status: meta.status,
       analyticsState: meta.analyticsState,
       marketDataState: meta.marketDataState,
       lastTransactionDate: transactions[0]?.tradeDate
+    };
+  }
+
+  private resolvePortfolioFreshness(meta: PortfolioRuntimeMeta): PortfolioRuntimeMeta["freshness"] {
+    if (meta.marketDataState === "pending" || meta.analyticsState === "pending") {
+      return meta.freshness;
+    }
+
+    const states = [
+      meta.marketDataAsOf
+        ? classifyFreshness(meta.marketDataAsOf, this.now(), MARKET_DATA_FRESHNESS_POLICY.quote)
+        : meta.freshness,
+      meta.analyticsAsOf
+        ? classifyFreshness(meta.analyticsAsOf, this.now(), MARKET_DATA_FRESHNESS_POLICY.analytics)
+        : meta.freshness
+    ];
+
+    return states.includes("stale") ? "stale" : states.includes("partial") ? "partial" : "fresh";
+  }
+
+  private withAccountSnapshotFreshness(snapshot: PortfolioAccountSnapshot): PortfolioAccountSnapshot {
+    const asOf = new Date(snapshot.meta.asOf);
+    if (Number.isNaN(asOf.getTime())) {
+      return snapshot;
+    }
+
+    const freshness = classifyFreshness(
+      asOf,
+      this.now(),
+      MARKET_DATA_FRESHNESS_POLICY.analytics
+    );
+    if (freshness === snapshot.meta.freshness) {
+      return snapshot;
+    }
+
+    return {
+      ...snapshot,
+      meta: {
+        ...snapshot.meta,
+        freshness,
+        status: freshness === "stale" ? "degraded" : "syncing",
+        warnings: [
+          ...snapshot.meta.warnings,
+          `Os dados têm como referência ${snapshot.meta.asOf} e excederam o limite de atualização.`
+        ]
+      }
     };
   }
 

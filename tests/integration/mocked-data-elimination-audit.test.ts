@@ -2,6 +2,7 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../../src/app";
 import { createSeededTestApp } from "../helpers/testApp";
+import { createSeededIdentityStore } from "../helpers/seededIdentityStore";
 
 describe("mocked data elimination audit", () => {
   it("does not seed historical local users during runtime app startup", async () => {
@@ -29,6 +30,15 @@ describe("mocked data elimination audit", () => {
     expect(response.body.data.actor).toMatchObject({
       email: "user@risk.local",
       role: "user"
+    });
+  });
+
+  it("does not rewrite former fixture aliases to canonical seeded identities", async () => {
+    const identityStore = await createSeededIdentityStore();
+
+    await expect(identityStore.findByEmail("user@example.com")).resolves.toBeUndefined();
+    await expect(identityStore.findByEmail("user@risk.local")).resolves.toMatchObject({
+      id: "usr_user"
     });
   });
 });

@@ -141,7 +141,7 @@ describe("compliance and delivery charting", () => {
   it("limits assistant delivery charts to assigned client scope and blocks client actors", async () => {
     const { app } = await createApp();
     const advisorToken = await login(app, "advisor@example.com");
-    const analystToken = await login(app, "analyst@example.com");
+    const analystToken = await login(app, "analyst@risk.local");
     const assistantToken = await login(app, "assistant@example.com");
     const clientToken = await login(app, "client@example.com");
 
