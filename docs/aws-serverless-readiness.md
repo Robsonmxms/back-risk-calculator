@@ -1,13 +1,16 @@
 # AWS Serverless Readiness
 
-## Backend Target
+## Backend Packaging Targets
 
-The current production-compatible target for the declared Node engine is a Lambda container image
-based on the existing `Dockerfile` runtime stage (`node:26.5.0-alpine`). The Serverless zip config
-keeps `nodejs20.x` only as a managed-runtime packaging smoke target because the local Serverless v3
-version does not accept newer managed Node runtimes. Production deployments that must honor the
-Node 26 engine should use the container path until AWS/tooling support aligns or the project
-intentionally lowers its Node engine.
+The existing `Dockerfile` produces a Node 26.5 standalone HTTP container suitable for a container
+service such as ECS/Fargate or App Runner. It is not a Lambda container image: it does not use a
+Lambda base image or runtime interface client.
+
+The Serverless zip configuration keeps `nodejs20.x` only as a packaging smoke target because the
+current Serverless v3 version does not accept newer managed Node runtimes. That target does not
+match the declared Node 26 engine and is not an approved production runtime. A production Lambda
+delivery must either add a Lambda-compatible Node 26 container/runtime path or intentionally align
+the project engine and managed runtime after compatibility validation.
 
 ## Packaging
 
@@ -17,7 +20,7 @@ Serverless packaging must use compiled JavaScript:
 yarn aws:package
 ```
 
-The `serverless.js` handler points to:
+The `serverless.yml` handler points to:
 
 ```text
 dist/src/app.handler
@@ -26,19 +29,29 @@ dist/src/app.handler
 Do not deploy `src/04-infra/serverless-bootstrap.cjs` or rely on `tsx/register` for production
 Lambda execution.
 
-## Required Runtime Configuration
+## Current Runtime Configuration
 
 Production-like stages are `prod`, `production`, and `staging`.
 
-Required variables:
+The implemented API reads configuration directly through `src/04-infra/config/env.ts`. In a
+production-like stage it fails startup unless these values are available:
 
-- `ACCESS_TOKEN_SECRET`
-- `DATABASE_URL`
-- `CORS_ALLOWED_ORIGINS`
-- `PORTFOLIO_IMPORT_QUEUE_URL`
-- `PORTFOLIO_IMPORT_DLQ_URL`
+- `ACCESS_TOKEN_SECRET`, with a value different from the development fallback;
+- `PORTFOLIO_IMPORT_QUEUE_URL`;
+- `PORTFOLIO_IMPORT_DLQ_URL`.
 
-Production-like stages reject the dev access-token secret.
+`PORTFOLIO_IMPORT_QUEUE_PROVIDER` must resolve to `sqs`; `serverless.yml` sets it and injects the
+two provisioned FIFO queue URLs. Production-like stages reject the development access-token secret
+and the in-memory queue adapter.
+
+Other current inputs are optional or operationally scoped:
+
+- `ACCESS_TOKEN_TTL_SECONDS`, `REFRESH_TOKEN_TTL_DAYS`, `AWS_REGION`, and `AWS_ENDPOINT_URL` have
+  local defaults or are optional;
+- `CORS_ALLOWED_ORIGINS` is consumed by the API but does not currently fail startup when empty;
+- `DATABASE_URL` is consumed by migration/seed commands and has a development-only local default;
+  the normal API still uses process-local domain repositories and does not require PostgreSQL at
+  startup.
 
 `CORS_ALLOWED_ORIGINS` is a comma-separated allowlist of exact frontend origins, for example:
 
@@ -46,7 +59,22 @@ Production-like stages reject the dev access-token secret.
 https://app.example.com,https://admin.example.com
 ```
 
-Localhost and `127.0.0.1` remain allowed for local development.
+The current CORS middleware also accepts HTTP origins on `localhost` and `127.0.0.1` regardless of
+stage. A production-hardening change must scope that exception to local/test execution before this
+behavior can be described as development-only.
+
+## Planned Secrets Manager Bootstrap
+
+Root feature `1 - centralized-secrets-runtime-configuration` is specified but not implemented. Its
+target is a single versioned configuration document loaded from AWS Secrets Manager, with only
+bootstrap locators such as stage, region, port, source selector, and `APP_CONFIG_SECRET_ID` left in
+deployment environment variables. `serverless.yml` does not yet grant
+`secretsmanager:GetSecretValue` or configure that locator, so the current package must not be
+described as Secrets Manager-backed.
+
+After that feature is delivered, this section and `serverless.yml` must be updated together to
+document least-privilege IAM, secret rotation, the validated document schema, and any queue URL
+locator exception retained for generated infrastructure outputs.
 
 ## Current Runtime Limits
 

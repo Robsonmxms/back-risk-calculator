@@ -5,15 +5,22 @@ Guidance for AI agents working in the backend project.
 ## Backend Role
 
 `back-risk-calculator` is the TypeScript + Express backend for the Investment Portfolio Analytics
-Platform. Today it owns auth, session lifecycle, RBAC, current-user lookup, admin user listing,
-account access, portfolio ledger, backend-owned market data ingestion, the first analytics risk
-engine behavior, asynchronous XLSX portfolio imports, and local in-process reports, alerts,
-notifications, and realtime delivery.
+Platform. Today it owns auth, session lifecycle, global/office/account authorization, current-user
+lookup, read-only admin user listing, offices, clients, workbench, portfolios and ledger,
+backend-owned market data, analytics and operational charts, asynchronous XLSX portfolio imports,
+reports, alerts, notifications, compliance, report delivery, audit, client portal contracts, and
+authorized realtime delivery.
 
 The wider platform scope in root specs still exists as roadmap. Durable PostgreSQL runtime
 repositories for every module, production object storage, and hardened realtime operations are not
 implemented in this repository yet. Portfolio spreadsheet imports have an Amazon SQS FIFO/DLQ
 adapter; market-data, analytics, and report workers still use in-process queues.
+
+Two root macro features are active but not implemented:
+`1 - centralized-secrets-runtime-configuration` replaces dispersed environment reads with one
+validated Secrets Manager-capable bootstrap, and `2 - hierarchical-user-management` adds
+create/edit APIs and the `admin > analyst > user` management hierarchy. The current
+user-management capability remains admin-only and read-only.
 
 Specs are not local to this project. Before implementation, read the relevant root macro spec in
 `../.specs/features/<feature>/`.
@@ -32,7 +39,7 @@ Specs are not local to this project. Before implementation, read the relevant ro
 | Market data | Backend provider adapters behind ports |
 | Workers | SQS-backed portfolio-import worker; remaining workers run in process |
 | Observability | Lightweight logger and metrics adapters |
-| Containers | Docker Compose for API and PostgreSQL |
+| Containers | Docker Compose for API, PostgreSQL, and LocalStack/SQS |
 | Tests | Vitest and Supertest integration tests |
 
 ## Clean Architecture Rules
@@ -49,8 +56,8 @@ Use inward dependencies:
   `OperationalChartSchema.ts`.
 - Use cases own orchestration, policies, and security decisions.
 - Domain rules must not import Express, Joi, or infrastructure adapters.
-- Repository files expose contracts/ports. The current concrete implementation is an in-memory
-  identity, portfolio, market-data, and analytics stores.
+- Repository files expose contracts/ports. Most current concrete domain repositories are
+  empty-by-default in-memory stores; portfolio-import delivery can use SQS outside local/test mode.
 - `yarn architecture:check` enforces the source-root allowlist, inward dependency matrix, all
   TypeScript import/export forms, and a cycle-free production graph. It runs from lint, pre-commit,
   and CI.
@@ -70,6 +77,7 @@ back-risk-calculator/
       analytics/
       market-data/
       offices/
+      portfolio-imports/
       portfolios/
       reports-alerts/
       users/
@@ -84,6 +92,7 @@ back-risk-calculator/
       errors/
       market-data/
       offices/
+      portfolio-imports/
       portfolios/
       ports/
       reports-alerts/
@@ -102,6 +111,7 @@ back-risk-calculator/
       container/
       database/
       market-data/
+      portfolio-imports/
       providers/
       realtime/
       repositories/
@@ -121,6 +131,14 @@ back-risk-calculator/
 - Place analytics, market-data, and reports/alerts code in the numbered layer matching its
   responsibility; `src/modules` and compatibility re-exports are forbidden.
 - Follow root macro specs for feature scope and acceptance criteria.
+- Treat global roles, office membership roles, account roles, and advisory permissions as distinct
+  authorization dimensions.
+- Until feature `1` is delivered, configuration continues to enter through
+  `src/04-infra/config/env.ts`. Do not add environment/secret reads to domain, application,
+  controllers, routers, or providers; keep new configuration access at the infrastructure
+  composition boundary and follow the active macro spec for the centralized bootstrap.
+- Do not expose user creation/editing or delegated hierarchy through the existing read-only admin
+  route; implement that behavior only under feature `2` and its canonical contracts.
 - Do not put business rules in Express routers, Joi schemas, or infrastructure entry points.
 - Runtime startup must not seed users, offices, clients, accounts, portfolios, reports, alerts,
   notifications, audit events, assignments, quotes, analytics, or any other business records.

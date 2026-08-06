@@ -5,6 +5,24 @@ The backend source root contains only `01-domain`, `02-application`, `03-adapter
 01-domain`. The TypeScript-AST architecture check runs from lint, pre-commit, and CI and rejects
 invalid roots, reverse dependencies, legacy paths, and production cycles.
 
+The portfolio-import capability follows the same boundary: workbook values and job state live in
+`01-domain/portfolio-imports`, orchestration and ports live in `02-application/portfolio-imports`,
+HTTP mapping stays in adapters, and ExcelJS, in-memory delivery, and Amazon SQS implementations
+stay in `04-infra/portfolio-imports`.
+
+## Runtime Configuration Boundary
+
+The currently implemented `src/04-infra/config/env.ts` is the only application configuration
+adapter and still reads deployment values from `process.env`. `app.ts` loads that infrastructure
+configuration during composition and projects values into containers. Domain and application
+modules must not read the environment or depend on AWS SDK configuration types.
+
+Root feature `1 - centralized-secrets-runtime-configuration` is active but not implemented. It will
+replace the current environment adapter with one validated asynchronous bootstrap and narrow,
+immutable dependencies backed by AWS Secrets Manager in production-like stages. Until delivery,
+do not describe Secrets Manager retrieval or a shared `RuntimeConfig` bootstrap as current runtime
+behavior.
+
 ## Legacy Module Migration Inventory
 
 | Former `src/modules` source | Canonical numbered-layer destination | Responsibility |
