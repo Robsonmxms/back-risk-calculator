@@ -1,5 +1,5 @@
-import { MarketDataCache } from "../../modules/market-data/ports";
-import { DateRange, HistoricalPrice, LatestQuote } from "../../modules/market-data/types";
+import { MarketDataCache } from "../../02-application/market-data/ports";
+import { DateRange, HistoricalPrice, LatestQuote } from "../../01-domain/market-data/types";
 
 interface CacheEntry<T> {
   value: T;

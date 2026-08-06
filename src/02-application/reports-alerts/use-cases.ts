@@ -10,7 +10,12 @@ import {
   ReportRepository,
   ReportStorage
 } from "./ports";
-import { AlertCondition, AlertRule, ReportFormat, ReportJob } from "./types";
+import {
+  AlertCondition,
+  AlertRule,
+  ReportFormat,
+  ReportJob
+} from "../../01-domain/reports-alerts/types";
 
 export class RequestReportUseCase {
   constructor(

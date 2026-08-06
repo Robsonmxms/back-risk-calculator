@@ -2,8 +2,8 @@ import { randomUUID } from "crypto";
 import { Response } from "express";
 import { Actor } from "../../01-domain/auth/actor";
 import { MetricsPort } from "../../02-application/ports/observability";
-import { RealtimeRepository } from "../../modules/reports-alerts/ports";
-import { RealtimeMessage, RealtimeMessageType } from "../../modules/reports-alerts/types";
+import { RealtimeRepository } from "../../02-application/reports-alerts/ports";
+import { RealtimeMessage, RealtimeMessageType } from "../../01-domain/reports-alerts/types";
 
 interface RealtimeClient {
   id: string;

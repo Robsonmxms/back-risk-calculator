@@ -10,7 +10,7 @@ import {
   ProviderRequestLog,
   ProviderStatusSummary,
   Split
-} from "./types";
+} from "../../01-domain/market-data/types";
 
 export interface MarketDataProvider {
   readonly name: string;

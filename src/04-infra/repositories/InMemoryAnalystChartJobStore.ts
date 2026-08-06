@@ -1,7 +1,7 @@
 import {
   AnalystChartJob,
   AnalystChartJobRepository
-} from "../../modules/analytics/analyst-chart-types";
+} from "../../02-application/analytics/analyst-chart-types";
 
 export class InMemoryAnalystChartJobStore implements AnalystChartJobRepository {
   private readonly jobs = new Map<string, AnalystChartJob>();

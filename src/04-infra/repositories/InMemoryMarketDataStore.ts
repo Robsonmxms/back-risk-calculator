@@ -2,7 +2,7 @@ import {
   MarketDataEventPublisher,
   MarketDataJobQueue,
   MarketDataRepository
-} from "../../modules/market-data/ports";
+} from "../../02-application/market-data/ports";
 import {
   Dividend,
   HistoricalPrice,
@@ -13,7 +13,7 @@ import {
   ProviderRequestLog,
   ProviderStatusSummary,
   Split
-} from "../../modules/market-data/types";
+} from "../../01-domain/market-data/types";
 
 export class InMemoryMarketDataStore
   implements MarketDataRepository, MarketDataJobQueue, MarketDataEventPublisher

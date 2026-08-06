@@ -3,13 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     coverage: {
-      exclude: [
-        "dist/**",
-        "scripts/**",
-        "tests/**",
-        "src/04-infra/main.ts",
-        "src/04-infra/server.ts"
-      ],
+      exclude: ["dist/**", "scripts/**", "tests/**", "src/app.ts", "src/04-infra/server.ts"],
       provider: "v8",
       reporter: ["text", "json-summary"],
       thresholds: {

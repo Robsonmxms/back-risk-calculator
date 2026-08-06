@@ -1,8 +1,8 @@
 import { ClientStatus } from "../../../01-domain/clients/client";
 import { ReportPackageStatus } from "../../../01-domain/delivery/report-package";
 import { ReviewItemSeverity } from "../../../01-domain/workbench/workbench";
-import { AlertSeverity } from "../../../modules/reports-alerts/types";
-import { DataQualityIssue } from "../../../modules/analytics/types";
+import { AlertSeverity } from "../../../01-domain/reports-alerts/types";
+import { DataQualityIssue } from "../../../01-domain/analytics/types";
 
 export type AdvisorChartRange = "30d" | "90d" | "ytd" | "1y" | "all";
 export type AdvisorRiskBand = "low" | "watch" | "high";

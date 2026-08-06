@@ -8,7 +8,7 @@ import {
   RealtimeRepository,
   ReportRepository,
   ReportStorage
-} from "../../modules/reports-alerts/ports";
+} from "../../02-application/reports-alerts/ports";
 import {
   AuthorizeRealtimeSubscriptionUseCase,
   CreateAlertUseCase,
@@ -19,8 +19,8 @@ import {
   MarkNotificationReadUseCase,
   RequestReportUseCase,
   UpdateAlertUseCase
-} from "../../modules/reports-alerts/use-cases";
-import { AlertEvaluationWorker, ReportGenerationWorker } from "../../modules/reports-alerts/worker";
+} from "../../02-application/reports-alerts/use-cases";
+import { AlertEvaluationWorker, ReportGenerationWorker } from "../reports-alerts/worker";
 import type { SharedContainer } from "./SharedContainer";
 
 export interface ReportsAlertsContainerDependencies {

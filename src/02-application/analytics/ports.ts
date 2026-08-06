@@ -1,4 +1,4 @@
-import { AnalyticsJob, PortfolioAnalyticsSnapshot } from "./types";
+import { AnalyticsJob, PortfolioAnalyticsSnapshot } from "../../01-domain/analytics/types";
 
 export interface AnalyticsRepository {
   enqueue(job: AnalyticsJob): Promise<AnalyticsJob>;

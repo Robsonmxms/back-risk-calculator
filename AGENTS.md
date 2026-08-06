@@ -51,6 +51,9 @@ Use inward dependencies:
 - Domain rules must not import Express, Joi, or infrastructure adapters.
 - Repository files expose contracts/ports. The current concrete implementation is an in-memory
   identity, portfolio, market-data, and analytics stores.
+- `yarn architecture:check` enforces the source-root allowlist, inward dependency matrix, all
+  TypeScript import/export forms, and a cycle-free production graph. It runs from lint, pre-commit,
+  and CI.
 
 ## Source Layout
 
@@ -64,8 +67,11 @@ back-risk-calculator/
       clients/
       compliance/
       delivery/
+      analytics/
+      market-data/
       offices/
       portfolios/
+      reports-alerts/
       users/
       workbench/
     02-application/
@@ -74,29 +80,34 @@ back-risk-calculator/
       clients/
       compliance/
       delivery/
+      analytics/
       errors/
+      market-data/
       offices/
       portfolios/
       ports/
+      reports-alerts/
       users/
       workbench/
     03-adapters/
       controllers/
+      realtime/
       schemas/
       middlewares/
       observability/
       security/
     04-infra/
+      analytics/
       config/
       container/
       database/
+      market-data/
+      providers/
+      realtime/
       repositories/
+      reports-alerts/
       routes/
       server.ts
-    modules/ # legacy layout; do not add new modules here
-      analytics/
-      market-data/
-      reports-alerts/
     app.ts
   scripts/
   tests/
@@ -106,9 +117,9 @@ back-risk-calculator/
 ## Implementation Rules
 
 - Do not create `back-risk-calculator/.specs/`.
-- Do not add new code under `src/modules`; place new domain/application/adapter/infra code in the
-  numbered Clean Architecture layers. Moving the pre-existing legacy modules requires a scoped
-  refactor with regression coverage.
+- `src` may contain only `01-domain`, `02-application`, `03-adapters`, `04-infra`, and `app.ts`.
+- Place analytics, market-data, and reports/alerts code in the numbered layer matching its
+  responsibility; `src/modules` and compatibility re-exports are forbidden.
 - Follow root macro specs for feature scope and acceptance criteria.
 - Do not put business rules in Express routers, Joi schemas, or infrastructure entry points.
 - Runtime startup must not seed users, offices, clients, accounts, portfolios, reports, alerts,

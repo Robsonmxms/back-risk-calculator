@@ -1,5 +1,5 @@
-import { AnalyticsRepository } from "../../modules/analytics/ports";
-import { AnalyticsJob, PortfolioAnalyticsSnapshot } from "../../modules/analytics/types";
+import { AnalyticsRepository } from "../../02-application/analytics/ports";
+import { AnalyticsJob, PortfolioAnalyticsSnapshot } from "../../01-domain/analytics/types";
 
 export class InMemoryAnalyticsStore implements AnalyticsRepository {
   private readonly jobs = new Map<string, AnalyticsJob>();

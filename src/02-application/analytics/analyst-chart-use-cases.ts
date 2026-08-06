@@ -13,7 +13,11 @@ import {
   PortfolioRepository
 } from "../../02-application/ports/repositories";
 import { MarketDataRepository } from "../market-data/ports";
-import { calculatePeriodicReturns, calculateVolatility, round } from "./formulas";
+import {
+  calculatePeriodicReturns,
+  calculateVolatility,
+  round
+} from "../../01-domain/analytics/formulas";
 import { AnalyticsEventPublisher, AnalyticsRepository } from "./ports";
 import {
   AnalyticsJob,
@@ -21,7 +25,7 @@ import {
   AnalyticsMetricKey,
   DataQualityIssue,
   PortfolioAnalyticsSnapshot
-} from "./types";
+} from "../../01-domain/analytics/types";
 import {
   AnalystBenchmarkSensitivityPoint,
   AnalystChartBundle,

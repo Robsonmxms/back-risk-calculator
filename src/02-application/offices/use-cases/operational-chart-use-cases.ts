@@ -20,24 +20,24 @@ import {
   PortfolioRepository,
   ReportPackageRepository
 } from "../../ports/repositories";
-import { AnalyticsRepository } from "../../../modules/analytics/ports";
+import { AnalyticsRepository } from "../../analytics/ports";
 import {
   AnalyticsJob,
   DataQualityIssue,
   PortfolioAnalyticsSnapshot
-} from "../../../modules/analytics/types";
-import { MarketDataJobQueue, MarketDataRepository } from "../../../modules/market-data/ports";
+} from "../../../01-domain/analytics/types";
+import { MarketDataJobQueue, MarketDataRepository } from "../../market-data/ports";
 import {
   MarketDataFreshness,
   MarketDataJob,
   ProviderStatusSummary
-} from "../../../modules/market-data/types";
+} from "../../../01-domain/market-data/types";
 import {
   AlertRepository,
   NotificationRepository,
   ReportRepository
-} from "../../../modules/reports-alerts/ports";
-import { AlertRule, NotificationRecord, ReportJob } from "../../../modules/reports-alerts/types";
+} from "../../reports-alerts/ports";
+import { AlertRule, NotificationRecord, ReportJob } from "../../../01-domain/reports-alerts/types";
 import {
   OfficeAdminChartBundle,
   OfficeAdminChartsQuery,

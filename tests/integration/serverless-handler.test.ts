@@ -24,7 +24,7 @@ describe("serverless handler", () => {
   });
 
   it("handles API Gateway proxy health checks from compiled-handler entrypoint", async () => {
-    const { handler } = await import("../../src/04-infra/serverless.js");
+    const { handler } = await import("../../src/app.js");
     const context = createContext();
 
     const response = (await handler(
@@ -42,7 +42,7 @@ describe("serverless handler", () => {
   });
 
   it("returns preflight CORS headers only for configured production origins", async () => {
-    const { handler } = await import("../../src/04-infra/serverless.js");
+    const { handler } = await import("../../src/app.js");
 
     const allowed = (await handler(
       createEvent("OPTIONS", "/api/v1/users/me", {

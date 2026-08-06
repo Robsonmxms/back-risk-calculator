@@ -3,13 +3,17 @@ import { Actor } from "../../01-domain/auth/actor";
 import { assertAdmin } from "../../02-application/auth/policies";
 import { ApplicationError } from "../../02-application/errors/application-error";
 import { LoggerPort, MetricsPort } from "../../02-application/ports/observability";
-import { ageInSeconds, classifyFreshness, MARKET_DATA_FRESHNESS_POLICY } from "./freshness";
+import {
+  ageInSeconds,
+  classifyFreshness,
+  MARKET_DATA_FRESHNESS_POLICY
+} from "../../01-domain/market-data/freshness";
 import {
   assetMatchesExchange,
   findMarketExchange,
   MARKET_EXCHANGES,
   symbolForExchangeQuery
-} from "./exchanges";
+} from "../../01-domain/market-data/exchanges";
 import {
   CurrencyRateProvider,
   MarketDataEventPublisher,
@@ -28,7 +32,7 @@ import {
   MarketAssetSearchItem,
   ProviderStatusSummary,
   TradePriceQuote
-} from "./types";
+} from "../../01-domain/market-data/types";
 
 export interface AssetSearchResult {
   assets: MarketAssetSearchItem[];

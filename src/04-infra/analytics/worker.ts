@@ -5,8 +5,13 @@ import {
   CurrencyRateProvider,
   MarketDataProvider,
   MarketDataRepository
-} from "../market-data/ports";
-import { ExchangeRate, HistoricalPrice, LatestQuote, MarketAsset } from "../market-data/types";
+} from "../../02-application/market-data/ports";
+import {
+  ExchangeRate,
+  HistoricalPrice,
+  LatestQuote,
+  MarketAsset
+} from "../../01-domain/market-data/types";
 import {
   calculateAnnualizedReturn,
   calculateBeta,
@@ -19,18 +24,18 @@ import {
   calculateTotalReturn,
   calculateVolatility,
   round
-} from "./formulas";
-import { generateRiskInsights } from "./insights";
+} from "../../01-domain/analytics/formulas";
+import { generateRiskInsights } from "../../01-domain/analytics/insights";
 import {
   ANALYTICS_CALCULATION_VERSION,
   ANALYTICS_SAMPLE_POLICY,
   satisfiesAnalyticsSamplePolicy
-} from "./sample-policy";
+} from "../../01-domain/analytics/sample-policy";
 import {
   AnalyticsEventPublisher,
   AnalyticsPortfolioProjection,
   AnalyticsRepository
-} from "./ports";
+} from "../../02-application/analytics/ports";
 import {
   AllocationPoint,
   AnalyticsJob,
@@ -42,7 +47,7 @@ import {
   DataQualityIssue,
   PortfolioAnalyticsSnapshot,
   TimeSeriesPoint
-} from "./types";
+} from "../../01-domain/analytics/types";
 
 const ANALYTICS_BASE_CURRENCY = "USD";
 const BENCHMARK_SYMBOL = "SPY";

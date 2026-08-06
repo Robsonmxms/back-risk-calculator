@@ -11,8 +11,8 @@ import {
   ListMarketExchangesUseCase,
   RequestMarketDataRefreshUseCase,
   SearchMarketAssetsUseCase
-} from "../../modules/market-data/use-cases";
-import { MarketDataScheduler, MarketDataIngestionWorker } from "../../modules/market-data/worker";
+} from "../../02-application/market-data/use-cases";
+import { MarketDataScheduler, MarketDataIngestionWorker } from "../market-data/worker";
 import {
   CurrencyRateProvider,
   MarketDataCache,
@@ -20,7 +20,7 @@ import {
   MarketDataJobQueue,
   MarketDataProvider,
   MarketDataRepository
-} from "../../modules/market-data/ports";
+} from "../../02-application/market-data/ports";
 import type { SharedContainer } from "./SharedContainer";
 
 export interface MarketDataContainerDependencies {

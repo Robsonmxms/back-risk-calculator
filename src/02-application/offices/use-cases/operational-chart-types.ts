@@ -1,11 +1,11 @@
 import { OfficeMembershipRole, OfficeStatus } from "../../../01-domain/offices/office";
-import { AnalyticsJobStatus, DataQualityIssue } from "../../../modules/analytics/types";
-import { MarketDataFreshness, MarketDataRequestStatus } from "../../../modules/market-data/types";
+import { AnalyticsJobStatus, DataQualityIssue } from "../../../01-domain/analytics/types";
+import { MarketDataFreshness, MarketDataRequestStatus } from "../../../01-domain/market-data/types";
 import {
   AlertSeverity,
   NotificationStatus,
   ReportStatus
-} from "../../../modules/reports-alerts/types";
+} from "../../../01-domain/reports-alerts/types";
 import { ClientOnboardingStatus, ClientStatus } from "../../../01-domain/clients/client";
 import { ReportPackageStatus } from "../../../01-domain/delivery/report-package";
 

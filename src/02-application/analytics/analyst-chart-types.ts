@@ -1,4 +1,4 @@
-import { AnalyticsMetricKey, DataQualityIssue } from "./types";
+import { AnalyticsMetricKey, DataQualityIssue } from "../../01-domain/analytics/types";
 
 export type AnalystChartRange = "90d" | "ytd" | "1y" | "3y" | "5y" | "all";
 export type AnalystDataQualityFilter = "complete" | "partial" | "stale" | "failed";
