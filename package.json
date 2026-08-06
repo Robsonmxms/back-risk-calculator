@@ -6,6 +6,7 @@
   "main": "dist/src/04-infra/main.js",
   "scripts": {
     "dev": "tsx watch src/04-infra/main.ts",
+    "dev:seeded": "tsx scripts/seeded-dev-server.ts",
     "offline": "yarn build && serverless offline --stage dev",
     "aws:package": "yarn build && serverless package",
     "start": "node dist/src/04-infra/main.js",
