@@ -3,15 +3,18 @@ import {
   CreateAnalystChartJobUseCase,
   GetAnalystChartJobUseCase,
   GetAnalystChartsUseCase
-} from "../../modules/analytics/analyst-chart-use-cases";
+} from "../../02-application/analytics/analyst-chart-use-cases";
 import {
   GetPortfolioAnalyticsUseCase,
   ListPortfolioAnalyticsHistoryUseCase,
   RequestPortfolioAnalyticsRecomputeUseCase
-} from "../../modules/analytics/use-cases";
-import { GetPortfolioChartsUseCase } from "../../modules/analytics/chart-use-cases";
-import { PortfolioChartsQuery } from "../../modules/analytics/chart-types";
-import { AnalystChartJob, AnalystChartsQuery } from "../../modules/analytics/analyst-chart-types";
+} from "../../02-application/analytics/use-cases";
+import { GetPortfolioChartsUseCase } from "../../02-application/analytics/chart-use-cases";
+import { PortfolioChartsQuery } from "../../02-application/analytics/chart-types";
+import {
+  AnalystChartJob,
+  AnalystChartsQuery
+} from "../../02-application/analytics/analyst-chart-types";
 import { AuthenticatedRequest } from "../request";
 import { ApiError, ok } from "../http";
 

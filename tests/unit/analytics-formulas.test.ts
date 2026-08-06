@@ -9,11 +9,11 @@ import {
   calculateSharpeRatio,
   calculateTotalReturn,
   calculateVolatility
-} from "../../src/modules/analytics/formulas";
+} from "../../src/01-domain/analytics/formulas";
 import {
   ANALYTICS_SAMPLE_POLICY,
   satisfiesAnalyticsSamplePolicy
-} from "../../src/modules/analytics/sample-policy";
+} from "../../src/01-domain/analytics/sample-policy";
 
 describe("analytics formulas", () => {
   it("calculates return, annualized return and drawdown from value series", () => {

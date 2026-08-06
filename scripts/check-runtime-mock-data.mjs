@@ -7,7 +7,6 @@ const root = process.cwd();
 
 const bootPaths = [
   "src/app.ts",
-  "src/04-infra/main.ts",
   "src/04-infra/server.ts",
   "src/04-infra/container"
 ];

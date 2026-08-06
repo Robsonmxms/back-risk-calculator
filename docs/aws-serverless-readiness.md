@@ -20,7 +20,7 @@ yarn aws:package
 The `serverless.js` handler points to:
 
 ```text
-dist/src/04-infra/serverless.handler
+dist/src/app.handler
 ```
 
 Do not deploy `src/04-infra/serverless-bootstrap.cjs` or rely on `tsx/register` for production

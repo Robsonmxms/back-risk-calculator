@@ -1,5 +1,4 @@
-import { createApp } from "../../src/app";
-import type { AppDependencies } from "../../src/04-infra/container/SharedContainer";
+import { createApp, type AppDependencies } from "../../src/app";
 import { createSeededIdentityStore } from "./seededIdentityStore";
 
 export async function createSeededTestApp(dependencies: AppDependencies = {}) {

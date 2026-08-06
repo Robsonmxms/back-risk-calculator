@@ -5,7 +5,7 @@ import { assertCanReadAccountLedger } from "../../02-application/auth/policies";
 import { ApplicationError } from "../../02-application/errors/application-error";
 import { AccountRepository, PortfolioRepository } from "../../02-application/ports/repositories";
 import { AnalyticsEventPublisher, AnalyticsRepository } from "./ports";
-import { AnalyticsJob, PortfolioAnalyticsReadModel } from "./types";
+import { AnalyticsJob, PortfolioAnalyticsReadModel } from "../../01-domain/analytics/types";
 
 interface PortfolioAccess {
   account: Account;

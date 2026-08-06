@@ -11,14 +11,14 @@ import {
   MarkNotificationReadUseCase,
   RequestReportUseCase,
   UpdateAlertUseCase
-} from "../../modules/reports-alerts/use-cases";
-import { InMemoryRealtimeHub } from "../../04-infra/realtime/InMemoryRealtimeHub";
+} from "../../02-application/reports-alerts/use-cases";
+import { RealtimeSubscriptionPort } from "../realtime/RealtimeSubscriptionPort";
 import {
   AlertCondition,
   AlertSeverity,
   AlertStatus,
   ReportFormat
-} from "../../modules/reports-alerts/types";
+} from "../../01-domain/reports-alerts/types";
 
 export class ReportsAlertsController {
   constructor(
@@ -31,7 +31,7 @@ export class ReportsAlertsController {
     private readonly listNotificationsUseCase: ListNotificationsUseCase,
     private readonly markNotificationReadUseCase: MarkNotificationReadUseCase,
     private readonly authorizeRealtimeSubscriptionUseCase: AuthorizeRealtimeSubscriptionUseCase,
-    private readonly realtimeHub: InMemoryRealtimeHub
+    private readonly realtimeHub: RealtimeSubscriptionPort
   ) {}
 
   requestReport = async (request: Request, response: Response) => {

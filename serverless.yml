@@ -45,18 +45,16 @@ provider:
 
 package:
   patterns:
-    - "!src/**"
-    - "!tests/**"
-    - "!coverage/**"
-    - "!dist/tests/**"
+    - "!**/*"
     - "dist/src/**"
+    - "node_modules/**"
     - package.json
     - yarn.lock
     - .yarnrc.yml
 
 functions:
   api:
-    handler: dist/src/04-infra/serverless.handler
+    handler: dist/src/app.handler
     reservedConcurrency: 10
     events:
       - http:

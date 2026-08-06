@@ -14,15 +14,15 @@ import {
   ReportPackageRepository,
   WorkbenchRepository
 } from "../../ports/repositories";
-import { AnalyticsRepository } from "../../../modules/analytics/ports";
+import { AnalyticsRepository } from "../../analytics/ports";
 import {
   DataQualityIssue,
   PortfolioAnalyticsSnapshot,
   SectorExposurePoint
-} from "../../../modules/analytics/types";
-import { AlertRepository } from "../../../modules/reports-alerts/ports";
-import { AlertRule } from "../../../modules/reports-alerts/types";
-import { round } from "../../../modules/analytics/formulas";
+} from "../../../01-domain/analytics/types";
+import { AlertRepository } from "../../reports-alerts/ports";
+import { AlertRule } from "../../../01-domain/reports-alerts/types";
+import { round } from "../../../01-domain/analytics/formulas";
 import {
   AdvisorAlertSeverityTimelinePoint,
   AdvisorAllocationBreakdownPoint,

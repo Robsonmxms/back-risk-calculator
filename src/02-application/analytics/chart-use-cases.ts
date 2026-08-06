@@ -6,20 +6,20 @@ import { ApplicationError } from "../../02-application/errors/application-error"
 import { LoggerPort, MetricsPort } from "../../02-application/ports/observability";
 import { AccountRepository, PortfolioRepository } from "../../02-application/ports/repositories";
 import { MarketDataRepository } from "../market-data/ports";
-import { HistoricalPrice } from "../market-data/types";
+import { HistoricalPrice } from "../../01-domain/market-data/types";
 import {
   calculateDrawdowns,
   calculatePeriodicReturns,
   calculateVolatility,
   round
-} from "./formulas";
+} from "../../01-domain/analytics/formulas";
 import { AnalyticsRepository } from "./ports";
 import {
   AllocationPoint,
   DataQualityIssue,
   PortfolioAnalyticsSnapshot,
   TimeSeriesPoint
-} from "./types";
+} from "../../01-domain/analytics/types";
 import {
   AssetPriceChartSeries,
   BenchmarkComparisonPoint,

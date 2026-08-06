@@ -7,21 +7,10 @@ import { HmacJwtAccessTokenService } from "../../03-adapters/security/HmacJwtAcc
 import { ScryptPasswordHasher } from "../../03-adapters/security/ScryptPasswordHasher";
 import { Sha256RefreshTokenGenerator } from "../../03-adapters/security/Sha256RefreshTokenGenerator";
 import { AppConfig } from "../config/env";
-import type { AnalyticsContainerDependencies } from "./AnalyticsContainer";
-import type { MarketDataContainerDependencies } from "./MarketDataContainer";
-import type { ReportsAlertsContainerDependencies } from "./ReportsAlertsContainer";
-import type { PortfolioImportContainerDependencies } from "./PortfolioImportContainer";
 import { InMemoryIdentityStore } from "../repositories/InMemoryIdentityStore";
 
-export interface AppDependencies {
+export interface SharedContainerDependencies {
   identityStore?: InMemoryIdentityStore;
-  marketData?: MarketDataContainerDependencies;
-  analytics?: AnalyticsContainerDependencies;
-  reportsAlerts?: ReportsAlertsContainerDependencies;
-  portfolioImports?: PortfolioImportContainerDependencies;
-  operationalCharts?: {
-    operationalChartsNow?: () => Date;
-  };
 }
 
 export interface SharedContainer {
@@ -39,7 +28,7 @@ export interface SharedContainer {
 
 export async function buildSharedContainer(
   config: AppConfig,
-  dependencies: AppDependencies = {}
+  dependencies: SharedContainerDependencies = {}
 ): Promise<SharedContainer> {
   const passwordHasher = new ScryptPasswordHasher();
   const identityStore = dependencies.identityStore ?? new InMemoryIdentityStore();

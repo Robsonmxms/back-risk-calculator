@@ -4,14 +4,14 @@ import {
   RealtimeRepository,
   ReportRepository,
   ReportStorage
-} from "../../modules/reports-alerts/ports";
+} from "../../02-application/reports-alerts/ports";
 import {
   AlertRule,
   NotificationRecord,
   RealtimeMessage,
   ReportJob,
   StoredReportFile
-} from "../../modules/reports-alerts/types";
+} from "../../01-domain/reports-alerts/types";
 
 export class InMemoryReportsAlertsStore
   implements

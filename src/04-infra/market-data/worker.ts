@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { DateRange, LatestQuote, MarketDataJob } from "./types";
+import { DateRange, LatestQuote, MarketDataJob } from "../../01-domain/market-data/types";
 import {
   MarketDataCache,
   MarketDataEventPublisher,
@@ -7,7 +7,7 @@ import {
   MarketDataProvider,
   MarketDataRepository,
   PortfolioMarketDataProjection
-} from "./ports";
+} from "../../02-application/market-data/ports";
 import { MetricsPort, LoggerPort } from "../../02-application/ports/observability";
 
 const LATEST_QUOTE_TTL_SECONDS = 30;

@@ -1,15 +1,14 @@
 import { randomUUID } from "crypto";
 import { PortfolioRepository } from "../../02-application/ports/repositories";
-import { Logger } from "../../03-adapters/observability/Logger";
-import { Metrics } from "../../03-adapters/observability/Metrics";
+import { LoggerPort, MetricsPort } from "../../02-application/ports/observability";
 import {
   AlertRepository,
   ApplicationEventPublisher,
   NotificationRepository,
   ReportRepository,
   ReportStorage
-} from "./ports";
-import { AlertRule, ReportJob } from "./types";
+} from "../../02-application/reports-alerts/ports";
+import { AlertRule, ReportJob } from "../../01-domain/reports-alerts/types";
 
 export class ReportGenerationWorker {
   constructor(
@@ -18,8 +17,8 @@ export class ReportGenerationWorker {
     private readonly notifications: NotificationRepository,
     private readonly events: ApplicationEventPublisher,
     private readonly portfolios: PortfolioRepository,
-    private readonly logger: Logger,
-    private readonly metrics: Metrics,
+    private readonly logger: LoggerPort,
+    private readonly metrics: MetricsPort,
     private readonly now: () => Date = () => new Date()
   ) {}
 
@@ -164,7 +163,7 @@ export class AlertEvaluationWorker {
     private readonly alerts: AlertRepository,
     private readonly notifications: NotificationRepository,
     private readonly events: ApplicationEventPublisher,
-    private readonly metrics: Metrics,
+    private readonly metrics: MetricsPort,
     private readonly now: () => Date = () => new Date()
   ) {}
 

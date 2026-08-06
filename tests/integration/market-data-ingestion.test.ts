@@ -1,8 +1,8 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { createSeededTestApp as createApp } from "../helpers/testApp";
-import type { CurrencyRateProvider } from "../../src/modules/market-data/ports";
-import type { DateRange } from "../../src/modules/market-data/types";
+import type { CurrencyRateProvider } from "../../src/02-application/market-data/ports";
+import type { DateRange } from "../../src/01-domain/market-data/types";
 import { BrapiMarketDataProvider } from "../helpers/BrapiMarketDataProvider";
 import { createSeededIdentityStore } from "../helpers/seededIdentityStore";
 

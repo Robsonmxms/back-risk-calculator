@@ -2,7 +2,10 @@ import request from "supertest";
 import type { Response } from "supertest";
 import { describe, expect, it } from "vitest";
 import { createSeededTestApp as createApp } from "../helpers/testApp";
-import { CurrencyRateProvider, MarketDataProvider } from "../../src/modules/market-data/ports";
+import {
+  CurrencyRateProvider,
+  MarketDataProvider
+} from "../../src/02-application/market-data/ports";
 import {
   DateRange,
   Dividend,
@@ -11,7 +14,7 @@ import {
   LatestQuote,
   MarketAssetCandidate,
   Split
-} from "../../src/modules/market-data/types";
+} from "../../src/01-domain/market-data/types";
 
 const fixedNow = () => new Date("2026-07-15T12:00:00.000Z");
 

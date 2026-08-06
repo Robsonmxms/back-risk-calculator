@@ -3,7 +3,7 @@ import {
   ageInSeconds,
   classifyFreshness,
   MARKET_DATA_FRESHNESS_POLICY
-} from "../src/modules/market-data/freshness";
+} from "../src/01-domain/market-data/freshness";
 
 async function main() {
   const provider = new YahooFinanceMarketDataProvider();

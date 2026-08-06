@@ -15,7 +15,7 @@ import {
   ReportPackageFilters,
   ReportPackageRepository
 } from "../../ports/repositories";
-import { ReportRepository } from "../../../modules/reports-alerts/ports";
+import { ReportRepository } from "../../reports-alerts/ports";
 import { sanitizeAuditMetadata } from "../../compliance/use-cases/compliance-use-cases";
 
 export interface ReportPackageView {

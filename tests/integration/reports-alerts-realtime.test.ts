@@ -2,7 +2,10 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { createSeededTestApp as createApp } from "../helpers/testApp";
 import { ApplicationError } from "../../src/02-application/errors/application-error";
-import { CurrencyRateProvider, MarketDataProvider } from "../../src/modules/market-data/ports";
+import {
+  CurrencyRateProvider,
+  MarketDataProvider
+} from "../../src/02-application/market-data/ports";
 import {
   DateRange,
   Dividend,
@@ -11,9 +14,9 @@ import {
   LatestQuote,
   MarketAssetCandidate,
   Split
-} from "../../src/modules/market-data/types";
-import { ReportStorage } from "../../src/modules/reports-alerts/ports";
-import { StoredReportFile } from "../../src/modules/reports-alerts/types";
+} from "../../src/01-domain/market-data/types";
+import { ReportStorage } from "../../src/02-application/reports-alerts/ports";
+import { StoredReportFile } from "../../src/01-domain/reports-alerts/types";
 
 async function login(app: Parameters<typeof request>[0], email = "user@risk.local") {
   const response = await request(app).post("/api/v1/auth/login").send({

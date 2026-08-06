@@ -8,7 +8,7 @@ import {
   ListMarketExchangesUseCase,
   RequestMarketDataRefreshUseCase,
   SearchMarketAssetsUseCase
-} from "../../modules/market-data/use-cases";
+} from "../../02-application/market-data/use-cases";
 import { AuthenticatedRequest } from "../request";
 import { ApiError, ok } from "../http";
 

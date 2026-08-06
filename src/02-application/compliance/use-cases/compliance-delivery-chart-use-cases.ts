@@ -17,14 +17,14 @@ import {
   ReportPackageRepository,
   PortfolioRepository
 } from "../../ports/repositories";
-import { DataQualityIssue } from "../../../modules/analytics/types";
-import { NotificationRepository, ReportRepository } from "../../../modules/reports-alerts/ports";
+import { DataQualityIssue } from "../../../01-domain/analytics/types";
+import { NotificationRepository, ReportRepository } from "../../reports-alerts/ports";
 import {
   NotificationRecord,
   NotificationStatus,
   ReportJob,
   ReportStatus
-} from "../../../modules/reports-alerts/types";
+} from "../../../01-domain/reports-alerts/types";
 import {
   ApprovalLatencyPoint,
   ClientPackageReadinessPoint,

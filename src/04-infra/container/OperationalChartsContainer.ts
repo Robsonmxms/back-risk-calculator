@@ -4,13 +4,16 @@ import {
   GetPlatformAdminChartsUseCase
 } from "../../02-application/offices/use-cases/operational-chart-use-cases";
 import { OperationalChartsController } from "../../03-adapters/controllers/OperationalChartsController";
-import type { AnalyticsRepository } from "../../modules/analytics/ports";
-import type { MarketDataJobQueue, MarketDataRepository } from "../../modules/market-data/ports";
+import type { AnalyticsRepository } from "../../02-application/analytics/ports";
+import type {
+  MarketDataJobQueue,
+  MarketDataRepository
+} from "../../02-application/market-data/ports";
 import type {
   AlertRepository,
   NotificationRepository,
   ReportRepository
-} from "../../modules/reports-alerts/ports";
+} from "../../02-application/reports-alerts/ports";
 import type { SharedContainer } from "./SharedContainer";
 
 export interface OperationalChartsContainerDependencies {

@@ -82,12 +82,12 @@ import {
 } from "../../02-application/ports/repositories";
 import { ApplicationError } from "../../02-application/errors/application-error";
 import { ROLE_PERMISSION_MATRIX } from "../../02-application/auth/permission-service";
-import { AnalyticsPortfolioProjection } from "../../modules/analytics/ports";
-import { PortfolioMarketDataProjection } from "../../modules/market-data/ports";
+import { AnalyticsPortfolioProjection } from "../../02-application/analytics/ports";
+import { PortfolioMarketDataProjection } from "../../02-application/market-data/ports";
 import {
   classifyFreshness,
   MARKET_DATA_FRESHNESS_POLICY
-} from "../../modules/market-data/freshness";
+} from "../../01-domain/market-data/freshness";
 
 interface PortfolioRuntimeMeta {
   status: "ready" | "syncing" | "degraded";

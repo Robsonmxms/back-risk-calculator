@@ -1,8 +1,10 @@
+import serverless from "serverless-http";
+import type { APIGatewayProxyEvent, APIGatewayProxyEventV2, Context } from "aws-lambda";
 import { loadConfig } from "./04-infra/config/env";
 import { buildAccountContainer } from "./04-infra/container/AccountContainer";
 import { buildAdminContainer } from "./04-infra/container/AdminContainer";
 import { buildAuthContainer } from "./04-infra/container/AuthContainer";
-import { AppDependencies, buildSharedContainer } from "./04-infra/container/SharedContainer";
+import { buildSharedContainer } from "./04-infra/container/SharedContainer";
 import { buildUserContainer } from "./04-infra/container/UserContainer";
 import { buildPortfolioContainer } from "./04-infra/container/PortfolioContainer";
 import { buildMarketDataContainer } from "./04-infra/container/MarketDataContainer";
@@ -16,10 +18,26 @@ import { buildReportDeliveryContainer } from "./04-infra/container/ReportDeliver
 import { buildOperationalChartsContainer } from "./04-infra/container/OperationalChartsContainer";
 import { buildPortfolioImportContainer } from "./04-infra/container/PortfolioImportContainer";
 import { createServer } from "./04-infra/server";
+import type { AnalyticsContainerDependencies } from "./04-infra/container/AnalyticsContainer";
+import type { MarketDataContainerDependencies } from "./04-infra/container/MarketDataContainer";
+import type { ReportsAlertsContainerDependencies } from "./04-infra/container/ReportsAlertsContainer";
+import type { PortfolioImportContainerDependencies } from "./04-infra/container/PortfolioImportContainer";
+import type { InMemoryIdentityStore } from "./04-infra/repositories/InMemoryIdentityStore";
+
+export interface AppDependencies {
+  identityStore?: InMemoryIdentityStore;
+  marketData?: MarketDataContainerDependencies;
+  analytics?: AnalyticsContainerDependencies;
+  reportsAlerts?: ReportsAlertsContainerDependencies;
+  portfolioImports?: PortfolioImportContainerDependencies;
+  operationalCharts?: {
+    operationalChartsNow?: () => Date;
+  };
+}
 
 export async function createApp(dependencies: AppDependencies = {}) {
   const config = loadConfig();
-  const shared = await buildSharedContainer(config, dependencies);
+  const shared = await buildSharedContainer(config, { identityStore: dependencies.identityStore });
   const authContainer = buildAuthContainer(shared);
   const userContainer = buildUserContainer(shared);
   const adminContainer = buildAdminContainer(shared);
@@ -137,4 +155,37 @@ export async function createApp(dependencies: AppDependencies = {}) {
     },
     metrics: shared.metrics
   };
+}
+
+let serverlessAppPromise: ReturnType<typeof createServerlessApp> | undefined;
+
+function createServerlessApp() {
+  return createApp().then(({ app }) => serverless(app));
+}
+
+export async function handler(
+  event: APIGatewayProxyEvent | APIGatewayProxyEventV2,
+  context: Context
+) {
+  context.callbackWaitsForEmptyEventLoop = false;
+  serverlessAppPromise ??= createServerlessApp();
+  const serverlessApp = await serverlessAppPromise;
+  return serverlessApp(event, context);
+}
+
+export async function startServer() {
+  const config = loadConfig();
+  const { app } = await createApp();
+  return app.listen(config.port, () => {
+    process.stdout.write(
+      `${JSON.stringify({ level: "info", message: "api.started", port: config.port })}\n`
+    );
+  });
+}
+
+if (require.main === module) {
+  startServer().catch((error) => {
+    process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
+    process.exit(1);
+  });
 }

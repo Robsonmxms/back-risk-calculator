@@ -7,8 +7,8 @@ import {
   UpdateReviewItemUseCase
 } from "../../02-application/workbench/use-cases/workbench-use-cases";
 import { WorkbenchController } from "../../03-adapters/controllers/WorkbenchController";
-import { AnalyticsRepository } from "../../modules/analytics/ports";
-import { AlertRepository } from "../../modules/reports-alerts/ports";
+import { AnalyticsRepository } from "../../02-application/analytics/ports";
+import { AlertRepository } from "../../02-application/reports-alerts/ports";
 import type { SharedContainer } from "./SharedContainer";
 
 export interface WorkbenchContainerDependencies {

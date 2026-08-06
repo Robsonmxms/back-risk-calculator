@@ -105,6 +105,7 @@ adapter em memória fica restrito a execução local explícita e testes determi
 
 ```bash
 yarn check:runtime-data
+yarn architecture:check
 yarn lint
 yarn typecheck
 yarn test
@@ -113,7 +114,9 @@ yarn test:coverage
 yarn build
 ```
 
-`yarn lint` também verifica a formatação Prettier com largura de 100 caracteres. `yarn lint:fix`
+`yarn architecture:check` valida a allowlist de `src`, a direção entre as quatro camadas, todas as
+formas de import/export TypeScript e ciclos de produção. `yarn lint` inclui esse gate e também
+verifica a formatação Prettier com largura de 100 caracteres. `yarn lint:fix`
 aplica automaticamente as quebras de linha e demais ajustes mecânicos.
 
 `test:risk` protege os ramos críticos de amostra/freshness, adapters Yahoo/fallback, autorização,
@@ -124,14 +127,15 @@ escopo configurado. Testes usam Vitest e Supertest e não dependem da internet.
 
 ```text
 src/
-  01-domain/        entidades e regras de domínio
-  02-application/   auth, contas, clientes, escritórios, portfólios, workbench, compliance e entrega
+  01-domain/        entidades e regras de domínio, analytics, market data e reports/alerts
+  02-application/   casos de uso, portas, contratos de leitura e orquestração
   03-adapters/      controllers, schemas Joi, middlewares, segurança e observabilidade
-  04-infra/         containers, stores, providers, rotas, banco e entrypoints
-  modules/          analytics, market-data e reports-alerts
+  04-infra/         containers, stores, providers, workers, rotas e banco
+  app.ts            composition root e entrypoints HTTP/Serverless
 scripts/            boot seeded, banco, guards e smokes operacionais
 tests/              helpers, unitários e integrações
 ```
 
-Veja também [prontidão AWS](docs/aws-serverless-readiness.md) e
+Veja também [fronteiras de Clean Architecture](docs/architecture/clean-architecture.md),
+[prontidão AWS](docs/aws-serverless-readiness.md) e
 [branch protection](docs/branch-protection.md). Licença MIT em [LICENSE](LICENSE).

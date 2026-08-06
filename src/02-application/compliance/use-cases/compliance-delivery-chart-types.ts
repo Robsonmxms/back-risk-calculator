@@ -5,8 +5,8 @@ import {
   SupervisionReviewStatus
 } from "../../../01-domain/compliance/audit";
 import { ReportPackageStatus } from "../../../01-domain/delivery/report-package";
-import { ReportStatus, NotificationStatus } from "../../../modules/reports-alerts/types";
-import { DataQualityIssue } from "../../../modules/analytics/types";
+import { ReportStatus, NotificationStatus } from "../../../01-domain/reports-alerts/types";
+import { DataQualityIssue } from "../../../01-domain/analytics/types";
 
 export type ComplianceDeliveryChartRange = "7d" | "30d" | "90d" | "ytd" | "1y" | "all";
 export type ComplianceDeliveryDataQualityStatus = "complete" | "partial" | "empty";

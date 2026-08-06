@@ -1,5 +1,8 @@
 import { createSeededTestApp } from "../tests/helpers/testApp";
-import type { CurrencyRateProvider, MarketDataProvider } from "../src/modules/market-data/ports";
+import type {
+  CurrencyRateProvider,
+  MarketDataProvider
+} from "../src/02-application/market-data/ports";
 import type {
   DateRange,
   Dividend,
@@ -8,13 +11,13 @@ import type {
   LatestQuote,
   MarketAssetCandidate,
   Split
-} from "../src/modules/market-data/types";
+} from "../src/01-domain/market-data/types";
 import type {
   AlertRule,
   NotificationRecord,
   ReportJob,
   StoredReportFile
-} from "../src/modules/reports-alerts/types";
+} from "../src/01-domain/reports-alerts/types";
 
 const seedNow = () => new Date("2026-07-15T12:00:00.000Z");
 

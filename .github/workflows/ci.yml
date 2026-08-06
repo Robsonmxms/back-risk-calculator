@@ -40,6 +40,9 @@ jobs:
       - name: Runtime data audit
         run: yarn check:runtime-data
 
+      - name: Architecture boundaries
+        run: yarn architecture:check
+
       - name: Lint
         run: yarn lint
 

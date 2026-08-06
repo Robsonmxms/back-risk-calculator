@@ -1,5 +1,8 @@
 import { ApplicationError } from "../../../02-application/errors/application-error";
-import { CurrencyRateProvider, MarketDataProvider } from "../../../modules/market-data/ports";
+import {
+  CurrencyRateProvider,
+  MarketDataProvider
+} from "../../../02-application/market-data/ports";
 import {
   DateRange,
   Dividend,
@@ -9,11 +12,11 @@ import {
   MarketAssetCandidate,
   MarketAssetType,
   Split
-} from "../../../modules/market-data/types";
+} from "../../../01-domain/market-data/types";
 import {
   classifyFreshness,
   MARKET_DATA_FRESHNESS_POLICY
-} from "../../../modules/market-data/freshness";
+} from "../../../01-domain/market-data/freshness";
 
 interface YahooSearchResponse {
   quotes?: YahooSearchQuote[];

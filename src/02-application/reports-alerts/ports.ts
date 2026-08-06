@@ -4,7 +4,7 @@ import {
   RealtimeMessage,
   ReportJob,
   StoredReportFile
-} from "./types";
+} from "../../01-domain/reports-alerts/types";
 
 export interface ReportRepository {
   createReport(job: ReportJob): Promise<ReportJob>;

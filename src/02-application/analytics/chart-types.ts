@@ -5,7 +5,7 @@ import {
   DrawdownPoint,
   SectorExposurePoint,
   TimeSeriesPoint
-} from "./types";
+} from "../../01-domain/analytics/types";
 
 export type PortfolioChartRange = "1m" | "3m" | "6m" | "ytd" | "1y" | "3y" | "5y" | "all";
 export type PortfolioChartInterval = "daily" | "weekly" | "monthly";

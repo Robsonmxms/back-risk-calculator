@@ -6,20 +6,20 @@ import {
   AnalyticsEventPublisher,
   AnalyticsPortfolioProjection,
   AnalyticsRepository
-} from "../../modules/analytics/ports";
-import { AnalystChartJobRepository } from "../../modules/analytics/analyst-chart-types";
+} from "../../02-application/analytics/ports";
+import { AnalystChartJobRepository } from "../../02-application/analytics/analyst-chart-types";
 import {
   CreateAnalystChartJobUseCase,
   GetAnalystChartJobUseCase,
   GetAnalystChartsUseCase
-} from "../../modules/analytics/analyst-chart-use-cases";
+} from "../../02-application/analytics/analyst-chart-use-cases";
 import {
   GetPortfolioAnalyticsUseCase,
   ListPortfolioAnalyticsHistoryUseCase,
   RequestPortfolioAnalyticsRecomputeUseCase
-} from "../../modules/analytics/use-cases";
-import { GetPortfolioChartsUseCase } from "../../modules/analytics/chart-use-cases";
-import { AnalyticsCalculationWorker } from "../../modules/analytics/worker";
+} from "../../02-application/analytics/use-cases";
+import { GetPortfolioChartsUseCase } from "../../02-application/analytics/chart-use-cases";
+import { AnalyticsCalculationWorker } from "../analytics/worker";
 import type { SharedContainer } from "./SharedContainer";
 import type { MarketDataContainer } from "./MarketDataContainer";
 

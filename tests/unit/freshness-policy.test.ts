@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   classifyFreshness,
   MARKET_DATA_FRESHNESS_POLICY
-} from "../../src/modules/market-data/freshness";
+} from "../../src/01-domain/market-data/freshness";
 
 describe("market-data freshness policy", () => {
   const now = new Date("2026-08-06T12:00:00.000Z");
