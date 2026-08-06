@@ -76,11 +76,7 @@ export class AnalyticsController {
       range: "1y",
       interval: "daily"
     };
-    const chartResponse = await this.getPortfolioChartsUseCase.execute(
-      actor,
-      portfolioId,
-      query
-    );
+    const chartResponse = await this.getPortfolioChartsUseCase.execute(actor, portfolioId, query);
 
     return ok(response, chartResponse.data, chartResponse.meta);
   };

@@ -5,10 +5,7 @@ import {
   AuditSeverity,
   SupervisionReview
 } from "../../../01-domain/compliance/audit";
-import {
-  ReportPackage,
-  ReportPackageStatus
-} from "../../../01-domain/delivery/report-package";
+import { ReportPackage, ReportPackageStatus } from "../../../01-domain/delivery/report-package";
 import { PortfolioSummary } from "../../../01-domain/portfolios/portfolio";
 import { PermissionService } from "../../auth/permission-service";
 import { ApplicationError } from "../../errors/application-error";
@@ -21,10 +18,7 @@ import {
   PortfolioRepository
 } from "../../ports/repositories";
 import { DataQualityIssue } from "../../../modules/analytics/types";
-import {
-  NotificationRepository,
-  ReportRepository
-} from "../../../modules/reports-alerts/ports";
+import { NotificationRepository, ReportRepository } from "../../../modules/reports-alerts/ports";
 import {
   NotificationRecord,
   NotificationStatus,
@@ -98,11 +92,13 @@ export class GetComplianceChartsUseCase {
       severity: query.severity
     });
     const events = auditPage.events.filter((event) => withinWindow(event.createdAt, window));
-    const reviews = (await this.audits.listSupervisionReviews(officeId, {
-      status: query.status,
-      severity: query.severity,
-      assignedToUserId: query.assigneeUserId
-    })).filter((review) => withinWindow(review.createdAt, window));
+    const reviews = (
+      await this.audits.listSupervisionReviews(officeId, {
+        status: query.status,
+        severity: query.severity,
+        assignedToUserId: query.assigneeUserId
+      })
+    ).filter((review) => withinWindow(review.createdAt, window));
 
     const issues: DataQualityIssue[] = [];
     if (auditPage.total > auditPage.events.length) {
@@ -295,7 +291,9 @@ export class GetDeliveryChartsUseCase {
     )
       .flat()
       .filter((reportPackage) => withinWindow(reportPackage.updatedAt, window))
-      .filter((reportPackage) => !query.packageStatus || reportPackage.status === query.packageStatus)
+      .filter(
+        (reportPackage) => !query.packageStatus || reportPackage.status === query.packageStatus
+      )
       .filter(
         (reportPackage) =>
           !isReportPackageStatus(query.deliveryStatus) ||
@@ -309,18 +307,25 @@ export class GetDeliveryChartsUseCase {
     )
       .flat()
       .filter((report) => withinWindow(report.updatedAt, window))
-      .filter((report) => !isReportStatus(query.deliveryStatus) || report.status === query.deliveryStatus);
+      .filter(
+        (report) => !isReportStatus(query.deliveryStatus) || report.status === query.deliveryStatus
+      );
 
-    const notifications = (await this.notifications.listNotificationsByPortfolioIds([...portfolioIds]))
+    const notifications = (
+      await this.notifications.listNotificationsByPortfolioIds([...portfolioIds])
+    )
       .filter((notification) => withinWindow(notification.createdAt, window))
       .filter(
         (notification) =>
-          !isNotificationStatus(query.deliveryStatus) || notification.status === query.deliveryStatus
+          !isNotificationStatus(query.deliveryStatus) ||
+          notification.status === query.deliveryStatus
       );
 
     const deliveryAuditEvents = await this.loadDeliveryAuditEvents(officeId, window, query);
     const issues: DataQualityIssue[] = [];
-    if (deliveryAuditEvents.some((event) => event.metadata.failureCode && !event.metadata.channel)) {
+    if (
+      deliveryAuditEvents.some((event) => event.metadata.failureCode && !event.metadata.channel)
+    ) {
       issues.push({
         code: "delivery_charts.failure_channel_missing",
         severity: "info",
@@ -352,16 +357,18 @@ export class GetDeliveryChartsUseCase {
     officeId: string,
     clients: Array<{ id: string; householdId?: string }>
   ): Promise<Set<string>> {
-    const assignments = (await this.advisory.listAssignmentsForUser(actor.id, officeId))
-      .filter(
-        (assignment) =>
-          !assignment.revokedAt &&
-          (assignment.permissions.includes("reports.request") ||
-            assignment.permissions.includes("reports.approve") ||
-            assignment.permissions.includes("client.read"))
-      );
+    const assignments = (await this.advisory.listAssignmentsForUser(actor.id, officeId)).filter(
+      (assignment) =>
+        !assignment.revokedAt &&
+        (assignment.permissions.includes("reports.request") ||
+          assignment.permissions.includes("reports.approve") ||
+          assignment.permissions.includes("client.read"))
+    );
     const clientIds = new Set<string>();
-    const portfolios = await this.portfolios.listVisiblePortfolios(actor.id, actor.role === "admin");
+    const portfolios = await this.portfolios.listVisiblePortfolios(
+      actor.id,
+      actor.role === "admin"
+    );
 
     for (const assignment of assignments) {
       if (assignment.resourceType === "client") {
@@ -413,26 +420,28 @@ export class GetDeliveryChartsUseCase {
       .filter((event) => withinWindow(event.createdAt, window))
       .filter((event) => !query.channel || String(event.metadata.channel ?? "") === query.channel)
       .filter(
-        (event) =>
-          !isAuditOutcome(query.deliveryStatus) || event.outcome === query.deliveryStatus
+        (event) => !isAuditOutcome(query.deliveryStatus) || event.outcome === query.deliveryStatus
       )
       .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
   }
 }
 
 function buildAuditEventTimeline(events: AuditEvent[]) {
-  const buckets = new Map<string, {
-    date: string;
-    success: number;
-    failure: number;
-    info: number;
-    warning: number;
-    critical: number;
-    total: number;
-    eventIds: Set<string>;
-    clientIds: Set<string>;
-    portfolioIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    string,
+    {
+      date: string;
+      success: number;
+      failure: number;
+      info: number;
+      warning: number;
+      critical: number;
+      total: number;
+      eventIds: Set<string>;
+      clientIds: Set<string>;
+      portfolioIds: Set<string>;
+    }
+  >();
 
   for (const event of events) {
     const date = dayKey(event.createdAt);
@@ -477,14 +486,17 @@ function buildAuditEventTimeline(events: AuditEvent[]) {
 }
 
 function buildAuditActionBreakdown(events: AuditEvent[]) {
-  const buckets = new Map<string, {
-    action: string;
-    resourceType: AuditResourceType;
-    outcome: "success" | "failure";
-    severity: AuditSeverity;
-    count: number;
-    eventIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    string,
+    {
+      action: string;
+      resourceType: AuditResourceType;
+      outcome: "success" | "failure";
+      severity: AuditSeverity;
+      count: number;
+      eventIds: Set<string>;
+    }
+  >();
 
   for (const event of events) {
     const key = [event.action, event.resourceType, event.outcome, event.severity].join("|");
@@ -509,12 +521,15 @@ function buildAuditActionBreakdown(events: AuditEvent[]) {
 }
 
 function buildReviewStatusFunnel(reviews: SupervisionReview[]) {
-  const buckets = new Map<string, {
-    status: SupervisionReview["status"];
-    count: number;
-    reviewIds: Set<string>;
-    auditEventIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    string,
+    {
+      status: SupervisionReview["status"];
+      count: number;
+      reviewIds: Set<string>;
+      auditEventIds: Set<string>;
+    }
+  >();
 
   for (const review of reviews) {
     const bucket = getOrSet(buckets, review.status, () => ({
@@ -538,24 +553,31 @@ function buildReviewStatusFunnel(reviews: SupervisionReview[]) {
 
 function buildReviewAging(reviews: SupervisionReview[], now: Date) {
   const activeReviews = reviews.filter((review) => review.status !== "resolved");
-  const buckets = new Map<string, {
-    bucket: "0-1d" | "2-3d" | "4-7d" | "8-14d" | "15d+";
-    count: number;
-    reviewIds: Set<string>;
-    auditEventIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    string,
+    {
+      bucket: "0-1d" | "2-3d" | "4-7d" | "8-14d" | "15d+";
+      count: number;
+      reviewIds: Set<string>;
+      auditEventIds: Set<string>;
+    }
+  >();
 
   for (const review of activeReviews) {
-    const ageDays = Math.max(0, Math.floor((now.getTime() - review.createdAt.getTime()) / 86_400_000));
-    const label = ageDays <= 1
-      ? "0-1d"
-      : ageDays <= 3
-        ? "2-3d"
-        : ageDays <= 7
-          ? "4-7d"
-          : ageDays <= 14
-            ? "8-14d"
-            : "15d+";
+    const ageDays = Math.max(
+      0,
+      Math.floor((now.getTime() - review.createdAt.getTime()) / 86_400_000)
+    );
+    const label =
+      ageDays <= 1
+        ? "0-1d"
+        : ageDays <= 3
+          ? "2-3d"
+          : ageDays <= 7
+            ? "4-7d"
+            : ageDays <= 14
+              ? "8-14d"
+              : "15d+";
     const bucket = getOrSet(buckets, label, () => ({
       bucket: label,
       count: 0,
@@ -580,14 +602,17 @@ function buildReviewAging(reviews: SupervisionReview[], now: Date) {
 
 function buildPermissionActivity(events: AuditEvent[]) {
   const permissionEvents = events.filter((event) => event.resourceType === "permission");
-  const buckets = new Map<string, {
-    date: string;
-    created: number;
-    revoked: number;
-    roleChanges: number;
-    total: number;
-    eventIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    string,
+    {
+      date: string;
+      created: number;
+      revoked: number;
+      roleChanges: number;
+      total: number;
+      eventIds: Set<string>;
+    }
+  >();
 
   for (const event of permissionEvents) {
     const date = dayKey(event.createdAt);
@@ -626,12 +651,15 @@ function buildExceptionHeatmap(events: AuditEvent[]) {
   const exceptions = events.filter(
     (event) => event.outcome === "failure" || event.reviewRequired || event.severity !== "info"
   );
-  const buckets = new Map<string, {
-    date: string;
-    severity: AuditSeverity;
-    count: number;
-    eventIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    string,
+    {
+      date: string;
+      severity: AuditSeverity;
+      count: number;
+      eventIds: Set<string>;
+    }
+  >();
 
   for (const event of exceptions) {
     const date = dayKey(event.createdAt);
@@ -684,7 +712,10 @@ function buildDeliveryChartBundle(
     charts: {
       reportLifecycleFunnel: buildReportLifecycleFunnel(source.packages),
       approvalLatency: buildApprovalLatency(source.packages),
-      deliveryOutcomeTimeline: buildDeliveryOutcomeTimeline(source.packages, source.deliveryAuditEvents),
+      deliveryOutcomeTimeline: buildDeliveryOutcomeTimeline(
+        source.packages,
+        source.deliveryAuditEvents
+      ),
       failureReasonBreakdown: buildFailureReasonBreakdown(source.deliveryAuditEvents),
       notificationReadStatus: buildNotificationReadStatus(source.notifications),
       clientPackageReadiness: buildClientPackageReadiness(source)
@@ -698,12 +729,15 @@ function buildDeliveryChartBundle(
 }
 
 function buildReportLifecycleFunnel(packages: ReportPackage[]): ReportLifecycleFunnelPoint[] {
-  const buckets = new Map<ReportPackageStatus, {
-    status: ReportPackageStatus;
-    count: number;
-    reportPackageIds: Set<string>;
-    clientIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    ReportPackageStatus,
+    {
+      status: ReportPackageStatus;
+      count: number;
+      reportPackageIds: Set<string>;
+      clientIds: Set<string>;
+    }
+  >();
 
   for (const reportPackage of packages) {
     const bucket = getOrSet(buckets, reportPackage.status, () => ({
@@ -727,26 +761,26 @@ function buildReportLifecycleFunnel(packages: ReportPackage[]): ReportLifecycleF
 
 function buildApprovalLatency(packages: ReportPackage[]): ApprovalLatencyPoint[] {
   const approvedPackages = packages.filter((reportPackage) => reportPackage.approvedAt);
-  const buckets = new Map<ApprovalLatencyPoint["bucket"], {
-    bucket: ApprovalLatencyPoint["bucket"];
-    count: number;
-    totalHours: number;
-    reportPackageIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    ApprovalLatencyPoint["bucket"],
+    {
+      bucket: ApprovalLatencyPoint["bucket"];
+      count: number;
+      totalHours: number;
+      reportPackageIds: Set<string>;
+    }
+  >();
 
   for (const reportPackage of approvedPackages) {
     const approvedAt = reportPackage.approvedAt;
     if (!approvedAt) {
       continue;
     }
-    const hours = Math.max(0, (approvedAt.getTime() - reportPackage.createdAt.getTime()) / 3_600_000);
-    const label = hours <= 4
-      ? "0-4h"
-      : hours <= 24
-        ? "4-24h"
-        : hours <= 72
-          ? "1-3d"
-          : "3d+";
+    const hours = Math.max(
+      0,
+      (approvedAt.getTime() - reportPackage.createdAt.getTime()) / 3_600_000
+    );
+    const label = hours <= 4 ? "0-4h" : hours <= 24 ? "4-24h" : hours <= 72 ? "1-3d" : "3d+";
     const bucket = getOrSet(buckets, label, () => ({
       bucket: label,
       count: 0,
@@ -773,16 +807,19 @@ function buildDeliveryOutcomeTimeline(
   packages: ReportPackage[],
   events: AuditEvent[]
 ): DeliveryOutcomeTimelinePoint[] {
-  const buckets = new Map<string, {
-    date: string;
-    delivered: number;
-    viewed: number;
-    failed: number;
-    revoked: number;
-    total: number;
-    reportPackageIds: Set<string>;
-    eventIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    string,
+    {
+      date: string;
+      delivered: number;
+      viewed: number;
+      failed: number;
+      revoked: number;
+      total: number;
+      reportPackageIds: Set<string>;
+      eventIds: Set<string>;
+    }
+  >();
 
   for (const reportPackage of packages) {
     const statusDate =
@@ -830,13 +867,16 @@ function buildDeliveryOutcomeTimeline(
 
 function buildFailureReasonBreakdown(events: AuditEvent[]): FailureReasonBreakdownPoint[] {
   const failedEvents = events.filter((event) => event.outcome === "failure");
-  const buckets = new Map<string, {
-    failureCode: string;
-    channel?: string;
-    count: number;
-    eventIds: Set<string>;
-    reportPackageIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    string,
+    {
+      failureCode: string;
+      channel?: string;
+      count: number;
+      eventIds: Set<string>;
+      reportPackageIds: Set<string>;
+    }
+  >();
 
   for (const event of failedEvents) {
     const failureCode = String(event.metadata.failureCode ?? "unclassified_failure");
@@ -857,7 +897,9 @@ function buildFailureReasonBreakdown(events: AuditEvent[]): FailureReasonBreakdo
   }
 
   return [...buckets.values()]
-    .sort((left, right) => right.count - left.count || left.failureCode.localeCompare(right.failureCode))
+    .sort(
+      (left, right) => right.count - left.count || left.failureCode.localeCompare(right.failureCode)
+    )
     .map((bucket) => ({
       failureCode: bucket.failureCode,
       channel: bucket.channel,
@@ -870,11 +912,14 @@ function buildFailureReasonBreakdown(events: AuditEvent[]): FailureReasonBreakdo
 function buildNotificationReadStatus(
   notifications: NotificationRecord[]
 ): NotificationReadStatusPoint[] {
-  const buckets = new Map<NotificationStatus, {
-    status: NotificationStatus;
-    count: number;
-    notificationIds: Set<string>;
-  }>();
+  const buckets = new Map<
+    NotificationStatus,
+    {
+      status: NotificationStatus;
+      count: number;
+      notificationIds: Set<string>;
+    }
+  >();
 
   for (const notification of notifications) {
     const bucket = getOrSet(buckets, notification.status, () => ({
@@ -896,7 +941,9 @@ function buildNotificationReadStatus(
 function buildClientPackageReadiness(source: DeliveryChartSource): ClientPackageReadinessPoint[] {
   return source.clients
     .map((client) => {
-      const packages = source.packages.filter((reportPackage) => reportPackage.clientId === client.id);
+      const packages = source.packages.filter(
+        (reportPackage) => reportPackage.clientId === client.id
+      );
       const portfolioIds = new Set(client.portfolios.map((portfolio) => portfolio.id));
       const notifications = source.notifications.filter(
         (notification) => notification.portfolioId && portfolioIds.has(notification.portfolioId)
@@ -915,7 +962,9 @@ function buildClientPackageReadiness(source: DeliveryChartSource): ClientPackage
           sum + reportPackage.items.filter((item) => item.status === "unavailable").length,
         0
       );
-      const staleNotificationCount = notifications.filter((notification) => notification.status === "unread").length;
+      const staleNotificationCount = notifications.filter(
+        (notification) => notification.status === "unread"
+      ).length;
 
       return {
         clientId: client.id,
@@ -947,16 +996,19 @@ function buildClientPackageReadiness(source: DeliveryChartSource): ClientPackage
 }
 
 function getOrSetDeliveryTimelineBucket(
-  buckets: Map<string, {
-    date: string;
-    delivered: number;
-    viewed: number;
-    failed: number;
-    revoked: number;
-    total: number;
-    reportPackageIds: Set<string>;
-    eventIds: Set<string>;
-  }>,
+  buckets: Map<
+    string,
+    {
+      date: string;
+      delivered: number;
+      viewed: number;
+      failed: number;
+      revoked: number;
+      total: number;
+      reportPackageIds: Set<string>;
+      eventIds: Set<string>;
+    }
+  >,
   date: string
 ) {
   return getOrSet(buckets, date, () => ({
@@ -1007,7 +1059,8 @@ function dataQualityStatus(
 }
 
 function countRedactedAuditMetadataFields(events: AuditEvent[]): number {
-  const blockedPattern = /(token|secret|password|credential|accountNumber|rawCredential|phone|email|document)/i;
+  const blockedPattern =
+    /(token|secret|password|credential|accountNumber|rawCredential|phone|email|document)/i;
   return events.reduce(
     (sum, event) =>
       sum + Object.keys(event.metadata).filter((key) => blockedPattern.test(key)).length,
@@ -1018,14 +1071,9 @@ function countRedactedAuditMetadataFields(events: AuditEvent[]): number {
 function isReportPackageStatus(
   value: DeliveryChartsQuery["deliveryStatus"]
 ): value is ReportPackageStatus {
-  return [
-    "draft",
-    "pending_approval",
-    "approved",
-    "delivered",
-    "viewed",
-    "revoked"
-  ].includes(String(value));
+  return ["draft", "pending_approval", "approved", "delivered", "viewed", "revoked"].includes(
+    String(value)
+  );
 }
 
 function isReportStatus(value: DeliveryChartsQuery["deliveryStatus"]): value is ReportStatus {
@@ -1038,7 +1086,9 @@ function isNotificationStatus(
   return ["unread", "read"].includes(String(value));
 }
 
-function isAuditOutcome(value: DeliveryChartsQuery["deliveryStatus"]): value is "success" | "failure" {
+function isAuditOutcome(
+  value: DeliveryChartsQuery["deliveryStatus"]
+): value is "success" | "failure" {
   return ["success", "failure"].includes(String(value));
 }
 

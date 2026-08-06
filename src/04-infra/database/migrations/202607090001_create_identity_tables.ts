@@ -23,9 +23,7 @@ export async function up(knex: Knex): Promise<void> {
     table.uuid("id").primary();
     table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
     table.uuid("user_id").notNullable().references("users.id").onDelete("CASCADE");
-    table
-      .enu("role", ["office_admin", "advisor", "analyst", "assistant", "client"])
-      .notNullable();
+    table.enu("role", ["office_admin", "advisor", "analyst", "assistant", "client"]).notNullable();
     table.timestamp("created_at").notNullable().defaultTo(knex.fn.now());
     table.unique(["office_id", "user_id"]);
   });
@@ -45,9 +43,7 @@ export async function up(knex: Knex): Promise<void> {
     table.uuid("office_id").notNullable().references("offices.id").onDelete("CASCADE");
     table.uuid("team_id").notNullable().references("advisory_teams.id").onDelete("CASCADE");
     table.uuid("user_id").notNullable().references("users.id").onDelete("CASCADE");
-    table
-      .enu("role", ["office_admin", "advisor", "analyst", "assistant", "client"])
-      .notNullable();
+    table.enu("role", ["office_admin", "advisor", "analyst", "assistant", "client"]).notNullable();
     table.timestamp("created_at").notNullable().defaultTo(knex.fn.now());
     table.unique(["team_id", "user_id"]);
     table.index(["office_id", "user_id"]);

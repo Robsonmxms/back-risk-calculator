@@ -1,14 +1,7 @@
 import Joi from "joi";
 
 const chartRanges = ["7d", "30d", "90d", "ytd", "1y", "all"];
-const packageStatuses = [
-  "draft",
-  "pending_approval",
-  "approved",
-  "delivered",
-  "viewed",
-  "revoked"
-];
+const packageStatuses = ["draft", "pending_approval", "approved", "delivered", "viewed", "revoked"];
 
 const packageItemSchema = Joi.object({
   id: Joi.string().trim().min(1),
@@ -42,7 +35,9 @@ export const updateReportPackageSchema = Joi.object({
 }).min(1);
 
 export const deliveryChartsQuerySchema = Joi.object({
-  range: Joi.string().valid(...chartRanges).default("30d"),
+  range: Joi.string()
+    .valid(...chartRanges)
+    .default("30d"),
   packageStatus: Joi.string().valid(...packageStatuses),
   deliveryStatus: Joi.string().valid(
     ...packageStatuses,

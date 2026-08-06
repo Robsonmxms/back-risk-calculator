@@ -10,6 +10,7 @@ import { AppConfig } from "../config/env";
 import type { AnalyticsContainerDependencies } from "./AnalyticsContainer";
 import type { MarketDataContainerDependencies } from "./MarketDataContainer";
 import type { ReportsAlertsContainerDependencies } from "./ReportsAlertsContainer";
+import type { PortfolioImportContainerDependencies } from "./PortfolioImportContainer";
 import { InMemoryIdentityStore } from "../repositories/InMemoryIdentityStore";
 
 export interface AppDependencies {
@@ -17,6 +18,7 @@ export interface AppDependencies {
   marketData?: MarketDataContainerDependencies;
   analytics?: AnalyticsContainerDependencies;
   reportsAlerts?: ReportsAlertsContainerDependencies;
+  portfolioImports?: PortfolioImportContainerDependencies;
   operationalCharts?: {
     operationalChartsNow?: () => Date;
   };

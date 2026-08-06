@@ -37,11 +37,7 @@ export function buildAuthContainer(shared: SharedContainer): AuthContainer {
     shared.logger,
     shared.metrics
   );
-  const controller = new AuthController(
-    loginUseCase,
-    refreshSessionUseCase,
-    logoutUseCase
-  );
+  const controller = new AuthController(loginUseCase, refreshSessionUseCase, logoutUseCase);
 
   return {
     controller,

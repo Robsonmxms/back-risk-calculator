@@ -1,9 +1,5 @@
 import { Request, Response } from "express";
-import {
-  AuditEvent,
-  AuditExportJob,
-  SupervisionReview
-} from "../../01-domain/compliance/audit";
+import { AuditEvent, AuditExportJob, SupervisionReview } from "../../01-domain/compliance/audit";
 import {
   GetAuditEventUseCase,
   ListAuditEventsUseCase,
@@ -11,12 +7,8 @@ import {
   RequestAuditExportUseCase,
   UpdateSupervisionReviewUseCase
 } from "../../02-application/compliance/use-cases/compliance-use-cases";
-import {
-  GetComplianceChartsUseCase
-} from "../../02-application/compliance/use-cases/compliance-delivery-chart-use-cases";
-import {
-  ComplianceChartsQuery
-} from "../../02-application/compliance/use-cases/compliance-delivery-chart-types";
+import { GetComplianceChartsUseCase } from "../../02-application/compliance/use-cases/compliance-delivery-chart-use-cases";
+import { ComplianceChartsQuery } from "../../02-application/compliance/use-cases/compliance-delivery-chart-types";
 import {
   AuditEventFilters,
   SupervisionReviewFilters
@@ -39,7 +31,7 @@ export class ComplianceController {
     const page = await this.listAuditEventsUseCase.execute(
       actor,
       requireOfficeId(request),
-      ((request as Request & { validatedQuery?: AuditEventFilters }).validatedQuery ?? {})
+      (request as Request & { validatedQuery?: AuditEventFilters }).validatedQuery ?? {}
     );
 
     return ok(
@@ -60,7 +52,7 @@ export class ComplianceController {
     const reviews = await this.listSupervisionReviewsUseCase.execute(
       actor,
       requireOfficeId(request),
-      ((request as Request & { validatedQuery?: SupervisionReviewFilters }).validatedQuery ?? {})
+      (request as Request & { validatedQuery?: SupervisionReviewFilters }).validatedQuery ?? {}
     );
     return ok(
       response,
@@ -94,9 +86,9 @@ export class ComplianceController {
     const result = await this.getComplianceChartsUseCase.execute(
       actor,
       requireOfficeId(request),
-      ((request as Request & { validatedQuery?: ComplianceChartsQuery }).validatedQuery ?? {
+      (request as Request & { validatedQuery?: ComplianceChartsQuery }).validatedQuery ?? {
         range: "30d"
-      })
+      }
     );
     return ok(response, result.data, result.meta);
   };

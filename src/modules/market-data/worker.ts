@@ -165,7 +165,10 @@ export class MarketDataIngestionWorker {
     }
 
     const stored = await this.repository.findLatestQuote(assetId);
-    if (stored && this.now().getTime() - stored.updatedAt.getTime() <= LATEST_QUOTE_TTL_SECONDS * 1000) {
+    if (
+      stored &&
+      this.now().getTime() - stored.updatedAt.getTime() <= LATEST_QUOTE_TTL_SECONDS * 1000
+    ) {
       this.metrics.increment("market_data.cache.latest_quote.stored_hit");
       await this.cache.setLatestQuote(symbol, stored, LATEST_QUOTE_TTL_SECONDS);
       return stored;

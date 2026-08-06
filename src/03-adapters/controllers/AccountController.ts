@@ -33,10 +33,7 @@ export class AccountController {
       throw new ApiError(400, "request.invalid_account_id", "Invalid account id");
     }
 
-    return ok(
-      response,
-      await this.getAccountAnalyticsSummaryUseCase.execute(actor, accountId)
-    );
+    return ok(response, await this.getAccountAnalyticsSummaryUseCase.execute(actor, accountId));
   };
 
   getDashboard = async (request: Request, response: Response) => {

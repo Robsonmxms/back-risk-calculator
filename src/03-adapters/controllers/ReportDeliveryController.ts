@@ -1,8 +1,5 @@
 import { Request, Response } from "express";
-import {
-  ClientPortalReadModel,
-  ReportPackage
-} from "../../01-domain/delivery/report-package";
+import { ClientPortalReadModel, ReportPackage } from "../../01-domain/delivery/report-package";
 import {
   ApproveReportPackageUseCase,
   CreateReportPackageUseCase,
@@ -38,7 +35,7 @@ export class ReportDeliveryController {
     const packages = await this.listClientReportPackagesUseCase.execute(
       actor,
       requireParam(request, "clientId"),
-      ((request as Request & { validatedQuery?: ReportPackageFilters }).validatedQuery ?? {})
+      (request as Request & { validatedQuery?: ReportPackageFilters }).validatedQuery ?? {}
     );
     return ok(
       response,
@@ -114,9 +111,9 @@ export class ReportDeliveryController {
     const result = await this.getDeliveryChartsUseCase.execute(
       actor,
       requireParam(request, "officeId"),
-      ((request as Request & { validatedQuery?: DeliveryChartsQuery }).validatedQuery ?? {
+      (request as Request & { validatedQuery?: DeliveryChartsQuery }).validatedQuery ?? {
         range: "30d"
-      })
+      }
     );
     return ok(response, result.data, result.meta);
   };

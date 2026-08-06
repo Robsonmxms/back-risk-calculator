@@ -6,12 +6,7 @@ import {
   MarketDataProvider,
   MarketDataRepository
 } from "../market-data/ports";
-import {
-  ExchangeRate,
-  HistoricalPrice,
-  LatestQuote,
-  MarketAsset
-} from "../market-data/types";
+import { ExchangeRate, HistoricalPrice, LatestQuote, MarketAsset } from "../market-data/types";
 import {
   calculateAnnualizedReturn,
   calculateBeta,
@@ -186,7 +181,8 @@ export class AnalyticsCalculationWorker {
     const sectorExposure = calculateSectorExposure(
       analyticsPositions
         .filter(
-          (position) => position.marketValueUsd !== undefined && position.weightPercent !== undefined
+          (position) =>
+            position.marketValueUsd !== undefined && position.weightPercent !== undefined
         )
         .map((position) => ({
           sector: position.sector,
@@ -206,11 +202,7 @@ export class AnalyticsCalculationWorker {
     const correlationObservationCount = maximumPairObservationCount(assetReturnSeries);
     const eligibleCorrelationSeries = new Map(
       Array.from(assetReturnSeries.entries()).filter(([, returns]) =>
-        satisfiesAnalyticsSamplePolicy(
-          "assetCorrelation",
-          returns.length,
-          performanceHorizonDays
-        )
+        satisfiesAnalyticsSamplePolicy("assetCorrelation", returns.length, performanceHorizonDays)
       )
     );
     const correlation = calculateCorrelationMatrix(eligibleCorrelationSeries);
@@ -220,11 +212,11 @@ export class AnalyticsCalculationWorker {
       portfolioReturns.length,
       performanceHorizonDays
     )
-        ? calculateAnnualizedReturn(
-            performance[performance.length - 1].value / performance[0].value - 1,
-            performanceHorizonDays
-          )
-        : undefined;
+      ? calculateAnnualizedReturn(
+          performance[performance.length - 1].value / performance[0].value - 1,
+          performanceHorizonDays
+        )
+      : undefined;
     const volatility = satisfiesAnalyticsSamplePolicy(
       "volatility",
       portfolioReturns.length,
@@ -336,7 +328,12 @@ export class AnalyticsCalculationWorker {
     const issues: DataQualityIssue[] = [];
     const asset = await this.resolveAsset(position.assetSymbol);
     const quote = await this.resolveLatestQuote(position.assetSymbol, asset, issues);
-    const historicalPrices = await this.resolveHistoricalPrices(position.assetSymbol, asset, range, issues);
+    const historicalPrices = await this.resolveHistoricalPrices(
+      position.assetSymbol,
+      asset,
+      range,
+      issues
+    );
     const quoteCurrency = quote?.currency ?? position.currency;
     const quoteRate = quote
       ? await this.resolveRateToUsd(quoteCurrency, conversionRates, issues, position.assetSymbol, [
@@ -359,12 +356,8 @@ export class AnalyticsCalculationWorker {
       ["totalReturn"]
     );
     const marketValueUsd =
-      quote && quoteRate
-        ? round(position.quantity * quote.price * quoteRate.rate, 2)
-        : undefined;
-    const costBasisUsd = costRate
-      ? round(position.totalCostBasis * costRate.rate, 2)
-      : undefined;
+      quote && quoteRate ? round(position.quantity * quote.price * quoteRate.rate, 2) : undefined;
+    const costBasisUsd = costRate ? round(position.totalCostBasis * costRate.rate, 2) : undefined;
 
     return {
       source: position,
@@ -404,7 +397,9 @@ export class AnalyticsCalculationWorker {
     asset: MarketAsset | undefined,
     issues: DataQualityIssue[]
   ): Promise<LatestQuote | undefined> {
-    const providerQuote = await this.marketDataProvider.getLatestQuote(symbol).catch(() => undefined);
+    const providerQuote = await this.marketDataProvider
+      .getLatestQuote(symbol)
+      .catch(() => undefined);
     if (providerQuote) {
       const normalizedQuote = {
         ...providerQuote,
@@ -659,7 +654,11 @@ export class AnalyticsCalculationWorker {
         label: "Retorno total",
         unit: "percent",
         unavailableReason: "Requer valor de mercado atual e custo-base em USD.",
-        requiredData: ["cotações mais recentes", "custo-base das posições", "taxas de conversão para USD"],
+        requiredData: [
+          "cotações mais recentes",
+          "custo-base das posições",
+          "taxas de conversão para USD"
+        ],
         observationCount: input.positionCount,
         effectiveHorizonDays: input.effectiveHorizonDays
       }),
@@ -722,7 +721,11 @@ export class AnalyticsCalculationWorker {
           label: "Maior exposição setorial",
           unit: "percent",
           unavailableReason: "Requer ao menos uma posição com valor de mercado atual.",
-          requiredData: ["metadados do ativo", "cotações mais recentes", "taxas de conversão para USD"],
+          requiredData: [
+            "metadados do ativo",
+            "cotações mais recentes",
+            "taxas de conversão para USD"
+          ],
           observationCount: input.positionCount,
           effectiveHorizonDays: input.effectiveHorizonDays
         }
@@ -847,8 +850,7 @@ function daysBetween(from: string, to: string): number {
   return Math.max(
     0,
     Math.round(
-      (new Date(`${to}T00:00:00.000Z`).getTime() -
-        new Date(`${from}T00:00:00.000Z`).getTime()) /
+      (new Date(`${to}T00:00:00.000Z`).getTime() - new Date(`${from}T00:00:00.000Z`).getTime()) /
         86_400_000
     )
   );

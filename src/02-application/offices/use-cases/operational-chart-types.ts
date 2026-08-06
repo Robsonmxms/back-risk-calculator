@@ -1,18 +1,12 @@
 import { OfficeMembershipRole, OfficeStatus } from "../../../01-domain/offices/office";
 import { AnalyticsJobStatus, DataQualityIssue } from "../../../modules/analytics/types";
-import {
-  MarketDataFreshness,
-  MarketDataRequestStatus
-} from "../../../modules/market-data/types";
+import { MarketDataFreshness, MarketDataRequestStatus } from "../../../modules/market-data/types";
 import {
   AlertSeverity,
   NotificationStatus,
   ReportStatus
 } from "../../../modules/reports-alerts/types";
-import {
-  ClientOnboardingStatus,
-  ClientStatus
-} from "../../../01-domain/clients/client";
+import { ClientOnboardingStatus, ClientStatus } from "../../../01-domain/clients/client";
 import { ReportPackageStatus } from "../../../01-domain/delivery/report-package";
 
 export type OfficeAdminChartRange = "7d" | "30d" | "90d" | "ytd" | "1y" | "all";
@@ -29,11 +23,7 @@ export type OfficeAdminWorkflowStatus =
   | "monitoring"
   | "disabled";
 
-export type OfficeAdminSeverityFilter =
-  | AlertSeverity
-  | "info"
-  | "warning"
-  | "critical";
+export type OfficeAdminSeverityFilter = AlertSeverity | "info" | "warning" | "critical";
 
 export interface OfficeAdminChartsQuery {
   range: OfficeAdminChartRange;
@@ -256,7 +246,9 @@ export interface PlatformAdminChartBundle {
     providerHealth: PlatformProviderHealthPoint[];
     jobHealth: PlatformJobHealthPoint[];
     reportThroughput: Array<Omit<OfficeReportThroughputPoint, "reportIds" | "reportPackageIds">>;
-    alertNotificationVolume: Array<Omit<OfficeAlertNotificationVolumePoint, "alertIds" | "notificationIds">>;
+    alertNotificationVolume: Array<
+      Omit<OfficeAlertNotificationVolumePoint, "alertIds" | "notificationIds">
+    >;
     permissionActivity: Array<Omit<OfficePermissionActivityPoint, "eventIds" | "assignmentIds">>;
   };
   dataQuality: {

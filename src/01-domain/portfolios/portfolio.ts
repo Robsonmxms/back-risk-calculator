@@ -29,6 +29,9 @@ export interface PortfolioTransaction {
   currency: string;
   notes?: string;
   idempotencyKey?: string;
+  source?: "manual" | "spreadsheet_import";
+  importId?: string;
+  sourceRowNumber?: number;
   createdAt: Date;
 }
 

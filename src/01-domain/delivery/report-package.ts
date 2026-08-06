@@ -1,12 +1,7 @@
 import { PortfolioSummary } from "../portfolios/portfolio";
 
 export type ReportPackageStatus =
-  | "draft"
-  | "pending_approval"
-  | "approved"
-  | "delivered"
-  | "viewed"
-  | "revoked";
+  "draft" | "pending_approval" | "approved" | "delivered" | "viewed" | "revoked";
 
 export type ReportPackageItemType = "report" | "analytics_snapshot" | "portfolio_summary";
 export type ReportPackageItemStatus = "ready" | "pending" | "unavailable";

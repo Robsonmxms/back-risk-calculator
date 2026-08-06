@@ -156,9 +156,7 @@ describe("portfolio ledger", () => {
       });
 
     expect(mismatchResponse.status).toBe(409);
-    expect(mismatchResponse.body.error.code).toBe(
-      "portfolio.idempotency_key_payload_mismatch"
-    );
+    expect(mismatchResponse.body.error.code).toBe("portfolio.idempotency_key_payload_mismatch");
     await expect(identityStore.listOutboxEvents()).resolves.toHaveLength(
       outboxAfterFirstWrite.length
     );

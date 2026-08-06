@@ -9,10 +9,7 @@ import {
 } from "../../../01-domain/clients/client";
 import { ROLE_PERMISSION_MATRIX, PermissionService } from "../../auth/permission-service";
 import { ApplicationError } from "../../errors/application-error";
-import {
-  ClientFilters,
-  ClientRepository
-} from "../../ports/repositories";
+import { ClientFilters, ClientRepository } from "../../ports/repositories";
 
 export class ListClientsUseCase {
   constructor(

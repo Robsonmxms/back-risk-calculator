@@ -85,9 +85,7 @@ describe("advisory team permissions", () => {
       .get("/api/v1/offices/ofc_main/assignments")
       .set("Authorization", `Bearer ${token}`);
     expect(assignmentsResponse.body.data.assignments).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: assignmentResponse.body.data.id })
-      ])
+      expect.arrayContaining([expect.objectContaining({ id: assignmentResponse.body.data.id })])
     );
 
     const deleteResponse = await request(app)

@@ -59,9 +59,11 @@ export class MarketDataController {
 
   getAssetHistory = async (request: Request, response: Response) => {
     const assetId = requireAssetId(request);
-    const query = (request as Request & {
-      validatedQuery?: { from?: string; to?: string; interval?: "daily" | "weekly" | "monthly" };
-    }).validatedQuery;
+    const query = (
+      request as Request & {
+        validatedQuery?: { from?: string; to?: string; interval?: "daily" | "weekly" | "monthly" };
+      }
+    ).validatedQuery;
     const data = await this.getAssetHistoryUseCase.execute(assetId, query);
 
     return ok(response, data, {

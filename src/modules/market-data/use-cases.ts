@@ -3,11 +3,7 @@ import { Actor } from "../../01-domain/auth/actor";
 import { assertAdmin } from "../../02-application/auth/policies";
 import { ApplicationError } from "../../02-application/errors/application-error";
 import { LoggerPort, MetricsPort } from "../../02-application/ports/observability";
-import {
-  ageInSeconds,
-  classifyFreshness,
-  MARKET_DATA_FRESHNESS_POLICY
-} from "./freshness";
+import { ageInSeconds, classifyFreshness, MARKET_DATA_FRESHNESS_POLICY } from "./freshness";
 import {
   assetMatchesExchange,
   findMarketExchange,
@@ -71,9 +67,11 @@ export class SearchMarketAssetsUseCase {
     const startedAt = this.now().getTime();
     try {
       const candidates = (
-        await Promise.all(this.searchQueries(normalizedQuery, exchange).map((query) =>
-          this.provider.searchAssets(query)
-        ))
+        await Promise.all(
+          this.searchQueries(normalizedQuery, exchange).map((query) =>
+            this.provider.searchAssets(query)
+          )
+        )
       ).flat();
       const assets = (await this.repository.upsertAssets(dedupeAssets(candidates))).filter(
         (asset) => assetMatchesExchange(asset, exchange)
@@ -105,8 +103,8 @@ export class SearchMarketAssetsUseCase {
       });
       this.metrics.increment("market_data.provider.search_assets.failure");
 
-      const fallbackAssets = (await this.repository.searchAssets(normalizedQuery)).filter(
-        (asset) => assetMatchesExchange(asset, exchange)
+      const fallbackAssets = (await this.repository.searchAssets(normalizedQuery)).filter((asset) =>
+        assetMatchesExchange(asset, exchange)
       );
       if (fallbackAssets.length > 0) {
         return {

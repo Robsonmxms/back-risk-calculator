@@ -37,11 +37,7 @@ import {
   PortfolioSummary,
   PortfolioTransaction
 } from "../../01-domain/portfolios/portfolio";
-import {
-  Office,
-  OfficeMembership,
-  OfficeMembershipSummary
-} from "../../01-domain/offices/office";
+import { Office, OfficeMembership, OfficeMembershipSummary } from "../../01-domain/offices/office";
 import { User } from "../../01-domain/users/user";
 import {
   AccountRepository,
@@ -59,6 +55,7 @@ import {
   CreateAdvisoryAssignmentInput,
   CreateAdvisoryTeamInput,
   CreatePortfolioInput,
+  CreateImportedPortfolioInput,
   CreateReportPackageInput,
   CreatePortfolioTransactionInput,
   CreateRefreshTokenInput,
@@ -224,10 +221,7 @@ export class InMemoryIdentityStore
     return snapshot ? this.withAccountSnapshotFreshness(snapshot) : undefined;
   }
 
-  async listOfficesForUser(
-    userId: string,
-    isAdmin: boolean
-  ): Promise<OfficeMembershipSummary[]> {
+  async listOfficesForUser(userId: string, isAdmin: boolean): Promise<OfficeMembershipSummary[]> {
     const visibleOfficeIds = isAdmin
       ? new Set(this.offices.keys())
       : new Set(
@@ -270,10 +264,14 @@ export class InMemoryIdentityStore
     return membership ? { ...membership } : undefined;
   }
 
-  async listOfficeMembers(officeId: string): Promise<Array<OfficeMembership & {
-    userName: string;
-    userEmail: string;
-  }>> {
+  async listOfficeMembers(officeId: string): Promise<
+    Array<
+      OfficeMembership & {
+        userName: string;
+        userEmail: string;
+      }
+    >
+  > {
     return Array.from(this.officeMembers.values())
       .filter((membership) => membership.officeId === officeId)
       .map((membership) => {
@@ -589,7 +587,9 @@ export class InMemoryIdentityStore
   ): Promise<ReviewItem[]> {
     return Array.from(this.reviewItems.values())
       .filter((item) => item.officeId === officeId)
-      .filter((item) => !visibleClientIds || (item.clientId ? visibleClientIds.has(item.clientId) : false))
+      .filter(
+        (item) => !visibleClientIds || (item.clientId ? visibleClientIds.has(item.clientId) : false)
+      )
       .filter((item) => !filters.status || item.status === filters.status)
       .filter((item) => !filters.severity || item.severity === filters.severity)
       .filter(
@@ -657,10 +657,7 @@ export class InMemoryIdentityStore
     return { ...item };
   }
 
-  async listAuditEvents(
-    officeId: string,
-    filters: AuditEventFilters
-  ): Promise<AuditEventPage> {
+  async listAuditEvents(officeId: string, filters: AuditEventFilters): Promise<AuditEventPage> {
     const page = Math.max(1, filters.page ?? 1);
     const pageSize = Math.min(Math.max(1, filters.pageSize ?? 25), 100);
     const fromTime = filters.from ? new Date(filters.from).getTime() : undefined;
@@ -707,7 +704,8 @@ export class InMemoryIdentityStore
       .filter((review) => !filters.status || review.status === filters.status)
       .filter((review) => !filters.severity || review.severity === filters.severity)
       .filter(
-        (review) => !filters.assignedToUserId || review.assignedToUserId === filters.assignedToUserId
+        (review) =>
+          !filters.assignedToUserId || review.assignedToUserId === filters.assignedToUserId
       )
       .map((review) => ({ ...review }))
       .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
@@ -861,6 +859,114 @@ export class InMemoryIdentityStore
     return portfolio;
   }
 
+  async createImportedPortfolio(input: CreateImportedPortfolioInput): Promise<Portfolio> {
+    if (this.portfolios.has(input.portfolio.id)) {
+      return this.portfolios.get(input.portfolio.id)!;
+    }
+
+    const idempotencyKeys = new Set<string>();
+    const positions = new Map<string, number>();
+    const orderedTransactions = [...input.transactions].sort(
+      (left, right) =>
+        left.tradeDate.localeCompare(right.tradeDate) ||
+        (left.sourceRowNumber ?? 0) - (right.sourceRowNumber ?? 0)
+    );
+
+    for (const transaction of orderedTransactions) {
+      if (transaction.idempotencyKey) {
+        if (idempotencyKeys.has(transaction.idempotencyKey)) {
+          throw new ApplicationError(
+            "conflict",
+            "portfolio_import.duplicate_row_idempotency",
+            "Imported transaction row was duplicated"
+          );
+        }
+        idempotencyKeys.add(transaction.idempotencyKey);
+      }
+
+      const current = positions.get(transaction.assetSymbol) ?? 0;
+      const next =
+        transaction.type === "buy"
+          ? current + transaction.quantity
+          : current - transaction.quantity;
+      if (next < 0) {
+        throw new ApplicationError(
+          "invalid",
+          "portfolio.negative_position",
+          "Sell transaction would create a negative position"
+        );
+      }
+      positions.set(transaction.assetSymbol, next);
+    }
+
+    const portfolio: Portfolio = { ...input.portfolio };
+    const transactions = orderedTransactions.map((transaction) => ({ ...transaction }));
+
+    this.portfolios.set(portfolio.id, portfolio);
+    this.portfolioTransactions.set(portfolio.id, transactions);
+    this.portfolioRuntimeMeta.set(portfolio.id, {
+      status: "syncing",
+      freshness: "partial",
+      analyticsState: "pending",
+      marketDataState: "pending",
+      warnings: [
+        "Analytics recomputation pending after spreadsheet import.",
+        "Market data refresh pending for imported assets."
+      ]
+    });
+    for (const transaction of transactions) {
+      if (transaction.idempotencyKey) {
+        this.transactionIdempotency.set(
+          this.getIdempotencyIndex(portfolio.id, transaction.idempotencyKey),
+          {
+            transaction,
+            requestFingerprint: transaction.idempotencyFingerprint ?? ""
+          }
+        );
+      }
+    }
+    this.rebuildSnapshots(portfolio.id);
+
+    this.pushEvent("PortfolioCreated", portfolio.id, {
+      officeId: portfolio.officeId,
+      portfolioId: portfolio.id,
+      accountId: portfolio.accountId,
+      importId: input.importId
+    });
+    this.pushEvent("PortfolioTransactionsImported", portfolio.id, {
+      officeId: portfolio.officeId,
+      portfolioId: portfolio.id,
+      importId: input.importId,
+      transactionCount: transactions.length,
+      distinctAssetCount: new Set(transactions.map((transaction) => transaction.assetSymbol)).size
+    });
+    this.pushEvent("PositionProjectionUpdated", portfolio.id, {
+      officeId: portfolio.officeId,
+      portfolioId: portfolio.id,
+      importId: input.importId
+    });
+    this.pushEvent("PortfolioSnapshotCreated", portfolio.id, {
+      officeId: portfolio.officeId,
+      portfolioId: portfolio.id,
+      importId: input.importId
+    });
+    this.pushEvent("AnalyticsRequested", portfolio.id, {
+      officeId: portfolio.officeId,
+      portfolioId: portfolio.id,
+      importId: input.importId
+    });
+    for (const assetSymbol of new Set(transactions.map((transaction) => transaction.assetSymbol))) {
+      this.pushEvent("MarketDataRequested", assetSymbol, {
+        officeId: portfolio.officeId,
+        portfolioId: portfolio.id,
+        importId: input.importId,
+        assetSymbol
+      });
+    }
+
+    return portfolio;
+  }
+
   async updatePortfolio(id: string, input: UpdatePortfolioInput): Promise<Portfolio | undefined> {
     const portfolio = this.portfolios.get(id);
     if (!portfolio) {
@@ -892,10 +998,10 @@ export class InMemoryIdentityStore
         const account = this.accounts.get(portfolio.accountId);
         return Boolean(
           account &&
-            (isAdmin ||
-              account.ownerUserId === userId ||
-              membershipByAccountId.has(portfolio.accountId) ||
-              this.userHasOfficePermission(userId, account.officeId, "ledger.read"))
+          (isAdmin ||
+            account.ownerUserId === userId ||
+            membershipByAccountId.has(portfolio.accountId) ||
+            this.userHasOfficePermission(userId, account.officeId, "ledger.read"))
         );
       })
       .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
@@ -942,7 +1048,10 @@ export class InMemoryIdentityStore
 
   async listPortfolioTransactions(portfolioId: string): Promise<PortfolioTransaction[]> {
     return [...(this.portfolioTransactions.get(portfolioId) ?? [])].sort((left, right) => {
-      return right.tradeDate.localeCompare(left.tradeDate) || right.createdAt.getTime() - left.createdAt.getTime();
+      return (
+        right.tradeDate.localeCompare(left.tradeDate) ||
+        right.createdAt.getTime() - left.createdAt.getTime()
+      );
     });
   }
 
@@ -1110,9 +1219,7 @@ export class InMemoryIdentityStore
     meta.analyticsAsOf = refreshedAt;
     meta.status = meta.marketDataState === "pending" ? "syncing" : "ready";
     meta.freshness = meta.marketDataState === "pending" ? "partial" : "fresh";
-    meta.warnings = meta.warnings.filter(
-      (warning) => !warning.toLowerCase().includes("analytics")
-    );
+    meta.warnings = meta.warnings.filter((warning) => !warning.toLowerCase().includes("analytics"));
     if (meta.marketDataState === "pending" && meta.warnings.length === 0) {
       meta.warnings.push("Market data refresh pending for affected assets.");
     }
@@ -1145,9 +1252,7 @@ export class InMemoryIdentityStore
   }
 
   async findByHash(tokenHash: string): Promise<RefreshTokenRecord | undefined> {
-    return Array.from(this.refreshTokens.values()).find(
-      (token) => token.tokenHash === tokenHash
-    );
+    return Array.from(this.refreshTokens.values()).find((token) => token.tokenHash === tokenHash);
   }
 
   async markRotated(
@@ -1166,11 +1271,7 @@ export class InMemoryIdentityStore
     return refreshToken;
   }
 
-  async revoke(
-    id: string,
-    revokedAt: Date,
-    reason: RefreshTokenRevocationReason
-  ): Promise<void> {
+  async revoke(id: string, revokedAt: Date, reason: RefreshTokenRevocationReason): Promise<void> {
     const refreshToken = this.refreshTokens.get(id);
     if (refreshToken) {
       refreshToken.revokedAt = revokedAt;
@@ -1295,11 +1396,7 @@ export class InMemoryIdentityStore
     };
   }
 
-  private replaceTeamMembers(
-    team: AdvisoryTeam,
-    memberUserIds: string[],
-    createdAt: Date
-  ): void {
+  private replaceTeamMembers(team: AdvisoryTeam, memberUserIds: string[], createdAt: Date): void {
     for (const [id, member] of this.advisoryTeamMembers.entries()) {
       if (member.teamId === team.id) {
         this.advisoryTeamMembers.delete(id);
@@ -1368,7 +1465,9 @@ export class InMemoryIdentityStore
       name: portfolio.name,
       description: portfolio.description,
       baseCurrency: portfolio.baseCurrency,
-      membershipRole: membership?.role ?? (isAdmin ? "owner" : account?.ownerUserId === userId ? "owner" : "viewer"),
+      membershipRole:
+        membership?.role ??
+        (isAdmin ? "owner" : account?.ownerUserId === userId ? "owner" : "viewer"),
       holdingsCount: positions.length,
       transactionCount: transactions.length,
       totalCostBasis,
@@ -1397,17 +1496,15 @@ export class InMemoryIdentityStore
     return states.includes("stale") ? "stale" : states.includes("partial") ? "partial" : "fresh";
   }
 
-  private withAccountSnapshotFreshness(snapshot: PortfolioAccountSnapshot): PortfolioAccountSnapshot {
+  private withAccountSnapshotFreshness(
+    snapshot: PortfolioAccountSnapshot
+  ): PortfolioAccountSnapshot {
     const asOf = new Date(snapshot.meta.asOf);
     if (Number.isNaN(asOf.getTime())) {
       return snapshot;
     }
 
-    const freshness = classifyFreshness(
-      asOf,
-      this.now(),
-      MARKET_DATA_FRESHNESS_POLICY.analytics
-    );
+    const freshness = classifyFreshness(asOf, this.now(), MARKET_DATA_FRESHNESS_POLICY.analytics);
     if (freshness === snapshot.meta.freshness) {
       return snapshot;
     }
@@ -1430,15 +1527,15 @@ export class InMemoryIdentityStore
     return `${portfolioId}:${key}`;
   }
 
-  private buildPositionMap(
-    portfolioId: string,
-    asOfDate?: string
-  ): Map<string, PortfolioPosition> {
+  private buildPositionMap(portfolioId: string, asOfDate?: string): Map<string, PortfolioPosition> {
     const positionMap = new Map<string, PortfolioPosition>();
     const transactions = [...(this.portfolioTransactions.get(portfolioId) ?? [])]
       .filter((transaction) => !asOfDate || transaction.tradeDate <= asOfDate)
       .sort((left, right) => {
-        return left.tradeDate.localeCompare(right.tradeDate) || left.createdAt.getTime() - right.createdAt.getTime();
+        return (
+          left.tradeDate.localeCompare(right.tradeDate) ||
+          left.createdAt.getTime() - right.createdAt.getTime()
+        );
       });
 
     for (const transaction of transactions) {
@@ -1494,12 +1591,21 @@ export class InMemoryIdentityStore
       return;
     }
 
-    const transactions = [...(this.portfolioTransactions.get(portfolioId) ?? [])].sort((left, right) => {
-      return left.tradeDate.localeCompare(right.tradeDate) || left.createdAt.getTime() - right.createdAt.getTime();
-    });
+    const transactions = [...(this.portfolioTransactions.get(portfolioId) ?? [])].sort(
+      (left, right) => {
+        return (
+          left.tradeDate.localeCompare(right.tradeDate) ||
+          left.createdAt.getTime() - right.createdAt.getTime()
+        );
+      }
+    );
 
-    const snapshots: PortfolioSnapshot[] = [
-      {
+    const snapshots: PortfolioSnapshot[] = [];
+    const wasCreatedBySpreadsheetImport = transactions.some(
+      (transaction) => transaction.source === "spreadsheet_import"
+    );
+    if (!wasCreatedBySpreadsheetImport) {
+      snapshots.push({
         id: randomUUID(),
         portfolioId,
         asOfDate: portfolio.createdAt.toISOString().slice(0, 10),
@@ -1507,10 +1613,12 @@ export class InMemoryIdentityStore
         positions: [],
         transactionCount: 0,
         totalCostBasis: 0
-      }
-    ];
+      });
+    }
 
-    const tradeDates = Array.from(new Set(transactions.map((transaction) => transaction.tradeDate)));
+    const tradeDates = Array.from(
+      new Set(transactions.map((transaction) => transaction.tradeDate))
+    );
     for (const tradeDate of tradeDates) {
       const positions = Array.from(this.buildPositionMap(portfolioId, tradeDate).values());
       snapshots.push({
@@ -1519,7 +1627,8 @@ export class InMemoryIdentityStore
         asOfDate: tradeDate,
         createdAt: new Date(`${tradeDate}T23:59:59.000Z`),
         positions,
-        transactionCount: transactions.filter((transaction) => transaction.tradeDate <= tradeDate).length,
+        transactionCount: transactions.filter((transaction) => transaction.tradeDate <= tradeDate)
+          .length,
         totalCostBasis: Number(
           positions.reduce((sum, position) => sum + position.totalCostBasis, 0).toFixed(2)
         )
@@ -1570,11 +1679,7 @@ export class InMemoryIdentityStore
     };
   }
 
-  private pushEvent(
-    topic: string,
-    aggregateId: string,
-    payload: Record<string, unknown>
-  ): void {
+  private pushEvent(topic: string, aggregateId: string, payload: Record<string, unknown>): void {
     const createdAt = new Date();
     this.outboxEvents.push({
       id: randomUUID(),
@@ -1655,7 +1760,11 @@ function auditResourceTypeForTopic(topic: string): AuditResourceType {
   if (topic.startsWith("Portfolio") && !topic.includes("Snapshot")) {
     return "portfolio";
   }
-  if (topic.startsWith("Transaction") || topic.includes("Snapshot") || topic.includes("Projection")) {
+  if (
+    topic.startsWith("Transaction") ||
+    topic.includes("Snapshot") ||
+    topic.includes("Projection")
+  ) {
     return "ledger";
   }
   if (topic.startsWith("Analytics")) {

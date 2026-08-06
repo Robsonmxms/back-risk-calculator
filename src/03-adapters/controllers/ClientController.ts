@@ -29,9 +29,13 @@ export class ClientController {
     const clients = await this.listClientsUseCase.execute(
       actor,
       requireOfficeId(request),
-      ((request as Request & { validatedQuery?: ClientFilters }).validatedQuery ?? {})
+      (request as Request & { validatedQuery?: ClientFilters }).validatedQuery ?? {}
     );
-    return ok(response, { clients: clients.map(serializeClientSummary) }, { count: clients.length });
+    return ok(
+      response,
+      { clients: clients.map(serializeClientSummary) },
+      { count: clients.length }
+    );
   };
 
   createClient = async (request: Request, response: Response) => {
@@ -63,7 +67,11 @@ export class ClientController {
   listHouseholds = async (request: Request, response: Response) => {
     const actor = (request as AuthenticatedRequest).actor;
     const households = await this.listHouseholdsUseCase.execute(actor, requireOfficeId(request));
-    return ok(response, { households: households.map(serializeHousehold) }, { count: households.length });
+    return ok(
+      response,
+      { households: households.map(serializeHousehold) },
+      { count: households.length }
+    );
   };
 
   createHousehold = async (request: Request, response: Response) => {

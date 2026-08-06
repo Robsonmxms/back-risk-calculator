@@ -20,10 +20,7 @@ export function buildClientContainer(shared: SharedContainer) {
     permissionService
   );
   const updateClientUseCase = new UpdateClientUseCase(shared.identityStore, permissionService);
-  const listHouseholdsUseCase = new ListHouseholdsUseCase(
-    shared.identityStore,
-    permissionService
-  );
+  const listHouseholdsUseCase = new ListHouseholdsUseCase(shared.identityStore, permissionService);
   const createHouseholdUseCase = new CreateHouseholdUseCase(
     shared.identityStore,
     permissionService

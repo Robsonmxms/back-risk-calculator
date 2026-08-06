@@ -1,9 +1,4 @@
-import {
-  CorrelationCell,
-  DrawdownPoint,
-  SectorExposurePoint,
-  TimeSeriesPoint
-} from "./types";
+import { CorrelationCell, DrawdownPoint, SectorExposurePoint, TimeSeriesPoint } from "./types";
 
 const TRADING_PERIODS_PER_YEAR = 252;
 
@@ -36,10 +31,7 @@ export function calculateTotalReturn(endingValue: number, costBasis: number): nu
   return endingValue / costBasis - 1;
 }
 
-export function calculateAnnualizedReturn(
-  totalReturn: number,
-  days: number
-): number | undefined {
+export function calculateAnnualizedReturn(totalReturn: number, days: number): number | undefined {
   if (days <= 0 || totalReturn <= -1) {
     return undefined;
   }

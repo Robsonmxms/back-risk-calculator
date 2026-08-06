@@ -25,10 +25,7 @@ export class OperationalChartsController {
 
   getPlatformAdminCharts = async (request: Request, response: Response) => {
     const actor = (request as AuthenticatedRequest).actor;
-    const result = await this.getPlatformAdminChartsUseCase.execute(
-      actor,
-      validatedQuery(request)
-    );
+    const result = await this.getPlatformAdminChartsUseCase.execute(actor, validatedQuery(request));
     return ok(response, result.data, result.meta);
   };
 }

@@ -3,10 +3,7 @@ import { ClientSummary, ClientStatus } from "../../../01-domain/clients/client";
 import { PortfolioSummary } from "../../../01-domain/portfolios/portfolio";
 import { ReviewItem } from "../../../01-domain/workbench/workbench";
 import { ReportPackage } from "../../../01-domain/delivery/report-package";
-import {
-  PermissionEvaluation,
-  PermissionService
-} from "../../auth/permission-service";
+import { PermissionEvaluation, PermissionService } from "../../auth/permission-service";
 import { ApplicationError } from "../../errors/application-error";
 import { LoggerPort, MetricsPort } from "../../ports/observability";
 import {
@@ -189,7 +186,9 @@ export class GetAdvisorChartsUseCase {
         issues: uniqueIssues(issues),
         sourceCounts: {
           clients: filteredSources.length,
-          households: new Set(filteredSources.map((source) => source.client.householdId).filter(Boolean)).size,
+          households: new Set(
+            filteredSources.map((source) => source.client.householdId).filter(Boolean)
+          ).size,
           portfolios: portfolioSources.length,
           analyticsSnapshots,
           reportPackages: reportPackageCount,
@@ -298,8 +297,9 @@ export class GetAdvisorChartsUseCase {
         return { portfolio, client, snapshot };
       })
     );
-    const reportPackages = (await this.reportPackages.listReportPackagesByClient(client.id))
-      .filter((entry) => isDateInRange(entry.updatedAt.toISOString().slice(0, 10), rangeStart));
+    const reportPackages = (await this.reportPackages.listReportPackagesByClient(client.id)).filter(
+      (entry) => isDateInRange(entry.updatedAt.toISOString().slice(0, 10), rangeStart)
+    );
     const reviewItems = officeReviewItems.filter((item) => item.clientId === client.id);
     const alerts = (
       await Promise.all(
@@ -310,7 +310,9 @@ export class GetAdvisorChartsUseCase {
       portfolioSources.reduce((sum, source) => sum + source.portfolio.totalCostBasis, 0),
       2
     );
-    const riskBand = highestRiskBand(portfolioSources.map((source) => riskBandForPortfolio(source)));
+    const riskBand = highestRiskBand(
+      portfolioSources.map((source) => riskBandForPortfolio(source))
+    );
     const freshness = resolveClientFreshness(portfolioSources.map((source) => source.portfolio));
 
     return {
@@ -350,16 +352,17 @@ function parseClientStatuses(value: string | undefined): ClientStatus[] {
   return value
     .split(",")
     .map((entry) => entry.trim())
-    .filter((entry): entry is ClientStatus =>
-      CLIENT_STATUSES.includes(entry as ClientStatus)
-    );
+    .filter((entry): entry is ClientStatus => CLIENT_STATUSES.includes(entry as ClientStatus));
 }
 
 function buildBookValueTrend(
   sources: PortfolioChartSource[],
   rangeStart: string | undefined
 ): AdvisorBookValueTrendPoint[] {
-  const byDate = new Map<string, { value: number; clients: Set<string>; portfolios: Set<string> }>();
+  const byDate = new Map<
+    string,
+    { value: number; clients: Set<string>; portfolios: Set<string> }
+  >();
   for (const source of sources) {
     const performance = source.snapshot?.performance ?? [];
     for (const point of performance) {
@@ -441,9 +444,10 @@ function buildClientRiskDistributionPoint(
     clientName: source.client.name,
     householdId: source.client.householdId,
     householdName: source.client.householdName,
-    value: metric === "maxDrawdown"
-      ? round(source.maxDrawdownPercent ?? 0, 4)
-      : round(source.volatilityPercent ?? 0, 4),
+    value:
+      metric === "maxDrawdown"
+        ? round(source.maxDrawdownPercent ?? 0, 4)
+        : round(source.volatilityPercent ?? 0, 4),
     portfolioCount: source.portfolios.length,
     riskBand: source.riskBand,
     freshness: source.freshness,
@@ -484,7 +488,10 @@ function buildSectorExposureHeatmap(sources: PortfolioChartSource[]): AdvisorSec
 
   const totalsByClient = new Map<string, number>();
   for (const cell of byClientSector.values()) {
-    totalsByClient.set(cell.clientId, (totalsByClient.get(cell.clientId) ?? 0) + cell.marketValueUsd);
+    totalsByClient.set(
+      cell.clientId,
+      (totalsByClient.get(cell.clientId) ?? 0) + cell.marketValueUsd
+    );
   }
 
   return Array.from(byClientSector.values())
@@ -492,14 +499,19 @@ function buildSectorExposureHeatmap(sources: PortfolioChartSource[]): AdvisorSec
       ...cell,
       marketValueUsd: round(cell.marketValueUsd, 2),
       weightPercent: round(
-        ((cell.marketValueUsd / Math.max(totalsByClient.get(cell.clientId) ?? 0, 1)) * 100),
+        (cell.marketValueUsd / Math.max(totalsByClient.get(cell.clientId) ?? 0, 1)) * 100,
         2
       )
     }))
-    .sort((left, right) => left.clientName.localeCompare(right.clientName) || right.weightPercent - left.weightPercent);
+    .sort(
+      (left, right) =>
+        left.clientName.localeCompare(right.clientName) || right.weightPercent - left.weightPercent
+    );
 }
 
-function buildAllocationBreakdown(sources: PortfolioChartSource[]): AdvisorAllocationBreakdownPoint[] {
+function buildAllocationBreakdown(
+  sources: PortfolioChartSource[]
+): AdvisorAllocationBreakdownPoint[] {
   const allocation = new Map<string, AdvisorAllocationBreakdownPoint>();
   for (const source of sources) {
     const points = source.snapshot?.allocation.length
@@ -524,7 +536,10 @@ function buildAllocationBreakdown(sources: PortfolioChartSource[]): AdvisorAlloc
     }
   }
 
-  const total = Array.from(allocation.values()).reduce((sum, entry) => sum + entry.marketValueUsd, 0);
+  const total = Array.from(allocation.values()).reduce(
+    (sum, entry) => sum + entry.marketValueUsd,
+    0
+  );
   return Array.from(allocation.values())
     .map((entry) => ({
       ...entry,
@@ -540,7 +555,9 @@ function buildAlertSeverityTimeline(
 ): AdvisorAlertSeverityTimelinePoint[] {
   const byDate = new Map<string, AdvisorAlertSeverityTimelinePoint>();
   for (const alert of alerts) {
-    const date = (alert.lastTriggeredAt ?? alert.updatedAt ?? alert.createdAt).toISOString().slice(0, 10);
+    const date = (alert.lastTriggeredAt ?? alert.updatedAt ?? alert.createdAt)
+      .toISOString()
+      .slice(0, 10);
     if (!isDateInRange(date, rangeStart)) {
       continue;
     }
@@ -574,7 +591,10 @@ function buildReportPipeline(
     current.count += 1;
     current.clients.add(reportPackage.clientId);
     current.clientCount = current.clients.size;
-    if (["draft", "pending_approval", "approved"].includes(reportPackage.status) && ageInDays(reportPackage.updatedAt, now) > 7) {
+    if (
+      ["draft", "pending_approval", "approved"].includes(reportPackage.status) &&
+      ageInDays(reportPackage.updatedAt, now) > 7
+    ) {
       current.staleCount += 1;
     }
     current.latestUpdatedAt =
@@ -643,15 +663,22 @@ function buildStaleDataBacklog(
     }))
     .sort((left, right) => {
       const freshnessRank = freshnessWeight(right.freshness) - freshnessWeight(left.freshness);
-      return freshnessRank || (right.daysSinceLastTransaction ?? 0) - (left.daysSinceLastTransaction ?? 0);
+      return (
+        freshnessRank ||
+        (right.daysSinceLastTransaction ?? 0) - (left.daysSinceLastTransaction ?? 0)
+      );
     });
 }
 
 function buildNeedsAttentionRankings(sources: ClientChartSource[]): AdvisorNeedsAttentionItem[] {
   return sources
     .map((source) => {
-      const openReviewItemCount = source.reviewItems.filter((item) => item.status !== "closed").length;
-      const highAlertCount = source.alerts.filter((alert) => alert.severity === "high" && alert.status !== "disabled").length;
+      const openReviewItemCount = source.reviewItems.filter(
+        (item) => item.status !== "closed"
+      ).length;
+      const highAlertCount = source.alerts.filter(
+        (alert) => alert.severity === "high" && alert.status !== "disabled"
+      ).length;
       const pendingReportCount = source.reportPackages.filter((entry) =>
         ["draft", "pending_approval", "approved"].includes(entry.status)
       ).length;
@@ -795,7 +822,9 @@ function matchesRiskAndFreshness(
   riskBand: AdvisorRiskBand | undefined,
   freshness: AdvisorFreshness | undefined
 ): boolean {
-  return (!riskBand || source.riskBand === riskBand) && (!freshness || source.freshness === freshness);
+  return (
+    (!riskBand || source.riskBand === riskBand) && (!freshness || source.freshness === freshness)
+  );
 }
 
 function resolveDataQualityStatus(

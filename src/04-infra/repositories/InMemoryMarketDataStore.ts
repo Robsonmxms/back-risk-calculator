@@ -53,8 +53,7 @@ export class InMemoryMarketDataStore
     const normalizedQuery = query.trim().toUpperCase();
     return Array.from(this.assetsById.values()).filter(
       (asset) =>
-        asset.symbol.includes(normalizedQuery) ||
-        asset.name.toUpperCase().includes(normalizedQuery)
+        asset.symbol.includes(normalizedQuery) || asset.name.toUpperCase().includes(normalizedQuery)
     );
   }
 
@@ -113,12 +112,8 @@ export class InMemoryMarketDataStore
       (request) => request.providerName === providerName
     );
     const failures = requests.filter((request) => request.status === "failed");
-    const lastSuccess = [...requests]
-      .reverse()
-      .find((request) => request.status === "succeeded");
-    const lastFailure = [...requests]
-      .reverse()
-      .find((request) => request.status === "failed");
+    const lastSuccess = [...requests].reverse().find((request) => request.status === "succeeded");
+    const lastFailure = [...requests].reverse().find((request) => request.status === "failed");
     const averageLatencyMs =
       requests.length === 0
         ? 0

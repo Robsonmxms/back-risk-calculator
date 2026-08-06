@@ -36,11 +36,7 @@ export interface StoredReportFile {
 }
 
 export interface AlertCondition {
-  eventType:
-    | "analytics.updated"
-    | "market_data.updated"
-    | "report.generated"
-    | "metric_threshold";
+  eventType: "analytics.updated" | "market_data.updated" | "report.generated" | "metric_threshold";
   metricKey?: AnalyticsMetricKey;
   operator?: "gte" | "lte";
   threshold?: number;

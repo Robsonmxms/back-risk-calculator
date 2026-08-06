@@ -13,9 +13,9 @@ describe("market-data freshness policy", () => {
     expect(classifyFreshness(new Date(now.getTime() - policy.freshMaxAgeMs), now, policy)).toBe(
       "fresh"
     );
-    expect(
-      classifyFreshness(new Date(now.getTime() - policy.freshMaxAgeMs - 1), now, policy)
-    ).toBe("partial");
+    expect(classifyFreshness(new Date(now.getTime() - policy.freshMaxAgeMs - 1), now, policy)).toBe(
+      "partial"
+    );
     expect(
       classifyFreshness(new Date(now.getTime() - policy.partialMaxAgeMs - 1), now, policy)
     ).toBe("stale");
@@ -25,11 +25,7 @@ describe("market-data freshness policy", () => {
     const policy = MARKET_DATA_FRESHNESS_POLICY.analytics;
 
     expect(classifyFreshness(new Date("2026-08-06T00:00:00.000Z"), now, policy)).toBe("fresh");
-    expect(classifyFreshness(new Date("2026-08-04T12:00:00.000Z"), now, policy)).toBe(
-      "partial"
-    );
-    expect(classifyFreshness(new Date("2026-08-01T12:00:00.000Z"), now, policy)).toBe(
-      "stale"
-    );
+    expect(classifyFreshness(new Date("2026-08-04T12:00:00.000Z"), now, policy)).toBe("partial");
+    expect(classifyFreshness(new Date("2026-08-01T12:00:00.000Z"), now, policy)).toBe("stale");
   });
 });

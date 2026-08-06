@@ -42,11 +42,7 @@ export function registerOfficeRoutes(
     validateBody(createAssignmentSchema),
     asyncHandler(controller.createAssignment)
   );
-  router.delete(
-    "/assignments/:assignmentId",
-    auth,
-    asyncHandler(controller.deleteAssignment)
-  );
+  router.delete("/assignments/:assignmentId", auth, asyncHandler(controller.deleteAssignment));
   router.patch(
     "/offices/:officeId",
     auth,

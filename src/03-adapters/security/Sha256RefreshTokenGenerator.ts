@@ -1,8 +1,5 @@
 import { createHash, randomBytes } from "crypto";
-import {
-  PlainRefreshToken,
-  RefreshTokenGenerator
-} from "../../02-application/ports/security";
+import { PlainRefreshToken, RefreshTokenGenerator } from "../../02-application/ports/security";
 
 export class Sha256RefreshTokenGenerator implements RefreshTokenGenerator {
   generate(): PlainRefreshToken {

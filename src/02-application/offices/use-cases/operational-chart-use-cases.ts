@@ -26,10 +26,7 @@ import {
   DataQualityIssue,
   PortfolioAnalyticsSnapshot
 } from "../../../modules/analytics/types";
-import {
-  MarketDataJobQueue,
-  MarketDataRepository
-} from "../../../modules/market-data/ports";
+import { MarketDataJobQueue, MarketDataRepository } from "../../../modules/market-data/ports";
 import {
   MarketDataFreshness,
   MarketDataJob,
@@ -40,11 +37,7 @@ import {
   NotificationRepository,
   ReportRepository
 } from "../../../modules/reports-alerts/ports";
-import {
-  AlertRule,
-  NotificationRecord,
-  ReportJob
-} from "../../../modules/reports-alerts/types";
+import { AlertRule, NotificationRecord, ReportJob } from "../../../modules/reports-alerts/types";
 import {
   OfficeAdminChartBundle,
   OfficeAdminChartsQuery,
@@ -144,7 +137,12 @@ export class GetOfficeAdminChartsUseCase {
     }
 
     const source = await this.buildOfficeSource(actor, officeId, query);
-    const data = buildOfficeChartBundle(source, query, rangeWindow(query.range, this.now()), this.now());
+    const data = buildOfficeChartBundle(
+      source,
+      query,
+      rangeWindow(query.range, this.now()),
+      this.now()
+    );
     const calculationDurationMs = this.now().getTime() - startedAt;
 
     this.metrics.increment("office_admin.charts.request");
@@ -206,15 +204,23 @@ export class GetOfficeAdminChartsUseCase {
     const memberUserIds = new Set(members.map((member) => member.userId));
     const assignments = (await this.advisory.listAssignmentsByOffice(officeId)).filter(
       (assignment) => {
-        if (query.role && assignment.assigneeUserId && !memberUserIds.has(assignment.assigneeUserId)) {
+        if (
+          query.role &&
+          assignment.assigneeUserId &&
+          !memberUserIds.has(assignment.assigneeUserId)
+        ) {
           return false;
         }
         return !query.workflowStatus || matchesAssignmentWorkflow(assignment, query.workflowStatus);
       }
     );
-    const visiblePortfolios = (await this.portfolios.listVisiblePortfolios(actor.id, actor.role === "admin"))
+    const visiblePortfolios = (
+      await this.portfolios.listVisiblePortfolios(actor.id, actor.role === "admin")
+    )
       .filter((portfolio) => portfolio.officeId === officeId)
-      .filter((portfolio) => !clientIds.size || !portfolio.clientId || clientIds.has(portfolio.clientId));
+      .filter(
+        (portfolio) => !clientIds.size || !portfolio.clientId || clientIds.has(portfolio.clientId)
+      );
     const portfolioIds = new Set(visiblePortfolios.map((portfolio) => portfolio.id));
     const portfolioSources = await Promise.all(
       visiblePortfolios.map(async (portfolio) => {
@@ -261,7 +267,9 @@ export class GetOfficeAdminChartsUseCase {
         (!query.workflowStatus || job.status === query.workflowStatus)
     );
     const reportPackages = (
-      await Promise.all(clients.map((client) => this.reportPackages.listReportPackagesByClient(client.id)))
+      await Promise.all(
+        clients.map((client) => this.reportPackages.listReportPackagesByClient(client.id))
+      )
     )
       .flat()
       .filter(
@@ -270,7 +278,9 @@ export class GetOfficeAdminChartsUseCase {
           withinWindow(reportPackage.updatedAt, window) &&
           (!query.workflowStatus || reportPackage.status === query.workflowStatus)
       );
-    const notifications = (await this.notifications.listNotificationsByPortfolioIds([...portfolioIds])).filter(
+    const notifications = (
+      await this.notifications.listNotificationsByPortfolioIds([...portfolioIds])
+    ).filter(
       (notification) =>
         withinWindow(notification.createdAt, window) &&
         (!query.workflowStatus || notification.status === query.workflowStatus) &&
@@ -297,7 +307,11 @@ export class GetOfficeAdminChartsUseCase {
       });
     }
 
-    const providerStatuses = await this.loadProviderStatuses(assetSymbols, query.provider, generatedIssues);
+    const providerStatuses = await this.loadProviderStatuses(
+      assetSymbols,
+      query.provider,
+      generatedIssues
+    );
     if (assetSymbols.size > 0 && providerStatuses.length === 0) {
       generatedIssues.push({
         code: "office_charts.provider_status_unavailable",
@@ -376,10 +390,7 @@ export class GetPlatformAdminChartsUseCase {
     private readonly now: () => Date = () => new Date()
   ) {}
 
-  async execute(
-    actor: Actor,
-    query: OfficeAdminChartsQuery
-  ): Promise<PlatformAdminChartsResponse> {
+  async execute(actor: Actor, query: OfficeAdminChartsQuery): Promise<PlatformAdminChartsResponse> {
     if (actor.role !== "admin") {
       this.metrics.increment("platform_admin.charts.denied");
       throw new ApplicationError(
@@ -392,11 +403,15 @@ export class GetPlatformAdminChartsUseCase {
     const startedAt = this.now().getTime();
     const officeSummaries = await this.offices.listOfficesForUser(actor.id, true);
     const officeSources = await Promise.all(
-      officeSummaries.map((office) => this.officeCharts.buildOfficeSource(actor, office.officeId, query))
+      officeSummaries.map((office) =>
+        this.officeCharts.buildOfficeSource(actor, office.officeId, query)
+      )
     );
     const data = await buildPlatformChartBundle(
       officeSources,
-      await Promise.all(officeSummaries.map((office) => this.offices.findOfficeById(office.officeId))),
+      await Promise.all(
+        officeSummaries.map((office) => this.offices.findOfficeById(office.officeId))
+      ),
       query,
       rangeWindow(query.range, this.now())
     );
@@ -632,7 +647,13 @@ function buildOnboardingFunnel(clients: ClientSummary[]) {
 function buildStaffRoleDistribution(
   members: OfficeMemberSource[]
 ): OfficeStaffRoleDistributionPoint[] {
-  const roles: OfficeMembershipRole[] = ["office_admin", "advisor", "analyst", "assistant", "client"];
+  const roles: OfficeMembershipRole[] = [
+    "office_admin",
+    "advisor",
+    "analyst",
+    "assistant",
+    "client"
+  ];
   return roles.map((role) => {
     const matching = members.filter((member) => member.role === role);
     return {
@@ -686,7 +707,9 @@ function buildAssignmentLoad(
   }
 
   return [...pointsByKey.values()].sort(
-    (left, right) => right.totalAssignments - left.totalAssignments || left.assigneeName.localeCompare(right.assigneeName)
+    (left, right) =>
+      right.totalAssignments - left.totalAssignments ||
+      left.assigneeName.localeCompare(right.assigneeName)
   );
 }
 
@@ -712,13 +735,16 @@ function buildPortfolioCoverage(portfolios: PortfolioSource[]): OfficeCoveragePo
 function buildAssetCoverage(
   positions: Array<{ position: PortfolioPosition; portfolioId: string }>
 ) {
-  const points = new Map<string, {
-    assetSymbol: string;
-    assetName: string;
-    portfolioIds: Set<string>;
-    totalQuantity: number;
-    totalCostBasis: number;
-  }>();
+  const points = new Map<
+    string,
+    {
+      assetSymbol: string;
+      assetName: string;
+      portfolioIds: Set<string>;
+      totalQuantity: number;
+      totalCostBasis: number;
+    }
+  >();
   for (const { position, portfolioId } of positions) {
     const point = points.get(position.assetSymbol) ?? {
       assetSymbol: position.assetSymbol,
@@ -816,9 +842,7 @@ function buildAnalyticsQueueHealth(
     grouped.set(job.status, point);
   }
 
-  const portfoliosWithoutJobs = portfolios.filter(
-    (source) => !source.latestAnalyticsJob
-  );
+  const portfoliosWithoutJobs = portfolios.filter((source) => !source.latestAnalyticsJob);
   if (portfoliosWithoutJobs.length > 0) {
     grouped.set("missing", {
       status: "missing",
@@ -858,7 +882,9 @@ function buildReportThroughput(
       reportIds: [],
       reportPackageIds: []
     };
-    const portfolioIds = new Set(reportPackage.items.map((item) => item.portfolioId).filter(isString));
+    const portfolioIds = new Set(
+      reportPackage.items.map((item) => item.portfolioId).filter(isString)
+    );
     point.count += 1;
     point.portfolioCount += portfolioIds.size;
     point.reportPackageIds.push(reportPackage.id);
@@ -945,11 +971,16 @@ function buildPermissionActivity(
   return [...points.values()].sort((left, right) => left.date.localeCompare(right.date));
 }
 
-function buildPlatformOfficeVolume(sources: OfficeOperationalSource[]): PlatformOfficeVolumePoint[] {
+function buildPlatformOfficeVolume(
+  sources: OfficeOperationalSource[]
+): PlatformOfficeVolumePoint[] {
   return [
     { bucket: "offices", count: sources.length },
     { bucket: "clients", count: sources.reduce((sum, source) => sum + source.clients.length, 0) },
-    { bucket: "households", count: sources.reduce((sum, source) => sum + source.households.length, 0) },
+    {
+      bucket: "households",
+      count: sources.reduce((sum, source) => sum + source.households.length, 0)
+    },
     {
       bucket: "accounts",
       count: sources.reduce(
@@ -957,7 +988,10 @@ function buildPlatformOfficeVolume(sources: OfficeOperationalSource[]): Platform
         0
       )
     },
-    { bucket: "portfolios", count: sources.reduce((sum, source) => sum + source.portfolios.length, 0) },
+    {
+      bucket: "portfolios",
+      count: sources.reduce((sum, source) => sum + source.portfolios.length, 0)
+    },
     { bucket: "staff", count: sources.reduce((sum, source) => sum + source.members.length, 0) }
   ];
 }
@@ -968,7 +1002,9 @@ function buildPlatformStaffRoleDistribution(
   return buildStaffRoleDistribution(members).map(({ userIds: _userIds, ...point }) => point);
 }
 
-function buildPlatformTenantFreshness(sources: OfficeOperationalSource[]): PlatformTenantFreshnessPoint[] {
+function buildPlatformTenantFreshness(
+  sources: OfficeOperationalSource[]
+): PlatformTenantFreshnessPoint[] {
   const freshnessValues: MarketDataFreshness[] = ["fresh", "partial", "stale"];
   return freshnessValues.map((freshness) => {
     const sourcesWithFreshness = sources.filter((source) =>
@@ -979,7 +1015,9 @@ function buildPlatformTenantFreshness(sources: OfficeOperationalSource[]): Platf
       officeCount: sourcesWithFreshness.length,
       portfolioCount: sources.reduce(
         (sum, source) =>
-          sum + source.portfolios.filter((portfolio) => portfolio.portfolio.freshness === freshness).length,
+          sum +
+          source.portfolios.filter((portfolio) => portfolio.portfolio.freshness === freshness)
+            .length,
         0
       )
     };
@@ -1006,7 +1044,9 @@ function buildPlatformProviderHealth(
     );
     byProvider.set(providerStatus.providerName, point);
   }
-  return [...byProvider.values()].sort((left, right) => left.providerName.localeCompare(right.providerName));
+  return [...byProvider.values()].sort((left, right) =>
+    left.providerName.localeCompare(right.providerName)
+  );
 }
 
 function buildPlatformJobHealth(sources: OfficeOperationalSource[]): PlatformJobHealthPoint[] {
@@ -1022,7 +1062,9 @@ function buildPlatformJobHealth(sources: OfficeOperationalSource[]): PlatformJob
       incrementJobHealth(points, "report", report.status);
     }
   }
-  return [...points.values()].sort((left, right) => left.kind.localeCompare(right.kind) || right.count - left.count);
+  return [...points.values()].sort(
+    (left, right) => left.kind.localeCompare(right.kind) || right.count - left.count
+  );
 }
 
 function incrementJobHealth(
@@ -1100,7 +1142,8 @@ function resolveOfficeQualityStatus(
   }
 
   const staleAudit = source.auditEvents.some(
-    (event) => now.getTime() - event.createdAt.getTime() > 24 * 60 * 60 * 1000 && event.outcome === "failure"
+    (event) =>
+      now.getTime() - event.createdAt.getTime() > 24 * 60 * 60 * 1000 && event.outcome === "failure"
   );
   if (staleAudit) {
     return "partial";
@@ -1117,10 +1160,11 @@ function resolvePlatformQualityStatus(
     return "empty";
   }
   if (
-    sources.some((source) =>
-      source.portfolios.some((portfolio) => portfolio.portfolio.freshness === "stale") ||
-      source.analyticsJobs.some((job) => job.status === "failed") ||
-      source.marketDataJobs.some((job) => job.status === "failed")
+    sources.some(
+      (source) =>
+        source.portfolios.some((portfolio) => portfolio.portfolio.freshness === "stale") ||
+        source.analyticsJobs.some((job) => job.status === "failed") ||
+        source.marketDataJobs.some((job) => job.status === "failed")
     )
   ) {
     return "stale";
@@ -1135,7 +1179,10 @@ function resolveProviderFreshness(
   if (status.status === "unavailable" || jobs.some((job) => job.status === "failed")) {
     return "stale";
   }
-  if (status.status === "degraded" || jobs.some((job) => job.status === "queued" || job.status === "running")) {
+  if (
+    status.status === "degraded" ||
+    jobs.some((job) => job.status === "queued" || job.status === "running")
+  ) {
     return "partial";
   }
   return "fresh";
@@ -1238,7 +1285,9 @@ function isString(value: string | undefined): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
-function isDefinedOffice(office: { status: OfficeStatus } | undefined): office is { status: OfficeStatus } {
+function isDefinedOffice(
+  office: { status: OfficeStatus } | undefined
+): office is { status: OfficeStatus } {
   return Boolean(office);
 }
 

@@ -51,11 +51,7 @@ import {
   PortfolioSummary,
   PortfolioTransaction
 } from "../../01-domain/portfolios/portfolio";
-import {
-  Office,
-  OfficeMembership,
-  OfficeMembershipSummary
-} from "../../01-domain/offices/office";
+import { Office, OfficeMembership, OfficeMembershipSummary } from "../../01-domain/offices/office";
 
 export interface CreateUserInput {
   id: string;
@@ -81,20 +77,23 @@ export interface AccountRepository {
   listMembershipsForUser(userId: string): Promise<AccountMembershipSummary[]>;
   findMembership(accountId: string, userId: string): Promise<AccountMember | undefined>;
   listPortfolioSnapshotsForUser(userId: string): Promise<PortfolioAccountSnapshot[]>;
-  findPortfolioSnapshotByAccountId(accountId: string): Promise<PortfolioAccountSnapshot | undefined>;
+  findPortfolioSnapshotByAccountId(
+    accountId: string
+  ): Promise<PortfolioAccountSnapshot | undefined>;
 }
 
 export interface OfficeRepository {
   listOfficesForUser(userId: string, isAdmin: boolean): Promise<OfficeMembershipSummary[]>;
   findOfficeById(officeId: string): Promise<Office | undefined>;
-  findOfficeMembership(
-    officeId: string,
-    userId: string
-  ): Promise<OfficeMembership | undefined>;
-  listOfficeMembers(officeId: string): Promise<Array<OfficeMembership & {
-    userName: string;
-    userEmail: string;
-  }>>;
+  findOfficeMembership(officeId: string, userId: string): Promise<OfficeMembership | undefined>;
+  listOfficeMembers(officeId: string): Promise<
+    Array<
+      OfficeMembership & {
+        userName: string;
+        userEmail: string;
+      }
+    >
+  >;
   updateOffice(
     officeId: string,
     input: Partial<Pick<Office, "name" | "status" | "updatedAt">>
@@ -217,10 +216,7 @@ export interface ClientRepository {
   listHouseholds(officeId: string): Promise<Household[]>;
   findHouseholdById(householdId: string): Promise<Household | undefined>;
   createHousehold(input: CreateHouseholdInput): Promise<Household>;
-  updateHousehold(
-    householdId: string,
-    input: UpdateHouseholdInput
-  ): Promise<Household | undefined>;
+  updateHousehold(householdId: string, input: UpdateHouseholdInput): Promise<Household | undefined>;
 }
 
 export interface ReviewItemFilters {
@@ -434,7 +430,16 @@ export interface CreatePortfolioTransactionInput {
   notes?: string;
   idempotencyKey?: string;
   idempotencyFingerprint?: string;
+  source?: "manual" | "spreadsheet_import";
+  importId?: string;
+  sourceRowNumber?: number;
   createdAt: Date;
+}
+
+export interface CreateImportedPortfolioInput {
+  portfolio: CreatePortfolioInput;
+  transactions: CreatePortfolioTransactionInput[];
+  importId: string;
 }
 
 export interface PortfolioTransactionIdempotencyRecord {
@@ -444,6 +449,7 @@ export interface PortfolioTransactionIdempotencyRecord {
 
 export interface PortfolioRepository {
   createPortfolio(input: CreatePortfolioInput): Promise<Portfolio>;
+  createImportedPortfolio(input: CreateImportedPortfolioInput): Promise<Portfolio>;
   updatePortfolio(id: string, input: UpdatePortfolioInput): Promise<Portfolio | undefined>;
   findPortfolioById(id: string): Promise<Portfolio | undefined>;
   listVisiblePortfolios(userId: string, isAdmin: boolean): Promise<PortfolioSummary[]>;
@@ -453,9 +459,7 @@ export interface PortfolioRepository {
     isAdmin: boolean
   ): Promise<PortfolioDetail | undefined>;
   listPortfolioTransactions(portfolioId: string): Promise<PortfolioTransaction[]>;
-  createPortfolioTransaction(
-    input: CreatePortfolioTransactionInput
-  ): Promise<PortfolioTransaction>;
+  createPortfolioTransaction(input: CreatePortfolioTransactionInput): Promise<PortfolioTransaction>;
   findTransactionIdempotencyRecord(
     portfolioId: string,
     idempotencyKey: string
@@ -465,11 +469,7 @@ export interface PortfolioRepository {
   listOutboxEvents(): Promise<PortfolioOutboxEvent[]>;
 }
 
-export type RefreshTokenRevocationReason =
-  | "rotated"
-  | "logout"
-  | "reuse_detected"
-  | "expired";
+export type RefreshTokenRevocationReason = "rotated" | "logout" | "reuse_detected" | "expired";
 
 export interface RefreshTokenRecord {
   id: string;

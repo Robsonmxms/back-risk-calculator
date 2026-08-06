@@ -3,10 +3,7 @@ import type { Response } from "supertest";
 import { describe, expect, it } from "vitest";
 import { createSeededTestApp as createApp } from "../helpers/testApp";
 import { ApplicationError } from "../../src/02-application/errors/application-error";
-import {
-  CurrencyRateProvider,
-  MarketDataProvider
-} from "../../src/modules/market-data/ports";
+import { CurrencyRateProvider, MarketDataProvider } from "../../src/modules/market-data/ports";
 import {
   DateRange,
   Dividend,
@@ -60,7 +57,11 @@ class DiagnosticsFixtureProvider implements MarketDataProvider, CurrencyRateProv
     const assetCandidate = this.assets[normalized];
     const price = this.latestPrices[normalized];
     if (!assetCandidate || !price) {
-      throw new ApplicationError("unavailable", "market_data.symbol_not_supported", "Symbol not supported");
+      throw new ApplicationError(
+        "unavailable",
+        "market_data.symbol_not_supported",
+        "Symbol not supported"
+      );
     }
 
     return {
@@ -80,7 +81,11 @@ class DiagnosticsFixtureProvider implements MarketDataProvider, CurrencyRateProv
     const assetCandidate = this.assets[normalized];
     const base = this.latestPrices[normalized];
     if (!assetCandidate || !base) {
-      throw new ApplicationError("unavailable", "market_data.symbol_not_supported", "Symbol not supported");
+      throw new ApplicationError(
+        "unavailable",
+        "market_data.symbol_not_supported",
+        "Symbol not supported"
+      );
     }
 
     return [0.91, 0.94, 0.98, 0.96, 1.01, 1].map((multiplier, index) => {
@@ -164,7 +169,9 @@ describe("analyst risk diagnostics charting", () => {
       expect.arrayContaining([expect.objectContaining({ benchmarkSymbol: "SPY" })])
     );
     expect(response.body.data.charts.providerFreshnessMatrix).toEqual(
-      expect.arrayContaining([expect.objectContaining({ symbol: "MSFT", providerName: "diagnostics-fixture" })])
+      expect.arrayContaining([
+        expect.objectContaining({ symbol: "MSFT", providerName: "diagnostics-fixture" })
+      ])
     );
     expect(JSON.stringify(response.body)).not.toContain("Cliente Reservado");
     expect(JSON.stringify(response.body)).not.toContain("prt_income");

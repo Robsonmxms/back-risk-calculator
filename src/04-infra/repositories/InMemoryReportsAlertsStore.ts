@@ -14,7 +14,12 @@ import {
 } from "../../modules/reports-alerts/types";
 
 export class InMemoryReportsAlertsStore
-  implements ReportRepository, ReportStorage, AlertRepository, NotificationRepository, RealtimeRepository
+  implements
+    ReportRepository,
+    ReportStorage,
+    AlertRepository,
+    NotificationRepository,
+    RealtimeRepository
 {
   readonly reports = new Map<string, ReportJob>();
   readonly reportFiles = new Map<string, StoredReportFile>();
@@ -240,10 +245,7 @@ export class InMemoryReportsAlertsStore
     }));
   }
 
-  private withActorReadState(
-    notification: NotificationRecord,
-    userId: string
-  ): NotificationRecord {
+  private withActorReadState(notification: NotificationRecord, userId: string): NotificationRecord {
     if (notification.userId) {
       return { ...notification };
     }

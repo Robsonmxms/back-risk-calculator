@@ -11,10 +11,7 @@ import {
 } from "../../02-application/delivery/use-cases/report-delivery-use-cases";
 import { GetDeliveryChartsUseCase } from "../../02-application/compliance/use-cases/compliance-delivery-chart-use-cases";
 import { ReportDeliveryController } from "../../03-adapters/controllers/ReportDeliveryController";
-import {
-  NotificationRepository,
-  ReportRepository
-} from "../../modules/reports-alerts/ports";
+import { NotificationRepository, ReportRepository } from "../../modules/reports-alerts/ports";
 import type { SharedContainer } from "./SharedContainer";
 
 export function buildReportDeliveryContainer(

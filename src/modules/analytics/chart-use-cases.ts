@@ -4,10 +4,7 @@ import { Portfolio, PortfolioPosition } from "../../01-domain/portfolios/portfol
 import { assertCanReadAccountLedger } from "../../02-application/auth/policies";
 import { ApplicationError } from "../../02-application/errors/application-error";
 import { LoggerPort, MetricsPort } from "../../02-application/ports/observability";
-import {
-  AccountRepository,
-  PortfolioRepository
-} from "../../02-application/ports/repositories";
+import { AccountRepository, PortfolioRepository } from "../../02-application/ports/repositories";
 import { MarketDataRepository } from "../market-data/ports";
 import { HistoricalPrice } from "../market-data/types";
 import {
@@ -126,10 +123,9 @@ export class GetPortfolioChartsUseCase {
     const sectorExposure = snapshot?.sectorExposure.length
       ? snapshot.sectorExposure
       : buildFallbackSectorExposure(positions, unavailableChartKeys);
-    const drawdown =
-      snapshot?.drawdown.length
-        ? snapshot.drawdown.filter((point) => isInRange(point.date, rangeStart))
-        : calculateDrawdowns(portfolioPerformance).series;
+    const drawdown = snapshot?.drawdown.length
+      ? snapshot.drawdown.filter((point) => isInRange(point.date, rangeStart))
+      : calculateDrawdowns(portfolioPerformance).series;
     if (drawdown.length === 0) {
       unavailableChartKeys.add("drawdown");
     }
@@ -217,10 +213,7 @@ export class GetPortfolioChartsUseCase {
     };
   }
 
-  private async assertChartAccess(
-    actor: Actor,
-    portfolioId: string
-  ): Promise<PortfolioAccess> {
+  private async assertChartAccess(actor: Actor, portfolioId: string): Promise<PortfolioAccess> {
     const denied = () =>
       new ApplicationError(
         "forbidden",
@@ -377,7 +370,8 @@ export class GetPortfolioChartsUseCase {
     return history.map((price) => ({
       date: price.date,
       symbol,
-      returnPercent: first > 0 ? round(((price.adjustedClose || price.close) / first - 1) * 100, 4) : 0
+      returnPercent:
+        first > 0 ? round(((price.adjustedClose || price.close) / first - 1) * 100, 4) : 0
     }));
   }
 }
@@ -411,7 +405,12 @@ function buildRollingRisk(
     const volatility = calculateVolatility(window);
     const currentPoint = performance[endIndex + 1];
     const windowStartPoint = performance[endIndex + 1 - window.length];
-    if (volatility === undefined || !currentPoint || !windowStartPoint || windowStartPoint.value <= 0) {
+    if (
+      volatility === undefined ||
+      !currentPoint ||
+      !windowStartPoint ||
+      windowStartPoint.value <= 0
+    ) {
       continue;
     }
 

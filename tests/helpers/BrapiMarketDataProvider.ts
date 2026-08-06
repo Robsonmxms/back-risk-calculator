@@ -1,8 +1,5 @@
 import { ApplicationError } from "../../src/02-application/errors/application-error";
-import {
-  CurrencyRateProvider,
-  MarketDataProvider
-} from "../../src/modules/market-data/ports";
+import { CurrencyRateProvider, MarketDataProvider } from "../../src/modules/market-data/ports";
 import {
   DateRange,
   Dividend,

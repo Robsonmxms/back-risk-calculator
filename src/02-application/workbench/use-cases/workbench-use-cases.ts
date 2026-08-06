@@ -20,7 +20,14 @@ import {
   WorkbenchRepository
 } from "../../ports/repositories";
 
-function visibleClientIdsFromAssignments(assignments: Array<{ resourceType: string; resourceId: string; permissions: string[]; revokedAt?: Date }>) {
+function visibleClientIdsFromAssignments(
+  assignments: Array<{
+    resourceType: string;
+    resourceId: string;
+    permissions: string[];
+    revokedAt?: Date;
+  }>
+) {
   return new Set(
     assignments
       .filter(

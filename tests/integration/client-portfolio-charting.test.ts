@@ -2,10 +2,7 @@ import request from "supertest";
 import type { Response } from "supertest";
 import { describe, expect, it } from "vitest";
 import { createSeededTestApp as createApp } from "../helpers/testApp";
-import {
-  CurrencyRateProvider,
-  MarketDataProvider
-} from "../../src/modules/market-data/ports";
+import { CurrencyRateProvider, MarketDataProvider } from "../../src/modules/market-data/ports";
 import {
   DateRange,
   Dividend,

@@ -54,7 +54,9 @@ export const createAuditExportSchema = Joi.object({
 });
 
 export const complianceChartsQuerySchema = Joi.object({
-  range: Joi.string().valid(...chartRanges).default("30d"),
+  range: Joi.string()
+    .valid(...chartRanges)
+    .default("30d"),
   resourceType: Joi.string().valid(...auditResourceTypes),
   action: Joi.string().trim().min(1).max(120),
   severity: Joi.string().valid("info", "warning", "critical"),

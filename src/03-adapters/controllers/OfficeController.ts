@@ -169,7 +169,13 @@ function requireQueryOfficeId(request: Request): string {
   return officeId;
 }
 
-function serializeOffice(office: { id: string; name: string; status: string; createdAt: Date; updatedAt: Date }) {
+function serializeOffice(office: {
+  id: string;
+  name: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
   return {
     ...office,
     createdAt: office.createdAt.toISOString(),

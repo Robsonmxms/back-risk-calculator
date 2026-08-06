@@ -27,10 +27,17 @@ export class GetOfficeUseCase {
 export class ListOfficeMembersUseCase {
   constructor(private readonly offices: OfficeRepository) {}
 
-  async execute(actor: Actor, officeId: string): Promise<Array<OfficeMembership & {
-    userName: string;
-    userEmail: string;
-  }>> {
+  async execute(
+    actor: Actor,
+    officeId: string
+  ): Promise<
+    Array<
+      OfficeMembership & {
+        userName: string;
+        userEmail: string;
+      }
+    >
+  > {
     await assertOfficeAdmin(actor, officeId, this.offices);
     return this.offices.listOfficeMembers(officeId);
   }
@@ -79,11 +86,7 @@ async function assertOfficeAccess(
     return;
   }
 
-  throw new ApplicationError(
-    "forbidden",
-    "auth.office_access_denied",
-    "Office access denied"
-  );
+  throw new ApplicationError("forbidden", "auth.office_access_denied", "Office access denied");
 }
 
 async function assertOfficeAdmin(

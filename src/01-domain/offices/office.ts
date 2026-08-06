@@ -1,10 +1,5 @@
 export type OfficeStatus = "active" | "disabled";
-export type OfficeMembershipRole =
-  | "office_admin"
-  | "advisor"
-  | "analyst"
-  | "assistant"
-  | "client";
+export type OfficeMembershipRole = "office_admin" | "advisor" | "analyst" | "assistant" | "client";
 
 export interface Office {
   id: string;
