@@ -10,10 +10,7 @@ export function createKnexClient(): Knex {
     client: "pg",
     connection: DEFAULT_DATABASE_URL,
     migrations: {
-      directory: path.resolve(
-        process.cwd(),
-        "src/04-infra/database/migrations"
-      ),
+      directory: path.resolve(process.cwd(), "src/04-infra/database/migrations"),
       extension: "ts"
     }
   });

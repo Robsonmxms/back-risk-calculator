@@ -35,6 +35,8 @@ Required variables:
 - `ACCESS_TOKEN_SECRET`
 - `DATABASE_URL`
 - `CORS_ALLOWED_ORIGINS`
+- `PORTFOLIO_IMPORT_QUEUE_URL`
+- `PORTFOLIO_IMPORT_DLQ_URL`
 
 Production-like stages reject the dev access-token secret.
 
@@ -48,14 +50,15 @@ Localhost and `127.0.0.1` remain allowed for local development.
 
 ## Current Runtime Limits
 
-In-memory repositories, report storage, realtime fan-out, and worker queues are not production
-durable. Before production Lambda traffic, these responsibilities must move to durable AWS-backed
-adapters:
+In-memory repositories, report storage, realtime fan-out, and most worker queues are not production
+durable. Portfolio spreadsheet imports already publish/consume through an SQS FIFO queue with a
+FIFO DLQ provisioned in `serverless.yml`; the remaining responsibilities must move to durable
+AWS-backed adapters before production Lambda traffic:
 
 - PostgreSQL through RDS Proxy for users, sessions, offices, clients, portfolios, ledger,
   analytics, reports, alerts, notifications, delivery, audit, realtime/outbox records, and jobs.
 - SQS plus DLQs for market data, analytics, reports, alert evaluation, notification delivery, and
-  outbox publishing.
+  outbox publishing; portfolio imports are already covered.
 - EventBridge Scheduler for market-data ingestion.
 - S3 for report objects, with metadata and authorization state persisted in PostgreSQL.
 - API Gateway WebSocket, AppSync, or a separate realtime service for realtime delivery; REST

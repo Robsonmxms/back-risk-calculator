@@ -10,6 +10,11 @@ describe("serverless handler", () => {
       ...originalEnv,
       ACCESS_TOKEN_SECRET: "lambda-test-secret",
       CORS_ALLOWED_ORIGINS: "https://app.example.com",
+      PORTFOLIO_IMPORT_QUEUE_PROVIDER: "sqs",
+      PORTFOLIO_IMPORT_QUEUE_URL:
+        "https://sqs.us-east-1.amazonaws.com/000000000000/portfolio-imports.fifo",
+      PORTFOLIO_IMPORT_DLQ_URL:
+        "https://sqs.us-east-1.amazonaws.com/000000000000/portfolio-imports-dlq.fifo",
       NODE_ENV: "staging"
     };
   });

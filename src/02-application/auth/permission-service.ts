@@ -32,12 +32,7 @@ export const ROLE_PERMISSION_MATRIX: Record<OfficeMembershipRole, PermissionKey[
     "alerts.manage",
     "notifications.read"
   ],
-  analyst: [
-    "client.read",
-    "analytics.recompute",
-    "reports.request",
-    "notifications.read"
-  ],
+  analyst: ["client.read", "analytics.recompute", "reports.request", "notifications.read"],
   assistant: ["client.read", "reports.request", "alerts.manage", "notifications.read"],
   client: ["notifications.read"]
 };
@@ -90,14 +85,10 @@ export class PermissionService {
 
     const membership =
       actor.role === "admin"
-        ? ({ role: "office_admin" as const })
+        ? { role: "office_admin" as const }
         : await this.offices.findOfficeMembership(officeId, actor.id);
     if (!membership) {
-      throw new ApplicationError(
-        "forbidden",
-        "auth.office_access_denied",
-        "Office access denied"
-      );
+      throw new ApplicationError("forbidden", "auth.office_access_denied", "Office access denied");
     }
 
     const assignments = await this.advisory.listAssignmentsForUser(actor.id, officeId);

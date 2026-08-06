@@ -16,10 +16,7 @@ export function buildComplianceContainer(shared: SharedContainer) {
     shared.identityStore,
     permissionService
   );
-  const getAuditEventUseCase = new GetAuditEventUseCase(
-    shared.identityStore,
-    permissionService
-  );
+  const getAuditEventUseCase = new GetAuditEventUseCase(shared.identityStore, permissionService);
   const listSupervisionReviewsUseCase = new ListSupervisionReviewsUseCase(
     shared.identityStore,
     permissionService

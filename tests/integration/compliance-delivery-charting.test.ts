@@ -61,7 +61,9 @@ describe("compliance and delivery charting", () => {
         })
       ])
     );
-    expect(JSON.stringify(response.body)).not.toMatch(/token|secret|credential|password|phone|email/i);
+    expect(JSON.stringify(response.body)).not.toMatch(
+      /token|secret|credential|password|phone|email/i
+    );
   });
 
   it("denies compliance charts without audit read permission", async () => {
@@ -135,7 +137,9 @@ describe("compliance and delivery charting", () => {
       ])
     );
     expect(JSON.stringify(response.body)).not.toContain("client_private");
-    expect(JSON.stringify(response.body)).not.toMatch(/private.client|internalNotes|password|token/i);
+    expect(JSON.stringify(response.body)).not.toMatch(
+      /private.client|internalNotes|password|token/i
+    );
   });
 
   it("limits assistant delivery charts to assigned client scope and blocks client actors", async () => {

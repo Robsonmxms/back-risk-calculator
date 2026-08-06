@@ -14,6 +14,7 @@ import { WorkbenchController } from "../03-adapters/controllers/WorkbenchControl
 import { ComplianceController } from "../03-adapters/controllers/ComplianceController";
 import { ReportDeliveryController } from "../03-adapters/controllers/ReportDeliveryController";
 import { OperationalChartsController } from "../03-adapters/controllers/OperationalChartsController";
+import { PortfolioImportController } from "../03-adapters/controllers/PortfolioImportController";
 import { AuthenticateAccessTokenUseCase } from "../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { registerAccountRoutes } from "./routes/accountRoutes";
 import { registerAdminRoutes } from "./routes/adminRoutes";
@@ -29,6 +30,7 @@ import { registerReportDeliveryRoutes } from "./routes/reportDeliveryRoutes";
 import { registerPortfolioRoutes } from "./routes/portfolioRoutes";
 import { registerReportsAlertsRoutes } from "./routes/reportsAlertsRoutes";
 import { registerUserRoutes } from "./routes/userRoutes";
+import { registerPortfolioImportRoutes } from "./routes/portfolioImportRoutes";
 
 export interface ServerDependencies {
   authController: AuthController;
@@ -36,6 +38,7 @@ export interface ServerDependencies {
   adminController: AdminController;
   accountController: AccountController;
   portfolioController: PortfolioController;
+  portfolioImportController: PortfolioImportController;
   marketDataController: MarketDataController;
   analyticsController: AnalyticsController;
   reportsAlertsController: ReportsAlertsController;
@@ -113,6 +116,11 @@ export function createServer(dependencies: ServerDependencies) {
   registerPortfolioRoutes(
     apiRouter,
     dependencies.portfolioController,
+    dependencies.authenticateAccessTokenUseCase
+  );
+  registerPortfolioImportRoutes(
+    apiRouter,
+    dependencies.portfolioImportController,
     dependencies.authenticateAccessTokenUseCase
   );
   registerAnalyticsRoutes(

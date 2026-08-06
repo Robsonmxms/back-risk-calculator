@@ -157,25 +157,13 @@ export class DeleteAssignmentUseCase {
   async execute(actor: Actor, assignmentId: string): Promise<AdvisoryAssignment> {
     const assignment = await this.advisory.findAssignmentById(assignmentId);
     if (!assignment) {
-      throw new ApplicationError(
-        "not_found",
-        "assignment.not_found",
-        "Assignment not found"
-      );
+      throw new ApplicationError("not_found", "assignment.not_found", "Assignment not found");
     }
 
-    await this.permissions.assertPermission(
-      actor,
-      assignment.officeId,
-      "office.members.manage"
-    );
+    await this.permissions.assertPermission(actor, assignment.officeId, "office.members.manage");
     const revoked = await this.advisory.revokeAssignment(assignmentId, this.now());
     if (!revoked) {
-      throw new ApplicationError(
-        "not_found",
-        "assignment.not_found",
-        "Assignment not found"
-      );
+      throw new ApplicationError("not_found", "assignment.not_found", "Assignment not found");
     }
     return revoked;
   }

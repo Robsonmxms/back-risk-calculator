@@ -2,12 +2,7 @@ export type MarketAssetType = "stock" | "etf" | "fund" | "crypto";
 export type MarketDataFreshness = "fresh" | "partial" | "stale";
 export type MarketDataRequestStatus = "queued" | "running" | "succeeded" | "failed";
 export type ProviderRequestOperation =
-  | "search_assets"
-  | "latest_quote"
-  | "historical_prices"
-  | "dividends"
-  | "splits"
-  | "currency_rate";
+  "search_assets" | "latest_quote" | "historical_prices" | "dividends" | "splits" | "currency_rate";
 
 export interface DateRange {
   from: string;

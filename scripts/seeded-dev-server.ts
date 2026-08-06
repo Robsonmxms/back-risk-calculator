@@ -1,8 +1,5 @@
 import { createSeededTestApp } from "../tests/helpers/testApp";
-import type {
-  CurrencyRateProvider,
-  MarketDataProvider
-} from "../src/modules/market-data/ports";
+import type { CurrencyRateProvider, MarketDataProvider } from "../src/modules/market-data/ports";
 import type {
   DateRange,
   Dividend,
@@ -34,13 +31,7 @@ class SeededMarketDataProvider implements MarketDataProvider, CurrencyRateProvid
     ),
     MSFT: this.asset("MSFT", "Microsoft Corporation", "NASDAQ", "USD", "Technology"),
     NVDA: this.asset("NVDA", "NVIDIA Corporation", "NASDAQ", "USD", "Technology"),
-    SCHD: this.asset(
-      "SCHD",
-      "Schwab US Dividend Equity ETF",
-      "NYSEARCA",
-      "USD",
-      "Dividend Equity"
-    ),
+    SCHD: this.asset("SCHD", "Schwab US Dividend Equity ETF", "NYSEARCA", "USD", "Dividend Equity"),
     SPY: this.asset("SPY", "SPDR S&P 500 ETF Trust", "NYSEARCA", "USD", "Benchmark"),
     VNQ: this.asset("VNQ", "Vanguard Real Estate ETF", "NYSEARCA", "USD", "Real Estate"),
     VTI: this.asset("VTI", "Vanguard Total Stock Market ETF", "NYSEARCA", "USD", "ETF")
@@ -59,8 +50,7 @@ class SeededMarketDataProvider implements MarketDataProvider, CurrencyRateProvid
   async searchAssets(query: string): Promise<MarketAssetCandidate[]> {
     const normalized = query.trim().toUpperCase();
     return Object.values(this.assets).filter(
-      (entry) =>
-        entry.symbol.includes(normalized) || entry.name.toUpperCase().includes(normalized)
+      (entry) => entry.symbol.includes(normalized) || entry.name.toUpperCase().includes(normalized)
     );
   }
 

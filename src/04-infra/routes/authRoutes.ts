@@ -15,10 +15,5 @@ export function registerAuthRoutes(
 
   router.post("/auth/login", validateBody(loginSchema), asyncHandler(controller.login));
   router.post("/auth/refresh", validateBody(refreshSchema), asyncHandler(controller.refresh));
-  router.post(
-    "/auth/logout",
-    auth,
-    validateBody(logoutSchema),
-    asyncHandler(controller.logout)
-  );
+  router.post("/auth/logout", auth, validateBody(logoutSchema), asyncHandler(controller.logout));
 }

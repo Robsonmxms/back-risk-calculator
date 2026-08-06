@@ -7,12 +7,13 @@ Guidance for AI agents working in the backend project.
 `back-risk-calculator` is the TypeScript + Express backend for the Investment Portfolio Analytics
 Platform. Today it owns auth, session lifecycle, RBAC, current-user lookup, admin user listing,
 account access, portfolio ledger, backend-owned market data ingestion, the first analytics risk
-engine behavior, and local in-process reports, alerts, notifications, and realtime delivery.
+engine behavior, asynchronous XLSX portfolio imports, and local in-process reports, alerts,
+notifications, and realtime delivery.
 
 The wider platform scope in root specs still exists as roadmap. Durable PostgreSQL runtime
-repositories for every module, external worker/queue infrastructure, production object storage, and
-hardened realtime operations are not implemented in this repository yet. Market-data, analytics,
-and report workers currently run in-process through local containers/tests.
+repositories for every module, production object storage, and hardened realtime operations are not
+implemented in this repository yet. Portfolio spreadsheet imports have an Amazon SQS FIFO/DLQ
+adapter; market-data, analytics, and report workers still use in-process queues.
 
 Specs are not local to this project. Before implementation, read the relevant root macro spec in
 `../.specs/features/<feature>/`.
@@ -29,7 +30,7 @@ Specs are not local to this project. Before implementation, read the relevant ro
 | Persistence prepared | PostgreSQL + Knex migrations/query builder |
 | Auth | Password login, JWT access token, refresh token rotation |
 | Market data | Backend provider adapters behind ports |
-| Workers | In-process market-data, analytics, report, and alert-evaluation workers |
+| Workers | SQS-backed portfolio-import worker; remaining workers run in process |
 | Observability | Lightweight logger and metrics adapters |
 | Containers | Docker Compose for API and PostgreSQL |
 | Tests | Vitest and Supertest integration tests |
@@ -92,7 +93,7 @@ back-risk-calculator/
       repositories/
       routes/
       server.ts
-    modules/
+    modules/ # legacy layout; do not add new modules here
       analytics/
       market-data/
       reports-alerts/
@@ -105,6 +106,9 @@ back-risk-calculator/
 ## Implementation Rules
 
 - Do not create `back-risk-calculator/.specs/`.
+- Do not add new code under `src/modules`; place new domain/application/adapter/infra code in the
+  numbered Clean Architecture layers. Moving the pre-existing legacy modules requires a scoped
+  refactor with regression coverage.
 - Follow root macro specs for feature scope and acceptance criteria.
 - Do not put business rules in Express routers, Joi schemas, or infrastructure entry points.
 - Runtime startup must not seed users, offices, clients, accounts, portfolios, reports, alerts,

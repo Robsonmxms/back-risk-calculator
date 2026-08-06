@@ -110,7 +110,11 @@ export function buildReportsAlertsContainer(
     reports,
     storage
   );
-  const listAlertsUseCase = new ListAlertsUseCase(shared.identityStore, shared.identityStore, alerts);
+  const listAlertsUseCase = new ListAlertsUseCase(
+    shared.identityStore,
+    shared.identityStore,
+    alerts
+  );
   const createAlertUseCase = new CreateAlertUseCase(
     shared.identityStore,
     shared.identityStore,

@@ -3,10 +3,7 @@ import { Account, AccountMember } from "../../01-domain/accounts/account";
 import { Actor } from "../../01-domain/auth/actor";
 import { assertCanReadAccountLedger } from "../../02-application/auth/policies";
 import { ApplicationError } from "../../02-application/errors/application-error";
-import {
-  AccountRepository,
-  PortfolioRepository
-} from "../../02-application/ports/repositories";
+import { AccountRepository, PortfolioRepository } from "../../02-application/ports/repositories";
 import { AnalyticsEventPublisher, AnalyticsRepository } from "./ports";
 import { AnalyticsJob, PortfolioAnalyticsReadModel } from "./types";
 

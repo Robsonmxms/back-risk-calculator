@@ -9,7 +9,10 @@ export class InMemoryAnalystChartJobStore implements AnalystChartJobRepository {
 
   async createJob(job: AnalystChartJob): Promise<AnalystChartJob> {
     this.jobs.set(job.id, copyJob(job));
-    this.idempotencyIndex.set(this.idempotencyKey(job.officeId, job.requestedBy, job.idempotencyKey), job.id);
+    this.idempotencyIndex.set(
+      this.idempotencyKey(job.officeId, job.requestedBy, job.idempotencyKey),
+      job.id
+    );
     return copyJob(job);
   }
 
@@ -23,16 +26,27 @@ export class InMemoryAnalystChartJobStore implements AnalystChartJobRepository {
     requestedBy: string,
     idempotencyKey: string
   ): Promise<AnalystChartJob | undefined> {
-    const jobId = this.idempotencyIndex.get(this.idempotencyKey(officeId, requestedBy, idempotencyKey));
+    const jobId = this.idempotencyIndex.get(
+      this.idempotencyKey(officeId, requestedBy, idempotencyKey)
+    );
     return jobId ? this.findJobById(jobId) : undefined;
   }
 
   async updateJob(
     jobId: string,
-    input: Partial<Pick<
-      AnalystChartJob,
-      "status" | "progressPercent" | "sourceSnapshotIds" | "resultMetadata" | "errorCode" | "updatedAt" | "completedAt" | "expiresAt"
-    >>
+    input: Partial<
+      Pick<
+        AnalystChartJob,
+        | "status"
+        | "progressPercent"
+        | "sourceSnapshotIds"
+        | "resultMetadata"
+        | "errorCode"
+        | "updatedAt"
+        | "completedAt"
+        | "expiresAt"
+      >
+    >
   ): Promise<AnalystChartJob | undefined> {
     const job = this.jobs.get(jobId);
     if (!job) {
@@ -41,7 +55,9 @@ export class InMemoryAnalystChartJobStore implements AnalystChartJobRepository {
 
     Object.assign(job, {
       ...input,
-      sourceSnapshotIds: input.sourceSnapshotIds ? [...input.sourceSnapshotIds] : job.sourceSnapshotIds,
+      sourceSnapshotIds: input.sourceSnapshotIds
+        ? [...input.sourceSnapshotIds]
+        : job.sourceSnapshotIds,
       resultMetadata: input.resultMetadata ? { ...input.resultMetadata } : job.resultMetadata
     });
     return copyJob(job);

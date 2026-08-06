@@ -3,9 +3,7 @@ import { ApplicationError } from "../../src/02-application/errors/application-er
 import { YahooFinanceMarketDataProvider } from "../../src/04-infra/providers/market-data/YahooFinanceMarketDataProvider";
 
 const consultationTime = new Date("2026-08-06T13:09:20.000Z");
-const sourceTimeSeconds = Math.floor(
-  new Date("2026-08-06T13:09:17.000Z").getTime() / 1000
-);
+const sourceTimeSeconds = Math.floor(new Date("2026-08-06T13:09:17.000Z").getTime() / 1000);
 
 describe("YahooFinanceMarketDataProvider currency rates", () => {
   it("maps a direct Yahoo pair and preserves source and consultation timestamps", async () => {

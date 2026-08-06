@@ -13,7 +13,12 @@ import {
   UpdateAlertUseCase
 } from "../../modules/reports-alerts/use-cases";
 import { InMemoryRealtimeHub } from "../../04-infra/realtime/InMemoryRealtimeHub";
-import { AlertCondition, AlertSeverity, AlertStatus, ReportFormat } from "../../modules/reports-alerts/types";
+import {
+  AlertCondition,
+  AlertSeverity,
+  AlertStatus,
+  ReportFormat
+} from "../../modules/reports-alerts/types";
 
 export class ReportsAlertsController {
   constructor(
@@ -47,20 +52,13 @@ export class ReportsAlertsController {
     const actor = (request as AuthenticatedRequest).actor;
     const portfolioId = requireParam(request, "portfolioId");
     const reports = await this.listReportsUseCase.execute(actor, portfolioId);
-    return ok(
-      response,
-      { reports: reports.map(serializeReport) },
-      { count: reports.length }
-    );
+    return ok(response, { reports: reports.map(serializeReport) }, { count: reports.length });
   };
 
   downloadReport = async (request: Request, response: Response) => {
     const actor = (request as AuthenticatedRequest).actor;
     const reportId = requireParam(request, "reportId");
-    const { report, file } = await this.downloadReportUseCase.execute(
-      actor,
-      reportId
-    );
+    const { report, file } = await this.downloadReportUseCase.execute(actor, reportId);
     response.setHeader("Content-Type", file.contentType);
     response.setHeader(
       "Content-Disposition",
@@ -113,10 +111,7 @@ export class ReportsAlertsController {
   markNotificationRead = async (request: Request, response: Response) => {
     const actor = (request as AuthenticatedRequest).actor;
     const notificationId = requireParam(request, "notificationId");
-    const notification = await this.markNotificationReadUseCase.execute(
-      actor,
-      notificationId
-    );
+    const notification = await this.markNotificationReadUseCase.execute(actor, notificationId);
     return ok(response, serializeNotification(notification));
   };
 

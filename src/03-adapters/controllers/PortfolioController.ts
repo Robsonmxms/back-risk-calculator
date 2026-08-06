@@ -80,7 +80,11 @@ export class PortfolioController {
     const actor = (request as AuthenticatedRequest).actor;
     const portfolioId = requirePortfolioId(request);
     const asOfDate = typeof request.query.asOf === "string" ? request.query.asOf : undefined;
-    const positions = await this.listPortfolioPositionsUseCase.execute(actor, portfolioId, asOfDate);
+    const positions = await this.listPortfolioPositionsUseCase.execute(
+      actor,
+      portfolioId,
+      asOfDate
+    );
 
     return ok(
       response,

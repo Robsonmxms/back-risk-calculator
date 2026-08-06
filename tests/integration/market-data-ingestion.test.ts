@@ -177,9 +177,7 @@ describe("market data ingestion", () => {
         .get(`/api/v1/market-data/fx-rate?from=USD&to=BRL&amount=${amount}`)
         .set("Authorization", `Bearer ${token}`);
       expect(invalidResponse.status).toBe(400);
-      expect(invalidResponse.body.error.code).toBe(
-        "market_data.invalid_currency_conversion"
-      );
+      expect(invalidResponse.body.error.code).toBe("market_data.invalid_currency_conversion");
     }
 
     expect(provider.currencyRateCalls).toBe(2);
@@ -349,9 +347,8 @@ describe("market data ingestion", () => {
       .get("/api/v1/market-data/assets/search?q=MSFT")
       .set("Authorization", `Bearer ${token}`);
 
-    const queued = await marketData.scheduler.refreshTrackedAssetsAfterMarketClose(
-      "scheduler-correlation"
-    );
+    const queued =
+      await marketData.scheduler.refreshTrackedAssetsAfterMarketClose("scheduler-correlation");
     expect(queued).toEqual([
       expect.objectContaining({
         assetId: "asset-msft",

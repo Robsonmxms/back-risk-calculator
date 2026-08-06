@@ -50,12 +50,7 @@ async function getPortfolioAccess(
         throw error;
       }
 
-      await assertExplicitLedgerWritePermission(
-        actor,
-        account,
-        permissions,
-        portfolioId
-      );
+      await assertExplicitLedgerWritePermission(actor, account, permissions, portfolioId);
     }
   }
 

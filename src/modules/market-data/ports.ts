@@ -59,7 +59,11 @@ export interface MarketDataJobQueue {
   nextQueued(): Promise<MarketDataJob | undefined>;
   markRunning(jobId: string, updatedAt: Date): Promise<MarketDataJob | undefined>;
   markSucceeded(jobId: string, completedAt: Date): Promise<MarketDataJob | undefined>;
-  markFailed(jobId: string, completedAt: Date, errorCode: string): Promise<MarketDataJob | undefined>;
+  markFailed(
+    jobId: string,
+    completedAt: Date,
+    errorCode: string
+  ): Promise<MarketDataJob | undefined>;
   listJobs(): Promise<MarketDataJob[]>;
 }
 

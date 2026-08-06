@@ -24,8 +24,11 @@ const alertConditionSchema = Joi.object({
   operator: Joi.string()
     .valid("gte", "lte")
     .when("eventType", { is: "metric_threshold", then: Joi.required(), otherwise: Joi.optional() }),
-  threshold: Joi.number()
-    .when("eventType", { is: "metric_threshold", then: Joi.required(), otherwise: Joi.optional() })
+  threshold: Joi.number().when("eventType", {
+    is: "metric_threshold",
+    then: Joi.required(),
+    otherwise: Joi.optional()
+  })
 });
 
 export const createAlertSchema = Joi.object({

@@ -5,10 +5,7 @@ import {
 } from "../../02-application/offices/use-cases/operational-chart-use-cases";
 import { OperationalChartsController } from "../../03-adapters/controllers/OperationalChartsController";
 import type { AnalyticsRepository } from "../../modules/analytics/ports";
-import type {
-  MarketDataJobQueue,
-  MarketDataRepository
-} from "../../modules/market-data/ports";
+import type { MarketDataJobQueue, MarketDataRepository } from "../../modules/market-data/ports";
 import type {
   AlertRepository,
   NotificationRepository,

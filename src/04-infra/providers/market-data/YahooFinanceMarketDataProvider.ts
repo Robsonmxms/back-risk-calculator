@@ -1,8 +1,5 @@
 import { ApplicationError } from "../../../02-application/errors/application-error";
-import {
-  CurrencyRateProvider,
-  MarketDataProvider
-} from "../../../modules/market-data/ports";
+import { CurrencyRateProvider, MarketDataProvider } from "../../../modules/market-data/ports";
 import {
   DateRange,
   Dividend,
@@ -97,9 +94,7 @@ interface OpenExchangeRateResponse {
 const YAHOO_BASE_URL = "https://query1.finance.yahoo.com";
 const OPEN_EXCHANGE_BASE_URL = "https://open.er-api.com/v6/latest";
 
-export class YahooFinanceMarketDataProvider
-  implements MarketDataProvider, CurrencyRateProvider
-{
+export class YahooFinanceMarketDataProvider implements MarketDataProvider, CurrencyRateProvider {
   readonly name = "yahoo";
 
   constructor(
@@ -121,8 +116,8 @@ export class YahooFinanceMarketDataProvider
     return dedupeCandidates([
       ...(exactCandidate ? [exactCandidate] : []),
       ...quotes
-      .filter((quote) => quote.symbol && quote.currency)
-      .map((quote) => this.normalizeSearchQuote(quote))
+        .filter((quote) => quote.symbol && quote.currency)
+        .map((quote) => this.normalizeSearchQuote(quote))
     ]).slice(0, 10);
   }
 
@@ -276,9 +271,7 @@ export class YahooFinanceMarketDataProvider
       return direct;
     }
 
-    const inverse = await this.getYahooCurrencyPair(`${to}${from}=X`, true).catch(
-      () => undefined
-    );
+    const inverse = await this.getYahooCurrencyPair(`${to}${from}=X`, true).catch(() => undefined);
     if (inverse) {
       return inverse;
     }

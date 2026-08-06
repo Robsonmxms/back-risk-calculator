@@ -17,7 +17,10 @@ function decode<T>(value: string): T {
 }
 
 export class HmacJwtAccessTokenService implements AccessTokenService {
-  constructor(private readonly secret: string, private readonly ttlSeconds: number) {}
+  constructor(
+    private readonly secret: string,
+    private readonly ttlSeconds: number
+  ) {}
 
   sign(claims: AccessTokenClaims): string {
     const now = Math.floor(Date.now() / 1000);
@@ -34,7 +37,11 @@ export class HmacJwtAccessTokenService implements AccessTokenService {
   verify(token: string): AccessTokenClaims {
     const parts = token.split(".");
     if (parts.length !== 3) {
-      throw new ApplicationError("unauthorized", "auth.access_token_invalid", "Invalid access token");
+      throw new ApplicationError(
+        "unauthorized",
+        "auth.access_token_invalid",
+        "Invalid access token"
+      );
     }
 
     const [header, payload, signature] = parts;
@@ -43,12 +50,20 @@ export class HmacJwtAccessTokenService implements AccessTokenService {
     const actual = Buffer.from(signature);
 
     if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
-      throw new ApplicationError("unauthorized", "auth.access_token_invalid", "Invalid access token");
+      throw new ApplicationError(
+        "unauthorized",
+        "auth.access_token_invalid",
+        "Invalid access token"
+      );
     }
 
     const decoded = decode<JwtPayload>(payload);
     if (decoded.exp <= Math.floor(Date.now() / 1000)) {
-      throw new ApplicationError("unauthorized", "auth.access_token_expired", "Access token expired");
+      throw new ApplicationError(
+        "unauthorized",
+        "auth.access_token_expired",
+        "Access token expired"
+      );
     }
 
     return {

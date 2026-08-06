@@ -1,10 +1,5 @@
 export type ApplicationErrorKind =
-  | "invalid"
-  | "unauthorized"
-  | "forbidden"
-  | "conflict"
-  | "not_found"
-  | "unavailable";
+  "invalid" | "unauthorized" | "forbidden" | "conflict" | "not_found" | "unavailable";
 
 export class ApplicationError extends Error {
   constructor(

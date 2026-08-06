@@ -197,10 +197,19 @@ export interface AnalystChartJobRepository {
   ): Promise<AnalystChartJob | undefined>;
   updateJob(
     jobId: string,
-    input: Partial<Pick<
-      AnalystChartJob,
-      "status" | "progressPercent" | "sourceSnapshotIds" | "resultMetadata" | "errorCode" | "updatedAt" | "completedAt" | "expiresAt"
-    >>
+    input: Partial<
+      Pick<
+        AnalystChartJob,
+        | "status"
+        | "progressPercent"
+        | "sourceSnapshotIds"
+        | "resultMetadata"
+        | "errorCode"
+        | "updatedAt"
+        | "completedAt"
+        | "expiresAt"
+      >
+    >
   ): Promise<AnalystChartJob | undefined>;
   listJobsByOffice(officeId: string): Promise<AnalystChartJob[]>;
 }

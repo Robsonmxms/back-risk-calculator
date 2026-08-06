@@ -1,10 +1,7 @@
 import { randomUUID } from "crypto";
 import { Actor } from "../../01-domain/auth/actor";
 import { ApplicationError } from "../../02-application/errors/application-error";
-import {
-  AccountRepository,
-  PortfolioRepository
-} from "../../02-application/ports/repositories";
+import { AccountRepository, PortfolioRepository } from "../../02-application/ports/repositories";
 import { assertPortfolioReadAccess, listVisiblePortfolioIds } from "./access";
 import {
   AlertRepository,
@@ -82,7 +79,11 @@ export class DownloadReportUseCase {
 
     const file = await this.storage.get(report.fileKey);
     if (!file) {
-      throw new ApplicationError("unavailable", "report.file_unavailable", "Report file unavailable");
+      throw new ApplicationError(
+        "unavailable",
+        "report.file_unavailable",
+        "Report file unavailable"
+      );
     }
 
     return { report, file };
@@ -195,11 +196,7 @@ export class MarkNotificationReadUseCase {
       this.now()
     );
     if (!notification) {
-      throw new ApplicationError(
-        "not_found",
-        "notification.not_found",
-        "Notification not found"
-      );
+      throw new ApplicationError("not_found", "notification.not_found", "Notification not found");
     }
     return notification;
   }

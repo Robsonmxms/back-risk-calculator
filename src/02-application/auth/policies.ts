@@ -39,11 +39,7 @@ export function assertCanReadAccountAnalytics(
     return;
   }
 
-  throw new ApplicationError(
-    "forbidden",
-    "auth.account_access_denied",
-    "Account access denied"
-  );
+  throw new ApplicationError("forbidden", "auth.account_access_denied", "Account access denied");
 }
 
 export function assertCanReadAccountLedger(
@@ -69,11 +65,7 @@ export function assertCanReadAccountLedger(
     return;
   }
 
-  throw new ApplicationError(
-    "forbidden",
-    "auth.account_access_denied",
-    "Account access denied"
-  );
+  throw new ApplicationError("forbidden", "auth.account_access_denied", "Account access denied");
 }
 
 export function assertCanManageAccountLedger(
@@ -115,9 +107,5 @@ function assertOfficeAccess(actor: Actor, account: Account): void {
     return;
   }
 
-  throw new ApplicationError(
-    "forbidden",
-    "auth.office_access_denied",
-    "Office access denied"
-  );
+  throw new ApplicationError("forbidden", "auth.office_access_denied", "Office access denied");
 }

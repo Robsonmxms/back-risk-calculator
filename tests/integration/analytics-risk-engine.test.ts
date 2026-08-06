@@ -3,10 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createSeededTestApp as createApp } from "../helpers/testApp";
 import { ApplicationError } from "../../src/02-application/errors/application-error";
 import { InMemoryAnalyticsStore } from "../../src/04-infra/repositories/InMemoryAnalyticsStore";
-import {
-  CurrencyRateProvider,
-  MarketDataProvider
-} from "../../src/modules/market-data/ports";
+import { CurrencyRateProvider, MarketDataProvider } from "../../src/modules/market-data/ports";
 import {
   DateRange,
   Dividend,
@@ -230,9 +227,7 @@ describe("analytics risk engine", () => {
       ])
     );
     expect(analyticsResponse.body.data.snapshot.insights).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ title: "Exposição setorial concentrada" })
-      ])
+      expect.arrayContaining([expect.objectContaining({ title: "Exposição setorial concentrada" })])
     );
     expect(metrics.snapshot()["analytics.calculation.success"]).toBe(1);
   });
@@ -264,9 +259,7 @@ describe("analytics risk engine", () => {
       calculationVersion: "risk-v2-minimum-sample"
     });
     expect(response.body.data.snapshot.dataQuality.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: "analytics.history_unavailable" })
-      ])
+      expect.arrayContaining([expect.objectContaining({ code: "analytics.history_unavailable" })])
     );
   });
 

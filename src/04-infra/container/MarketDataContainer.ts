@@ -62,8 +62,7 @@ export function buildMarketDataContainer(
   const defaultProvider = new YahooFinanceMarketDataProvider(now);
   const provider = dependencies.marketDataProvider ?? defaultProvider;
   const currencyRateProvider =
-    dependencies.currencyRateProvider ??
-    (provider as MarketDataProvider & CurrencyRateProvider);
+    dependencies.currencyRateProvider ?? (provider as MarketDataProvider & CurrencyRateProvider);
   const store = new InMemoryMarketDataStore(now);
   const repository = dependencies.marketDataRepository ?? store;
   const queue = dependencies.marketDataJobQueue ?? store;
@@ -83,12 +82,7 @@ export function buildMarketDataContainer(
     now
   );
   const getAssetUseCase = new GetMarketAssetUseCase(repository);
-  const requestRefreshUseCase = new RequestMarketDataRefreshUseCase(
-    repository,
-    queue,
-    events,
-    now
-  );
+  const requestRefreshUseCase = new RequestMarketDataRefreshUseCase(repository, queue, events, now);
   const getProviderStatusUseCase = new GetMarketDataProviderStatusUseCase(repository, provider);
   const listMarketExchangesUseCase = new ListMarketExchangesUseCase();
   const convertCurrencyUseCase = new ConvertCurrencyUseCase(
@@ -98,12 +92,7 @@ export function buildMarketDataContainer(
     shared.logger,
     now
   );
-  const getTradePriceUseCase = new GetTradePriceUseCase(
-    provider,
-    repository,
-    shared.metrics,
-    now
-  );
+  const getTradePriceUseCase = new GetTradePriceUseCase(provider, repository, shared.metrics, now);
   const getAssetHistoryUseCase = new GetAssetHistoryUseCase(repository);
   const worker = new MarketDataIngestionWorker(
     provider,

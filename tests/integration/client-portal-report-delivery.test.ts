@@ -36,7 +36,9 @@ describe("client portal report delivery", () => {
       });
     expect(createResponse.status).toBe(201);
     expect(createResponse.body.data.status).toBe("pending_approval");
-    expect(createResponse.body.data.internalNotes).toBe("Acompanhamento interno permanece restrito à equipe.");
+    expect(createResponse.body.data.internalNotes).toBe(
+      "Acompanhamento interno permanece restrito à equipe."
+    );
 
     const deniedDelivery = await request(app)
       .post(`/api/v1/report-packages/${createResponse.body.data.id}/deliver`)
@@ -64,7 +66,10 @@ describe("client portal report delivery", () => {
     expect(auditResponse.status).toBe(200);
     expect(auditResponse.body.data.auditEvents).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ resourceId: createResponse.body.data.id, clientId: "client_main" })
+        expect.objectContaining({
+          resourceId: createResponse.body.data.id,
+          clientId: "client_main"
+        })
       ])
     );
   });

@@ -3,10 +3,7 @@ import { AuthSession } from "../../../01-domain/auth/actor";
 import { ApplicationError } from "../../errors/application-error";
 import { LoggerPort, MetricsPort } from "../../ports/observability";
 import { RefreshTokenRepository, UserRepository } from "../../ports/repositories";
-import {
-  AccessTokenService,
-  RefreshTokenGenerator
-} from "../../ports/security";
+import { AccessTokenService, RefreshTokenGenerator } from "../../ports/security";
 import { GetActorForUserIdUseCase } from "../../users/use-cases/get-actor-for-user-id-use-case";
 import { AuthSessionIssuer } from "../services/auth-session-issuer";
 

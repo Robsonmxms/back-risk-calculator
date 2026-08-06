@@ -63,8 +63,7 @@ export function buildAnalyticsContainer(
         await shared.identityStore.appendOutboxEvent(topic, aggregateId, payload);
       }
     } satisfies AnalyticsEventPublisher);
-  const portfolioProjection =
-    dependencies.analyticsPortfolioProjection ?? shared.identityStore;
+  const portfolioProjection = dependencies.analyticsPortfolioProjection ?? shared.identityStore;
   const permissionService = new PermissionService(shared.identityStore, shared.identityStore);
 
   const getPortfolioAnalyticsUseCase = new GetPortfolioAnalyticsUseCase(
@@ -72,20 +71,18 @@ export function buildAnalyticsContainer(
     shared.identityStore,
     repository
   );
-  const requestPortfolioAnalyticsRecomputeUseCase =
-    new RequestPortfolioAnalyticsRecomputeUseCase(
-      shared.identityStore,
-      shared.identityStore,
-      repository,
-      events,
-      now
-    );
-  const listPortfolioAnalyticsHistoryUseCase =
-    new ListPortfolioAnalyticsHistoryUseCase(
-      shared.identityStore,
-      shared.identityStore,
-      repository
-    );
+  const requestPortfolioAnalyticsRecomputeUseCase = new RequestPortfolioAnalyticsRecomputeUseCase(
+    shared.identityStore,
+    shared.identityStore,
+    repository,
+    events,
+    now
+  );
+  const listPortfolioAnalyticsHistoryUseCase = new ListPortfolioAnalyticsHistoryUseCase(
+    shared.identityStore,
+    shared.identityStore,
+    repository
+  );
   const getPortfolioChartsUseCase = new GetPortfolioChartsUseCase(
     shared.identityStore,
     shared.identityStore,

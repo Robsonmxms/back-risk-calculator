@@ -36,10 +36,12 @@ export interface AdvisoryTeamMember {
 }
 
 export interface AdvisoryTeamSummary extends AdvisoryTeam {
-  members: Array<AdvisoryTeamMember & {
-    userName: string;
-    userEmail: string;
-  }>;
+  members: Array<
+    AdvisoryTeamMember & {
+      userName: string;
+      userEmail: string;
+    }
+  >;
 }
 
 export interface AdvisoryAssignment {

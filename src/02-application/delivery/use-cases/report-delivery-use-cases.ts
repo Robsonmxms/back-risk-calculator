@@ -378,7 +378,7 @@ export class GetClientPortalUseCase {
         );
         return {
           ...stripInternalPackage(viewed),
-          status: viewed.status === "delivered" ? "viewed" as const : "viewed" as const,
+          status: viewed.status === "delivered" ? ("viewed" as const) : ("viewed" as const),
           portfolios: client.portfolios.filter(
             (portfolio) => itemPortfolioIds.size === 0 || itemPortfolioIds.has(portfolio.id)
           )
@@ -433,11 +433,7 @@ async function requirePackage(
 ): Promise<ReportPackage> {
   const reportPackage = await packages.findReportPackageById(packageId);
   if (!reportPackage) {
-    throw new ApplicationError(
-      "not_found",
-      "report_package.not_found",
-      "Report package not found"
-    );
+    throw new ApplicationError("not_found", "report_package.not_found", "Report package not found");
   }
   return reportPackage;
 }

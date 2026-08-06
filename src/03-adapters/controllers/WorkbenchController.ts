@@ -44,7 +44,7 @@ export class WorkbenchController {
     const items = await this.listReviewItemsUseCase.execute(
       actor,
       requireOfficeId(request),
-      ((request as Request & { validatedQuery?: ReviewItemFilters }).validatedQuery ?? {})
+      (request as Request & { validatedQuery?: ReviewItemFilters }).validatedQuery ?? {}
     );
     return ok(response, { reviewItems: items.map(serializeReviewItem) }, { count: items.length });
   };

@@ -1,14 +1,27 @@
 import { createHash, randomUUID } from "crypto";
 import { Actor } from "../../01-domain/auth/actor";
 import { PortfolioSummary } from "../../01-domain/portfolios/portfolio";
-import { PermissionEvaluation, PermissionService } from "../../02-application/auth/permission-service";
+import {
+  PermissionEvaluation,
+  PermissionService
+} from "../../02-application/auth/permission-service";
 import { ApplicationError } from "../../02-application/errors/application-error";
 import { LoggerPort, MetricsPort } from "../../02-application/ports/observability";
-import { AdvisoryTeamRepository, ClientRepository, PortfolioRepository } from "../../02-application/ports/repositories";
+import {
+  AdvisoryTeamRepository,
+  ClientRepository,
+  PortfolioRepository
+} from "../../02-application/ports/repositories";
 import { MarketDataRepository } from "../market-data/ports";
 import { calculatePeriodicReturns, calculateVolatility, round } from "./formulas";
 import { AnalyticsEventPublisher, AnalyticsRepository } from "./ports";
-import { AnalyticsJob, AnalyticsMetric, AnalyticsMetricKey, DataQualityIssue, PortfolioAnalyticsSnapshot } from "./types";
+import {
+  AnalyticsJob,
+  AnalyticsMetric,
+  AnalyticsMetricKey,
+  DataQualityIssue,
+  PortfolioAnalyticsSnapshot
+} from "./types";
 import {
   AnalystBenchmarkSensitivityPoint,
   AnalystChartBundle,
@@ -87,11 +100,18 @@ export class GetAnalystChartsUseCase {
     const rangeStart = startDateForRange(query.range, this.now());
     const issues: DataQualityIssue[] = [];
     const unavailableChartKeys = new Set<string>();
-    const portfolioSources = await this.resolvePortfolioSources(actor, officeId, query, selectedPortfolioIds);
+    const portfolioSources = await this.resolvePortfolioSources(
+      actor,
+      officeId,
+      query,
+      selectedPortfolioIds
+    );
 
     if (selectedPortfolioIds.length > 0) {
       const visibleIds = new Set(portfolioSources.map((source) => source.portfolio.id));
-      const missingOrDenied = selectedPortfolioIds.filter((portfolioId) => !visibleIds.has(portfolioId));
+      const missingOrDenied = selectedPortfolioIds.filter(
+        (portfolioId) => !visibleIds.has(portfolioId)
+      );
       if (missingOrDenied.length > 0) {
         this.metrics.increment("analytics.charts.analyst.denied");
         throw new ApplicationError(
@@ -136,9 +156,22 @@ export class GetAnalystChartsUseCase {
       },
       charts: {
         riskReturnScatter: filteredSources.map(buildRiskReturnPoint),
-        metricDistributions: buildMetricDistributions(filteredSources, selectedMetrics, issues, unavailableChartKeys),
-        rollingVolatility: buildRollingVolatility(filteredSources, rangeStart, unavailableChartKeys),
-        rollingCorrelation: buildRollingCorrelation(filteredSources, rangeStart, unavailableChartKeys),
+        metricDistributions: buildMetricDistributions(
+          filteredSources,
+          selectedMetrics,
+          issues,
+          unavailableChartKeys
+        ),
+        rollingVolatility: buildRollingVolatility(
+          filteredSources,
+          rangeStart,
+          unavailableChartKeys
+        ),
+        rollingCorrelation: buildRollingCorrelation(
+          filteredSources,
+          rangeStart,
+          unavailableChartKeys
+        ),
         sectorExposureHeatmap: buildSectorExposureHeatmap(filteredSources, unavailableChartKeys),
         assetExposureHeatmap: buildAssetExposureHeatmap(filteredSources, unavailableChartKeys),
         benchmarkSensitivity,
@@ -200,9 +233,14 @@ export class GetAnalystChartsUseCase {
       ? await this.teamScopedResourceIds(officeId, query.teamId)
       : undefined;
 
-    const summaries = (await this.portfolios.listVisiblePortfolios(actor.id, actor.role === "admin"))
+    const summaries = (
+      await this.portfolios.listVisiblePortfolios(actor.id, actor.role === "admin")
+    )
       .filter((portfolio) => portfolio.officeId === officeId)
-      .filter((portfolio) => selectedPortfolioIds.length === 0 || selectedPortfolioIds.includes(portfolio.id))
+      .filter(
+        (portfolio) =>
+          selectedPortfolioIds.length === 0 || selectedPortfolioIds.includes(portfolio.id)
+      )
       .filter((portfolio) => !query.clientId || portfolio.clientId === query.clientId)
       .filter((portfolio) => !query.householdId || portfolio.householdId === query.householdId)
       .filter((portfolio) => !query.accountId || portfolio.accountId === query.accountId)
@@ -221,7 +259,9 @@ export class GetAnalystChartsUseCase {
           teamScopedResourceIds.portfolioIds.has(portfolio.id) ||
           teamScopedResourceIds.accountIds.has(portfolio.accountId) ||
           (portfolio.clientId ? teamScopedResourceIds.clientIds.has(portfolio.clientId) : false) ||
-          (portfolio.householdId ? teamScopedResourceIds.householdIds.has(portfolio.householdId) : false)
+          (portfolio.householdId
+            ? teamScopedResourceIds.householdIds.has(portfolio.householdId)
+            : false)
         );
       });
 
@@ -240,10 +280,26 @@ export class GetAnalystChartsUseCase {
       (assignment) => !assignment.revokedAt && assignment.teamId === teamId
     );
     return {
-      portfolioIds: new Set(assignments.filter((entry) => entry.resourceType === "portfolio").map((entry) => entry.resourceId)),
-      accountIds: new Set(assignments.filter((entry) => entry.resourceType === "account").map((entry) => entry.resourceId)),
-      clientIds: new Set(assignments.filter((entry) => entry.resourceType === "client").map((entry) => entry.resourceId)),
-      householdIds: new Set(assignments.filter((entry) => entry.resourceType === "household").map((entry) => entry.resourceId))
+      portfolioIds: new Set(
+        assignments
+          .filter((entry) => entry.resourceType === "portfolio")
+          .map((entry) => entry.resourceId)
+      ),
+      accountIds: new Set(
+        assignments
+          .filter((entry) => entry.resourceType === "account")
+          .map((entry) => entry.resourceId)
+      ),
+      clientIds: new Set(
+        assignments
+          .filter((entry) => entry.resourceType === "client")
+          .map((entry) => entry.resourceId)
+      ),
+      householdIds: new Set(
+        assignments
+          .filter((entry) => entry.resourceType === "household")
+          .map((entry) => entry.resourceId)
+      )
     };
   }
 
@@ -335,7 +391,11 @@ export class GetAnalystChartsUseCase {
         });
       }
     }
-    return cells.sort((left, right) => left.portfolioName.localeCompare(right.portfolioName) || left.symbol.localeCompare(right.symbol));
+    return cells.sort(
+      (left, right) =>
+        left.portfolioName.localeCompare(right.portfolioName) ||
+        left.symbol.localeCompare(right.symbol)
+    );
   }
 }
 
@@ -365,7 +425,11 @@ export class CreateAnalystChartJobUseCase {
         "Idempotency-Key header is required"
       );
     }
-    const requestedPortfolioCount = await this.assertRequestedPortfolioScope(actor, officeId, query);
+    const requestedPortfolioCount = await this.assertRequestedPortfolioScope(
+      actor,
+      officeId,
+      query
+    );
 
     const existing = await this.jobs.findJobByIdempotencyKey(officeId, actor.id, idempotencyKey);
     if (existing) {
@@ -409,15 +473,18 @@ export class CreateAnalystChartJobUseCase {
     query: AnalystChartsQuery
   ): Promise<number> {
     const selectedPortfolioIds = parseList(query.portfolioIds);
-    const visibleOfficePortfolios = (await this.portfolios.listVisiblePortfolios(actor.id, actor.role === "admin"))
-      .filter((portfolio) => portfolio.officeId === officeId);
+    const visibleOfficePortfolios = (
+      await this.portfolios.listVisiblePortfolios(actor.id, actor.role === "admin")
+    ).filter((portfolio) => portfolio.officeId === officeId);
 
     if (selectedPortfolioIds.length === 0) {
       return visibleOfficePortfolios.length;
     }
 
     const visibleIds = new Set(visibleOfficePortfolios.map((portfolio) => portfolio.id));
-    const missingOrDenied = selectedPortfolioIds.filter((portfolioId) => !visibleIds.has(portfolioId));
+    const missingOrDenied = selectedPortfolioIds.filter(
+      (portfolioId) => !visibleIds.has(portfolioId)
+    );
     if (missingOrDenied.length > 0) {
       this.metrics.increment("analytics.charts.analyst.denied");
       throw new ApplicationError(
@@ -443,9 +510,17 @@ export class GetAnalystChartJobUseCase {
     assertAnalystDiagnosticsAccess(actor, evaluation);
     const job = await this.jobs.findJobById(jobId);
     if (!job || job.officeId !== officeId) {
-      throw new ApplicationError("not_found", "analyst_chart_job.not_found", "Analyst chart job not found");
+      throw new ApplicationError(
+        "not_found",
+        "analyst_chart_job.not_found",
+        "Analyst chart job not found"
+      );
     }
-    if (job.expiresAt && job.expiresAt.getTime() < this.now().getTime() && job.status !== "expired") {
+    if (
+      job.expiresAt &&
+      job.expiresAt.getTime() < this.now().getTime() &&
+      job.status !== "expired"
+    ) {
       return { ...job, status: "expired" };
     }
     return job;
@@ -453,7 +528,12 @@ export class GetAnalystChartJobUseCase {
 }
 
 function assertAnalystDiagnosticsAccess(actor: Actor, evaluation: PermissionEvaluation): void {
-  if (actor.role === "admin" || actor.role === "analyst" || evaluation.role === "office_admin" || evaluation.role === "analyst") {
+  if (
+    actor.role === "admin" ||
+    actor.role === "analyst" ||
+    evaluation.role === "office_admin" ||
+    evaluation.role === "analyst"
+  ) {
     return;
   }
   throw new ApplicationError(
@@ -494,8 +574,15 @@ function buildMetricDistributions(
           value: metricValue(metric)
         };
       })
-      .filter((entry): entry is { source: AnalystPortfolioSource; metric: AnalyticsMetric; value: number } => entry.value !== undefined);
-    const unavailable = sources.filter((source) => metricValue(source.snapshot?.metrics[metricKey]) === undefined);
+      .filter(
+        (
+          entry
+        ): entry is { source: AnalystPortfolioSource; metric: AnalyticsMetric; value: number } =>
+          entry.value !== undefined
+      );
+    const unavailable = sources.filter(
+      (source) => metricValue(source.snapshot?.metrics[metricKey]) === undefined
+    );
     if (available.length === 0 && sources.length > 0) {
       issues.push({
         code: "analyst_charts.metric_unavailable",
@@ -510,16 +597,17 @@ function buildMetricDistributions(
       metricKey,
       unit: metricUnit(metricKey),
       buckets: [
-        ...histogramBuckets(available.map((entry) => ({
-          portfolioId: entry.source.portfolio.id,
-          value: metricUnit(metricKey) === "percent" ? entry.value * 100 : entry.value
-        }))),
+        ...histogramBuckets(
+          available.map((entry) => ({
+            portfolioId: entry.source.portfolio.id,
+            value: metricUnit(metricKey) === "percent" ? entry.value * 100 : entry.value
+          }))
+        ),
         ...unavailable.map((source) => ({
           label: "indisponivel",
           count: 1,
           portfolioIds: [source.portfolio.id],
-          unavailableReason:
-            source.snapshot?.metrics[metricKey]?.reason ?? "snapshot_unavailable"
+          unavailableReason: source.snapshot?.metrics[metricKey]?.reason ?? "snapshot_unavailable"
         }))
       ]
     };
@@ -562,15 +650,17 @@ function buildRollingCorrelation(
   rangeStart: string | undefined,
   unavailableChartKeys: Set<string>
 ): AnalystCorrelationPoint[] {
-  const points = sources.flatMap((source) =>
-    (source.snapshot?.correlation ?? []).map((cell) => ({
-      ...source.reference,
-      date: source.snapshot?.asOfDate ?? "",
-      leftSymbol: cell.leftSymbol,
-      rightSymbol: cell.rightSymbol,
-      correlation: cell.correlation
-    }))
-  ).filter((point) => point.date && (!rangeStart || point.date >= rangeStart));
+  const points = sources
+    .flatMap((source) =>
+      (source.snapshot?.correlation ?? []).map((cell) => ({
+        ...source.reference,
+        date: source.snapshot?.asOfDate ?? "",
+        leftSymbol: cell.leftSymbol,
+        rightSymbol: cell.rightSymbol,
+        correlation: cell.correlation
+      }))
+    )
+    .filter((point) => point.date && (!rangeStart || point.date >= rangeStart));
   if (points.length === 0 && sources.length > 0) {
     unavailableChartKeys.add("rollingCorrelation");
   }
@@ -631,7 +721,9 @@ function buildRiskContribution(
   if (points.length === 0 && sources.length > 0) {
     unavailableChartKeys.add("riskContribution");
   }
-  return points.sort((left, right) => (right.riskContributionPercent ?? 0) - (left.riskContributionPercent ?? 0));
+  return points.sort(
+    (left, right) => (right.riskContributionPercent ?? 0) - (left.riskContributionPercent ?? 0)
+  );
 }
 
 function buildConcentrationRanking(
@@ -663,7 +755,9 @@ function buildConcentrationRanking(
     .map((row, index) => ({ ...row, rank: index + 1 }));
 }
 
-function buildDataQualityTimeline(sources: AnalystPortfolioSource[]): AnalystDataQualityTimelinePoint[] {
+function buildDataQualityTimeline(
+  sources: AnalystPortfolioSource[]
+): AnalystDataQualityTimelinePoint[] {
   const points: AnalystDataQualityTimelinePoint[] = [];
   for (const source of sources) {
     if (!source.snapshot) {
@@ -689,12 +783,12 @@ function buildDataQualityTimeline(sources: AnalystPortfolioSource[]): AnalystDat
 
     for (const issue of source.snapshot.dataQuality.issues) {
       points.push({
-          ...source.reference,
-          date: source.snapshot.generatedAt.toISOString().slice(0, 10),
-          status: source.snapshot.status,
-          issueCode: issue.code,
-          severity: issue.severity,
-          message: issue.message
+        ...source.reference,
+        date: source.snapshot.generatedAt.toISOString().slice(0, 10),
+        status: source.snapshot.status,
+        issueCode: issue.code,
+        severity: issue.severity,
+        message: issue.message
       });
     }
   }
@@ -702,14 +796,24 @@ function buildDataQualityTimeline(sources: AnalystPortfolioSource[]): AnalystDat
   return points.filter((point) => point.date.length > 0);
 }
 
-function histogramBuckets(values: Array<{ portfolioId: string; value: number }>): AnalystMetricDistributionBucket[] {
+function histogramBuckets(
+  values: Array<{ portfolioId: string; value: number }>
+): AnalystMetricDistributionBucket[] {
   if (values.length === 0) {
     return [];
   }
   const min = Math.min(...values.map((entry) => entry.value));
   const max = Math.max(...values.map((entry) => entry.value));
   if (min === max) {
-    return [{ label: formatRangeLabel(min, max), min, max, count: values.length, portfolioIds: values.map((entry) => entry.portfolioId) }];
+    return [
+      {
+        label: formatRangeLabel(min, max),
+        min,
+        max,
+        count: values.length,
+        portfolioIds: values.map((entry) => entry.portfolioId)
+      }
+    ];
   }
   const bucketCount = Math.min(4, values.length);
   const step = (max - min) / bucketCount;
@@ -717,7 +821,9 @@ function histogramBuckets(values: Array<{ portfolioId: string; value: number }>)
     const start = min + step * index;
     const end = index === bucketCount - 1 ? max : start + step;
     const inBucket = values.filter((entry) =>
-      index === bucketCount - 1 ? entry.value >= start && entry.value <= end : entry.value >= start && entry.value < end
+      index === bucketCount - 1
+        ? entry.value >= start && entry.value <= end
+        : entry.value >= start && entry.value < end
     );
     return {
       label: formatRangeLabel(start, end),
@@ -744,7 +850,9 @@ function buildReference(portfolio: PortfolioSummary): AnalystPortfolioReference 
 
 function parseMetrics(value: string | undefined): AnalyticsMetricKey[] {
   const requested = parseList(value).filter((entry): entry is AnalyticsMetricKey =>
-    DEFAULT_METRICS.concat(["totalReturn", "annualizedReturn", "sectorExposure"]).includes(entry as AnalyticsMetricKey)
+    DEFAULT_METRICS.concat(["totalReturn", "annualizedReturn", "sectorExposure"]).includes(
+      entry as AnalyticsMetricKey
+    )
   );
   return requested.length > 0 ? requested : DEFAULT_METRICS;
 }
@@ -770,7 +878,11 @@ function sourceQualityStatus(source: AnalystPortfolioSource): AnalystChartDataQu
   if (source.portfolio.freshness === "stale") {
     return "stale";
   }
-  if (!source.snapshot || source.snapshot.status === "partial" || source.portfolio.freshness === "partial") {
+  if (
+    !source.snapshot ||
+    source.snapshot.status === "partial" ||
+    source.portfolio.freshness === "partial"
+  ) {
     return "partial";
   }
   return "complete";
@@ -801,7 +913,11 @@ function metricValue(metric: AnalyticsMetric | undefined): number | undefined {
 }
 
 function metricUnit(metricKey: AnalyticsMetricKey): "percent" | "ratio" | "score" | "currency" {
-  if (["totalReturn", "annualizedReturn", "maxDrawdown", "volatility", "sectorExposure"].includes(metricKey)) {
+  if (
+    ["totalReturn", "annualizedReturn", "maxDrawdown", "volatility", "sectorExposure"].includes(
+      metricKey
+    )
+  ) {
     return "percent";
   }
   if (metricKey === "concentrationHhi") {

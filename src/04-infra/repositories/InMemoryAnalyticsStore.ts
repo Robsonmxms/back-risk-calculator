@@ -68,9 +68,7 @@ export class InMemoryAnalyticsStore implements AnalyticsRepository {
     return [...this.jobs.values()];
   }
 
-  async saveSnapshot(
-    snapshot: PortfolioAnalyticsSnapshot
-  ): Promise<PortfolioAnalyticsSnapshot> {
+  async saveSnapshot(snapshot: PortfolioAnalyticsSnapshot): Promise<PortfolioAnalyticsSnapshot> {
     const key = this.effectiveSnapshotKey(snapshot);
     const existingId = this.snapshotIdByEffectiveKey.get(key);
     if (existingId) {
@@ -82,9 +80,7 @@ export class InMemoryAnalyticsStore implements AnalyticsRepository {
     return snapshot;
   }
 
-  async findLatestSnapshot(
-    portfolioId: string
-  ): Promise<PortfolioAnalyticsSnapshot | undefined> {
+  async findLatestSnapshot(portfolioId: string): Promise<PortfolioAnalyticsSnapshot | undefined> {
     return (await this.listSnapshots(portfolioId))[0];
   }
 
