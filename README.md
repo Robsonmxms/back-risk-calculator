@@ -16,6 +16,9 @@ alertas, notificações, compliance, entrega e eventos SSE.
   de portas do backend.
 - Relatórios, alertas, notificações e SSE locais implementados; filas externas dos demais módulos,
   object storage e realtime endurecido para produção permanecem no roadmap.
+- A configuração ainda é carregada pelo adapter de ambiente em `src/04-infra/config/env.ts`; a
+  centralização validada com AWS Secrets Manager está especificada na feature raiz `1`, mas ainda
+  não foi implementada.
 
 O bootstrap normal começa vazio: não cria identidades nem registros de negócio. Fixtures e fontes
 determinísticas existem somente em testes ou no comando operacional explícito `dev:seeded`.
@@ -27,7 +30,7 @@ Base local: `http://localhost:8000/api/v1` (`GET /health` fica fora do prefixo).
 Os módulos de rota implementados cobrem:
 
 - autenticação por senha, refresh rotativo, logout e ator atual;
-- usuários administrativos, contas e autorização por conta;
+- listagem administrativa somente leitura de usuários, contas e autorização por conta;
 - escritórios, permissões, operações e gráficos operacionais;
 - clientes, grupos familiares, assignments e workbench;
 - portfólios, ledger, posições, snapshots e idempotência;
@@ -41,6 +44,11 @@ Datas de calendário usam `YYYY-MM-DD`; instantes usam RFC 3339. Métricas anual
 sensíveis a amostra exigem 30 retornos e 30 dias de horizonte na versão
 `risk-v2-minimum-sample`. Cotações são frescas por 15 minutos e snapshots analíticos por 24 horas;
 as respostas preservam origem e idade em vez de tratar sucesso do worker como sinônimo de frescor.
+
+O gerenciamento global de identidades implementado limita-se a `GET /api/v1/admin/users`, acessível
+por administradores e com projeção segura. Criação, edição, delegação `admin > analyst > user` e
+listas separadas por classe estão especificadas na feature raiz `2`, mas ainda não existem no
+runtime.
 
 ## Execução local
 
@@ -127,10 +135,10 @@ escopo configurado. Testes usam Vitest e Supertest e não dependem da internet.
 
 ```text
 src/
-  01-domain/        entidades e regras de domínio, analytics, market data e reports/alerts
-  02-application/   casos de uso, portas, contratos de leitura e orquestração
+  01-domain/        entidades e regras dos módulos, incluindo portfolio-imports
+  02-application/   casos de uso, portas, contratos e orquestração por módulo
   03-adapters/      controllers, schemas Joi, middlewares, segurança e observabilidade
-  04-infra/         containers, stores, providers, workers, rotas e banco
+  04-infra/         config, containers, stores, providers, workers, rotas, SQS e banco
   app.ts            composition root e entrypoints HTTP/Serverless
 scripts/            boot seeded, banco, guards e smokes operacionais
 tests/              helpers, unitários e integrações
@@ -138,4 +146,5 @@ tests/              helpers, unitários e integrações
 
 Veja também [fronteiras de Clean Architecture](docs/architecture/clean-architecture.md),
 [prontidão AWS](docs/aws-serverless-readiness.md) e
-[branch protection](docs/branch-protection.md). Licença MIT em [LICENSE](LICENSE).
+[branch protection](docs/branch-protection.md). O contexto e as features ativas ficam somente em
+`../.specs/` na raiz do workspace. Licença MIT em [LICENSE](LICENSE).
