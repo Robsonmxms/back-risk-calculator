@@ -10,7 +10,6 @@ describe("serverless handler", () => {
       ...originalEnv,
       ACCESS_TOKEN_SECRET: "lambda-test-secret",
       CORS_ALLOWED_ORIGINS: "https://app.example.com",
-      GOOGLE_OAUTH_MOCK_TOKENS: "false",
       NODE_ENV: "staging"
     };
   });

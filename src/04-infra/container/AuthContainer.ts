@@ -1,4 +1,3 @@
-import { GoogleLoginUseCase } from "../../02-application/auth/use-cases/google-login-use-case";
 import { LoginUseCase } from "../../02-application/auth/use-cases/login-use-case";
 import { LogoutUseCase } from "../../02-application/auth/use-cases/logout-use-case";
 import { RefreshSessionUseCase } from "../../02-application/auth/use-cases/refresh-session-use-case";
@@ -9,7 +8,6 @@ export interface AuthContainer {
   controller: AuthController;
   useCases: {
     loginUseCase: LoginUseCase;
-    googleLoginUseCase: GoogleLoginUseCase;
     logoutUseCase: LogoutUseCase;
     refreshSessionUseCase: RefreshSessionUseCase;
   };
@@ -19,13 +17,6 @@ export function buildAuthContainer(shared: SharedContainer): AuthContainer {
   const loginUseCase = new LoginUseCase(
     shared.identityStore,
     shared.passwordHasher,
-    shared.sessionIssuer,
-    shared.logger,
-    shared.metrics
-  );
-  const googleLoginUseCase = new GoogleLoginUseCase(
-    shared.identityStore,
-    shared.googleOAuthVerifier,
     shared.sessionIssuer,
     shared.logger,
     shared.metrics
@@ -48,7 +39,6 @@ export function buildAuthContainer(shared: SharedContainer): AuthContainer {
   );
   const controller = new AuthController(
     loginUseCase,
-    googleLoginUseCase,
     refreshSessionUseCase,
     logoutUseCase
   );
@@ -57,7 +47,6 @@ export function buildAuthContainer(shared: SharedContainer): AuthContainer {
     controller,
     useCases: {
       loginUseCase,
-      googleLoginUseCase,
       logoutUseCase,
       refreshSessionUseCase
     }

@@ -9,7 +9,6 @@ analytics por conta.
 O backend ja possui codigo executavel, testes e rotas HTTP. O escopo implementado hoje e:
 
 - login por email/senha;
-- login Google via verificador configuravel;
 - refresh de sessao com rotacao de refresh token;
 - logout com revogacao do token ativo;
 - identificacao do usuario autenticado;
@@ -33,7 +32,7 @@ refresh tokens no PostgreSQL.
 | Validacao | Joi |
 | Persistencia atual | Store em memoria |
 | Persistencia preparada | PostgreSQL + Knex |
-| Auth | JWT, refresh token rotation, Google OAuth configuravel |
+| Auth | JWT, login por senha e refresh token rotation |
 | Execucao local | `tsx watch` |
 | Serverless | `serverless` + `serverless-offline` |
 | Testes | Vitest + Supertest |
@@ -50,7 +49,6 @@ http://localhost:8000/api/v1
 Rotas implementadas:
 
 - `POST /auth/login`
-- `POST /auth/google`
 - `POST /auth/refresh`
 - `POST /auth/logout`
 - `GET /users/me`
@@ -193,7 +191,6 @@ Use esses scripts para smoke manual de migracao/seed quando o PostgreSQL local e
 - `ACCESS_TOKEN_SECRET`
 - `ACCESS_TOKEN_TTL_SECONDS`
 - `REFRESH_TOKEN_TTL_DAYS`
-- `GOOGLE_OAUTH_MOCK_TOKENS`
 
 ## Testes e comportamento validado
 

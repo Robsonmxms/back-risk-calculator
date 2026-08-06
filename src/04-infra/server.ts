@@ -132,6 +132,14 @@ export function createServer(dependencies: ServerDependencies) {
   );
 
   app.use("/api/v1", apiRouter);
+  app.use("/api/v1", (_request, response) =>
+    response.status(404).json({
+      error: {
+        code: "request.route_not_found",
+        message: "Route not found"
+      }
+    })
+  );
   app.use(errorHandler);
 
   return app;

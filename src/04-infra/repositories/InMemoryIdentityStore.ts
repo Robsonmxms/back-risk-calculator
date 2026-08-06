@@ -171,23 +171,6 @@ export class InMemoryIdentityStore
     );
   }
 
-  async findByGoogleSubject(googleSubject: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.googleSubject === googleSubject
-    );
-  }
-
-  async linkGoogleSubject(userId: string, googleSubject: string): Promise<User | undefined> {
-    const user = this.users.get(userId);
-    if (!user) {
-      return undefined;
-    }
-
-    user.googleSubject = googleSubject;
-    user.updatedAt = new Date();
-    return user;
-  }
-
   async list(): Promise<User[]> {
     return Array.from(this.users.values());
   }
