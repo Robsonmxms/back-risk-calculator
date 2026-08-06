@@ -19,7 +19,6 @@ module.exports = {
         "${env:ACCESS_TOKEN_SECRET, 'dev-only-change-me-risk-calculator-access-token-secret'}",
       ACCESS_TOKEN_TTL_SECONDS: "${env:ACCESS_TOKEN_TTL_SECONDS, '900'}",
       REFRESH_TOKEN_TTL_DAYS: "${env:REFRESH_TOKEN_TTL_DAYS, '30'}",
-      GOOGLE_OAUTH_MOCK_TOKENS: "${env:GOOGLE_OAUTH_MOCK_TOKENS, 'false'}",
       CORS_ALLOWED_ORIGINS: "${env:CORS_ALLOWED_ORIGINS, ''}",
       DATABASE_URL:
         "${env:DATABASE_URL, 'postgres://risk_calculator:risk_calculator@127.0.0.1:5432/risk_calculator_dev'}"

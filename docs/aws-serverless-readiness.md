@@ -36,8 +36,7 @@ Required variables:
 - `DATABASE_URL`
 - `CORS_ALLOWED_ORIGINS`
 
-Production-like stages reject the dev access-token secret and reject
-`GOOGLE_OAUTH_MOCK_TOKENS=true`.
+Production-like stages reject the dev access-token secret.
 
 `CORS_ALLOWED_ORIGINS` is a comma-separated allowlist of exact frontend origins, for example:
 

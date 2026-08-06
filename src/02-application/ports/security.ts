@@ -19,19 +19,3 @@ export interface RefreshTokenGenerator {
   generate(): PlainRefreshToken;
   hash(token: string): string;
 }
-
-export interface GoogleOAuthInput {
-  idToken?: string;
-  code?: string;
-  redirectUri?: string;
-}
-
-export interface VerifiedGoogleIdentity {
-  subject: string;
-  email: string;
-  name: string;
-}
-
-export interface GoogleOAuthVerifier {
-  verify(input: GoogleOAuthInput): Promise<VerifiedGoogleIdentity>;
-}

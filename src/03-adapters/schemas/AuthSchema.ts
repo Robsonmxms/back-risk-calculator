@@ -5,12 +5,6 @@ export const loginSchema = Joi.object({
   password: Joi.string().min(8).required()
 });
 
-export const googleLoginSchema = Joi.object({
-  idToken: Joi.string(),
-  code: Joi.string(),
-  redirectUri: Joi.string().uri()
-}).or("idToken", "code");
-
 export const refreshSchema = Joi.object({
   refreshToken: Joi.string().min(32).required()
 });

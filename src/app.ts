@@ -90,7 +90,6 @@ export async function createApp(dependencies: AppDependencies = {}) {
         accountContainer.useCases.getAccountAnalyticsSummaryUseCase,
       getActorForUserIdUseCase: shared.getActorForUserIdUseCase,
       getCurrentUserUseCase: userContainer.useCases.getCurrentUserUseCase,
-      googleLoginUseCase: authContainer.useCases.googleLoginUseCase,
       listUserPortfoliosUseCase: accountContainer.useCases.listUserPortfoliosUseCase,
       listVisiblePortfoliosUseCase: portfolioContainer.useCases.listVisiblePortfoliosUseCase,
       searchMarketAssetsUseCase: marketDataContainer.useCases.searchAssetsUseCase,

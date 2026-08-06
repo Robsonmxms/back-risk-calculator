@@ -47,6 +47,22 @@ describe("auth and RBAC", () => {
     expect(JSON.stringify(response.body)).not.toContain("passwordHash");
   });
 
+  it("does not expose the removed Google authentication route", async () => {
+    const { app } = await createApp();
+    const response = await request(app).post("/api/v1/auth/google").send({
+      idToken: "legacy-google-token"
+    });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      error: {
+        code: "request.route_not_found",
+        message: "Route not found"
+      }
+    });
+    expect(JSON.stringify(response.body)).not.toMatch(/accessToken|refreshToken/);
+  });
+
   it("rotates refresh tokens and revokes the family when a rotated token is reused", async () => {
     const { app, response: loginResponse } = await login("user@example.com");
     const firstRefreshToken = loginResponse.body.data.refreshToken;

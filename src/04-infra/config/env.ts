@@ -4,7 +4,6 @@ export interface AppConfig {
   accessTokenSecret: string;
   accessTokenTtlSeconds: number;
   refreshTokenTtlDays: number;
-  googleOAuthMockTokens: boolean;
   corsAllowedOrigins: string[];
 }
 
@@ -16,16 +15,12 @@ export function loadConfig(): AppConfig {
   const nodeEnv = process.env.NODE_ENV ?? "development";
   const accessTokenSecret =
     process.env.ACCESS_TOKEN_SECRET ?? DEFAULT_DEV_ACCESS_TOKEN_SECRET;
-  const googleOAuthMockTokens = process.env.GOOGLE_OAUTH_MOCK_TOKENS === "true";
 
   if (PRODUCTION_LIKE_ENVS.has(nodeEnv)) {
     if (!process.env.ACCESS_TOKEN_SECRET || accessTokenSecret === DEFAULT_DEV_ACCESS_TOKEN_SECRET) {
       throw new Error("config.access_token_secret_required");
     }
 
-    if (googleOAuthMockTokens) {
-      throw new Error("config.google_oauth_mock_tokens_forbidden");
-    }
   }
 
   return {
@@ -34,7 +29,6 @@ export function loadConfig(): AppConfig {
     accessTokenSecret,
     accessTokenTtlSeconds: Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900),
     refreshTokenTtlDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? 30),
-    googleOAuthMockTokens,
     corsAllowedOrigins: parseList(process.env.CORS_ALLOWED_ORIGINS)
   };
 }

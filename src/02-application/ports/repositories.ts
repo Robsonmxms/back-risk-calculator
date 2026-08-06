@@ -73,8 +73,6 @@ export interface UserRepository {
   create(input: CreateUserInput): Promise<User>;
   findById(id: string): Promise<User | undefined>;
   findByEmail(email: string): Promise<User | undefined>;
-  findByGoogleSubject(googleSubject: string): Promise<User | undefined>;
-  linkGoogleSubject(userId: string, googleSubject: string): Promise<User | undefined>;
   list(): Promise<User[]>;
 }
 

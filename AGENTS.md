@@ -27,7 +27,7 @@ Specs are not local to this project. Before implementation, read the relevant ro
 | Validation | Joi |
 | Persistence in runtime | In-memory identity/session/portfolio/market-data/analytics/report/alert/notification stores |
 | Persistence prepared | PostgreSQL + Knex migrations/query builder |
-| Auth | JWT access token, refresh token rotation, Google OAuth |
+| Auth | Password login, JWT access token, refresh token rotation |
 | Market data | Backend provider adapters behind ports |
 | Workers | In-process market-data, analytics, report, and alert-evaluation workers |
 | Observability | Lightweight logger and metrics adapters |
@@ -72,7 +72,6 @@ back-risk-calculator/
       controllers/
       schemas/
       middlewares/
-      oauth/
       observability/
       security/
     04-infra/

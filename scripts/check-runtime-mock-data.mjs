@@ -12,10 +12,6 @@ const bootPaths = [
   "src/04-infra/container"
 ];
 
-const allowedBusinessLiteralFiles = new Set([
-  "src/03-adapters/oauth/ConfigurableGoogleOAuthVerifier.ts"
-]);
-
 const prohibitedBusinessLiterals = [
   "Orion Advisory",
   "Família Silva",
@@ -40,11 +36,9 @@ for (const file of listFiles(join(root, "src"))) {
     failures.push(`${relativePath}: imports or calls createSeededIdentityStore from runtime boot`);
   }
 
-  if (!allowedBusinessLiteralFiles.has(relativePath)) {
-    for (const literal of prohibitedBusinessLiterals) {
-      if (content.includes(literal)) {
-        failures.push(`${relativePath}: contains prohibited runtime business literal "${literal}"`);
-      }
+  for (const literal of prohibitedBusinessLiterals) {
+    if (content.includes(literal)) {
+      failures.push(`${relativePath}: contains prohibited runtime business literal "${literal}"`);
     }
   }
 }

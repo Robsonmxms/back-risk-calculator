@@ -10,7 +10,6 @@ services:
       ACCESS_TOKEN_SECRET: docker-local-risk-calculator-access-token-secret
       ACCESS_TOKEN_TTL_SECONDS: "900"
       REFRESH_TOKEN_TTL_DAYS: "30"
-      GOOGLE_OAUTH_MOCK_TOKENS: "true"
       DATABASE_URL: postgres://risk_calculator:risk_calculator@postgres:5432/risk_calculator_dev
     ports:
       - "8000:8000"

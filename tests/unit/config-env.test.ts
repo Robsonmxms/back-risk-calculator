@@ -8,7 +8,6 @@ describe("loadConfig", () => {
     process.env = { ...originalEnv };
     delete process.env.ACCESS_TOKEN_SECRET;
     delete process.env.CORS_ALLOWED_ORIGINS;
-    delete process.env.GOOGLE_OAUTH_MOCK_TOKENS;
     delete process.env.NODE_ENV;
   });
 
@@ -24,7 +23,6 @@ describe("loadConfig", () => {
 
     expect(loadConfig()).toMatchObject({
       nodeEnv: "development",
-      googleOAuthMockTokens: false,
       corsAllowedOrigins: ["https://app.example.com", "https://admin.example.com"]
     });
   });
@@ -35,15 +33,5 @@ describe("loadConfig", () => {
     const { loadConfig } = await import("../../src/04-infra/config/env.js");
 
     expect(() => loadConfig()).toThrow("config.access_token_secret_required");
-  });
-
-  it("rejects Google OAuth mock tokens in production-like runtimes", async () => {
-    process.env.NODE_ENV = "staging";
-    process.env.ACCESS_TOKEN_SECRET = "staging-secret";
-    process.env.GOOGLE_OAUTH_MOCK_TOKENS = "true";
-
-    const { loadConfig } = await import("../../src/04-infra/config/env.js");
-
-    expect(() => loadConfig()).toThrow("config.google_oauth_mock_tokens_forbidden");
   });
 });
