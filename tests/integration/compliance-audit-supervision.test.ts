@@ -14,7 +14,7 @@ async function login(app: Parameters<typeof request>[0], email: string) {
 describe("compliance audit supervision", () => {
   it("lists paginated audit events with office-scoped filters and safe metadata", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const response = await request(app)
       .get("/api/v1/offices/ofc_main/audit-events")
@@ -41,7 +41,7 @@ describe("compliance audit supervision", () => {
   it("denies audit access without audit read permission or office membership", async () => {
     const { app } = await createApp();
     const advisorToken = await login(app, "advisor@example.com");
-    const officeToken = await login(app, "user@example.com");
+    const officeToken = await login(app, "user@risk.local");
 
     const permissionDenied = await request(app)
       .get("/api/v1/offices/ofc_main/audit-events")
@@ -58,7 +58,7 @@ describe("compliance audit supervision", () => {
 
   it("updates supervision reviews and audits the review update", async () => {
     const { app, metrics } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const queueResponse = await request(app)
       .get("/api/v1/offices/ofc_main/supervision-reviews")
@@ -107,7 +107,7 @@ describe("compliance audit supervision", () => {
 
   it("creates immediate audit export jobs and records export audit events", async () => {
     const { app, metrics } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const exportResponse = await request(app)
       .post("/api/v1/offices/ofc_main/audit-exports")

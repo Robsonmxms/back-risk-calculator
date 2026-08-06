@@ -70,7 +70,7 @@ describe("advisor analyst workbench", () => {
   it("keeps review items isolated by office and blocks client access to staff workbench", async () => {
     const { app } = await createApp();
     const clientToken = await login(app, "client@example.com");
-    const userToken = await login(app, "user@example.com");
+    const userToken = await login(app, "user@risk.local");
 
     const clientWorkbench = await request(app)
       .get("/api/v1/offices/ofc_main/workbench")

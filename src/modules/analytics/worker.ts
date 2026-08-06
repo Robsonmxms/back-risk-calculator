@@ -27,6 +27,11 @@ import {
 } from "./formulas";
 import { generateRiskInsights } from "./insights";
 import {
+  ANALYTICS_CALCULATION_VERSION,
+  ANALYTICS_SAMPLE_POLICY,
+  satisfiesAnalyticsSamplePolicy
+} from "./sample-policy";
+import {
   AnalyticsEventPublisher,
   AnalyticsPortfolioProjection,
   AnalyticsRepository
@@ -110,10 +115,17 @@ export class AnalyticsCalculationWorker {
       for (let index = 0; index < savedSnapshot.dataQuality.unavailableMetricCount; index += 1) {
         this.metrics.increment("analytics.calculation.unavailable_metric");
       }
+      const insufficientSamples = savedSnapshot.dataQuality.issues.filter(
+        (issue) => issue.code === "analytics.insufficient_sample"
+      ).length;
+      this.metrics.increment("analytics.calculation.insufficient_sample", insufficientSamples);
       this.logger.info("analytics.calculation.succeeded", {
         portfolioId: job.portfolioId,
         correlationId: job.correlationId,
         status: savedSnapshot.status,
+        observationCount: savedSnapshot.metrics.annualizedReturn.observationCount,
+        effectiveHorizonDays: savedSnapshot.metrics.annualizedReturn.effectiveHorizonDays,
+        calculationVersion: ANALYTICS_CALCULATION_VERSION,
         latencyMs: this.now().getTime() - startedAt
       });
 
@@ -184,20 +196,57 @@ export class AnalyticsCalculationWorker {
     );
     const performance = this.buildPerformanceSeries(resolvedPositions);
     const portfolioReturns = calculatePeriodicReturns(performance.map((point) => point.value));
+    const performanceHorizonDays =
+      performance.length >= 2
+        ? daysBetween(performance[0].date, performance[performance.length - 1].date)
+        : 0;
     const drawdown = calculateDrawdowns(performance);
     const benchmarkReturns = await this.resolveBenchmarkReturns(range, issues);
-    const correlation = calculateCorrelationMatrix(this.buildAssetReturnSeries(resolvedPositions));
+    const assetReturnSeries = this.buildAssetReturnSeries(resolvedPositions);
+    const correlationObservationCount = maximumPairObservationCount(assetReturnSeries);
+    const eligibleCorrelationSeries = new Map(
+      Array.from(assetReturnSeries.entries()).filter(([, returns]) =>
+        satisfiesAnalyticsSamplePolicy(
+          "assetCorrelation",
+          returns.length,
+          performanceHorizonDays
+        )
+      )
+    );
+    const correlation = calculateCorrelationMatrix(eligibleCorrelationSeries);
     const totalReturn = calculateTotalReturn(totalMarketValueUsd, totalCostBasisUsd);
-    const annualizedReturn =
-      performance.length >= 2
+    const annualizedReturn = satisfiesAnalyticsSamplePolicy(
+      "annualizedReturn",
+      portfolioReturns.length,
+      performanceHorizonDays
+    )
         ? calculateAnnualizedReturn(
             performance[performance.length - 1].value / performance[0].value - 1,
-            daysBetween(performance[0].date, performance[performance.length - 1].date)
+            performanceHorizonDays
           )
         : undefined;
-    const volatility = calculateVolatility(portfolioReturns);
-    const beta = calculateBeta(portfolioReturns, benchmarkReturns);
-    const sharpeRatio = calculateSharpeRatio(annualizedReturn, volatility);
+    const volatility = satisfiesAnalyticsSamplePolicy(
+      "volatility",
+      portfolioReturns.length,
+      performanceHorizonDays
+    )
+      ? calculateVolatility(portfolioReturns)
+      : undefined;
+    const betaObservationCount = Math.min(portfolioReturns.length, benchmarkReturns.length);
+    const beta = satisfiesAnalyticsSamplePolicy(
+      "beta",
+      betaObservationCount,
+      performanceHorizonDays
+    )
+      ? calculateBeta(portfolioReturns, benchmarkReturns)
+      : undefined;
+    const sharpeRatio = satisfiesAnalyticsSamplePolicy(
+      "sharpeRatio",
+      portfolioReturns.length,
+      performanceHorizonDays
+    )
+      ? calculateSharpeRatio(annualizedReturn, volatility)
+      : undefined;
     const concentrationHhi = calculateHhi(
       analyticsPositions
         .map((position) => (position.weightPercent ?? 0) / 100)
@@ -208,6 +257,15 @@ export class AnalyticsCalculationWorker {
         ? correlation.reduce((sum, cell) => sum + Math.abs(cell.correlation), 0) /
           correlation.length
         : undefined;
+
+    issues.push(
+      ...samplePolicyIssues({
+        portfolioObservationCount: portfolioReturns.length,
+        betaObservationCount,
+        correlationObservationCount,
+        effectiveHorizonDays: performanceHorizonDays
+      })
+    );
 
     const metrics = this.buildMetrics({
       totalReturn,
@@ -220,6 +278,10 @@ export class AnalyticsCalculationWorker {
       largestSectorWeight: sectorExposure[0]?.weightPercent,
       averageCorrelation,
       performancePointCount: performance.length,
+      performanceObservationCount: portfolioReturns.length,
+      betaObservationCount,
+      correlationObservationCount,
+      effectiveHorizonDays: performanceHorizonDays,
       positionCount: positions.length,
       correlationPairCount: correlation.length,
       issues
@@ -444,7 +506,7 @@ export class AnalyticsCalculationWorker {
         rate: existing.rate,
         providerName: existing.providerName,
         asOf: existing.asOf,
-        updatedAt: this.now()
+        updatedAt: existing.updatedAt
       };
     }
 
@@ -467,7 +529,8 @@ export class AnalyticsCalculationWorker {
       to: "USD",
       rate: rate.rate,
       providerName: rate.providerName,
-      asOf: rate.asOf
+      asOf: rate.asOf,
+      updatedAt: rate.updatedAt
     });
     return rate;
   }
@@ -511,7 +574,7 @@ export class AnalyticsCalculationWorker {
       quantity: position.source.quantity,
       currency: position.source.currency,
       exchange: position.asset?.exchange,
-      sector: position.asset?.sector ?? "Unknown",
+      sector: position.asset?.sector ?? "Não classificado",
       latestPrice: position.quote?.price,
       latestPriceCurrency: position.quote?.currency,
       marketValueUsd: position.marketValueUsd,
@@ -564,7 +627,7 @@ export class AnalyticsCalculationWorker {
       const returns = calculatePeriodicReturns(
         position.historicalPrices.map((price) => price.adjustedClose)
       );
-      if (returns.length > 1) {
+      if (returns.length > 0) {
         returnsBySymbol.set(position.source.assetSymbol, returns);
       }
     }
@@ -583,68 +646,95 @@ export class AnalyticsCalculationWorker {
     largestSectorWeight?: number;
     averageCorrelation?: number;
     performancePointCount: number;
+    performanceObservationCount: number;
+    betaObservationCount: number;
+    correlationObservationCount: number;
+    effectiveHorizonDays: number;
     positionCount: number;
     correlationPairCount: number;
     issues: DataQualityIssue[];
   }): AnalyticsMetricSet {
     return {
       totalReturn: metric("totalReturn", input.totalReturn, {
-        label: "Total return",
+        label: "Retorno total",
         unit: "percent",
-        unavailableReason: "Requires current market value and USD cost basis.",
-        requiredData: ["latest quotes", "position cost basis", "USD conversion rates"]
+        unavailableReason: "Requer valor de mercado atual e custo-base em USD.",
+        requiredData: ["cotações mais recentes", "custo-base das posições", "taxas de conversão para USD"],
+        observationCount: input.positionCount,
+        effectiveHorizonDays: input.effectiveHorizonDays
       }),
       annualizedReturn: metric("annualizedReturn", input.annualizedReturn, {
-        label: "Annualized return",
+        label: "Retorno anualizado",
         unit: "percent",
-        unavailableReason: "Requires at least two historical portfolio value points.",
-        requiredData: ["historical prices", "USD conversion rates"]
+        unavailableReason: minimumSampleReason("annualizedReturn"),
+        unavailableReasonCode: "analytics.insufficient_sample",
+        requiredData: ["preços históricos", "taxas de conversão para USD"],
+        observationCount: input.performanceObservationCount,
+        effectiveHorizonDays: input.effectiveHorizonDays
       }),
       maxDrawdown: metric("maxDrawdown", input.maxDrawdown, {
-        label: "Max drawdown",
+        label: "Drawdown máximo",
         unit: "percent",
-        unavailableReason: "Requires at least two historical portfolio value points.",
-        requiredData: ["historical prices", "USD conversion rates"]
+        unavailableReason: "Requer ao menos dois pontos históricos do valor do portfólio.",
+        requiredData: ["preços históricos", "taxas de conversão para USD"],
+        observationCount: input.performancePointCount,
+        effectiveHorizonDays: input.effectiveHorizonDays
       }),
       volatility: metric("volatility", input.volatility, {
-        label: "Volatility",
+        label: "Volatilidade",
         unit: "percent",
-        unavailableReason: "Requires at least two portfolio return observations.",
-        requiredData: ["historical prices", "USD conversion rates"]
+        unavailableReason: minimumSampleReason("volatility"),
+        unavailableReasonCode: "analytics.insufficient_sample",
+        requiredData: ["preços históricos", "taxas de conversão para USD"],
+        observationCount: input.performanceObservationCount,
+        effectiveHorizonDays: input.effectiveHorizonDays
       }),
       beta: metric("beta", input.beta, {
         label: "Beta",
         unit: "ratio",
-        unavailableReason: `Requires portfolio returns and ${BENCHMARK_SYMBOL} benchmark returns.`,
-        requiredData: ["historical prices", `${BENCHMARK_SYMBOL} benchmark history`]
+        unavailableReason: minimumSampleReason("beta"),
+        unavailableReasonCode: "analytics.insufficient_sample",
+        requiredData: ["preços históricos", `histórico do benchmark ${BENCHMARK_SYMBOL}`],
+        observationCount: input.betaObservationCount,
+        effectiveHorizonDays: input.effectiveHorizonDays
       }),
       sharpeRatio: metric("sharpeRatio", input.sharpeRatio, {
-        label: "Sharpe ratio",
+        label: "Índice de Sharpe",
         unit: "ratio",
-        unavailableReason: "Requires annualized return and volatility.",
-        requiredData: ["annualized return", "volatility"]
+        unavailableReason: minimumSampleReason("sharpeRatio"),
+        unavailableReasonCode: "analytics.insufficient_sample",
+        requiredData: ["retorno anualizado", "volatilidade"],
+        observationCount: input.performanceObservationCount,
+        effectiveHorizonDays: input.effectiveHorizonDays
       }),
       concentrationHhi: metric("concentrationHhi", input.concentrationHhi, {
-        label: "Concentration HHI",
+        label: "Concentração HHI",
         unit: "score",
-        unavailableReason: "Requires current USD market values.",
-        requiredData: ["latest quotes", "USD conversion rates"]
+        unavailableReason: "Requer valores de mercado atuais em USD.",
+        requiredData: ["cotações mais recentes", "taxas de conversão para USD"],
+        observationCount: input.positionCount,
+        effectiveHorizonDays: input.effectiveHorizonDays
       }),
       sectorExposure: metric(
         "sectorExposure",
         input.largestSectorWeight === undefined ? undefined : input.largestSectorWeight / 100,
         {
-          label: "Largest sector exposure",
+          label: "Maior exposição setorial",
           unit: "percent",
-          unavailableReason: "Requires at least one position with current market value.",
-          requiredData: ["asset metadata", "latest quotes", "USD conversion rates"]
+          unavailableReason: "Requer ao menos uma posição com valor de mercado atual.",
+          requiredData: ["metadados do ativo", "cotações mais recentes", "taxas de conversão para USD"],
+          observationCount: input.positionCount,
+          effectiveHorizonDays: input.effectiveHorizonDays
         }
       ),
       assetCorrelation: metric("assetCorrelation", input.averageCorrelation, {
-        label: "Average asset correlation",
+        label: "Correlação média entre ativos",
         unit: "ratio",
-        unavailableReason: "Requires at least two assets with historical return observations.",
-        requiredData: ["historical prices for two or more assets"]
+        unavailableReason: minimumSampleReason("assetCorrelation"),
+        unavailableReasonCode: "analytics.insufficient_sample",
+        requiredData: ["preços históricos de dois ou mais ativos"],
+        observationCount: input.correlationObservationCount,
+        effectiveHorizonDays: input.effectiveHorizonDays
       })
     };
   }
@@ -657,7 +747,10 @@ function metric(
     label: string;
     unit: AnalyticsMetric["unit"];
     unavailableReason: string;
+    unavailableReasonCode?: string;
     requiredData: string[];
+    observationCount: number;
+    effectiveHorizonDays: number;
   }
 ): AnalyticsMetric {
   return {
@@ -667,31 +760,75 @@ function metric(
     status: value === undefined || Number.isNaN(value) ? "unavailable" : "available",
     value: value === undefined || Number.isNaN(value) ? undefined : round(value, 6),
     reason: value === undefined || Number.isNaN(value) ? options.unavailableReason : undefined,
+    reasonCode:
+      value === undefined || Number.isNaN(value) ? options.unavailableReasonCode : undefined,
+    observationCount: options.observationCount,
+    effectiveHorizonDays: options.effectiveHorizonDays,
+    calculationVersion: ANALYTICS_CALCULATION_VERSION,
     assumptions: assumptionsFor(key),
     requiredData: options.requiredData
   };
 }
 
+function minimumSampleReason(metricKey: keyof typeof ANALYTICS_SAMPLE_POLICY): string {
+  const policy = ANALYTICS_SAMPLE_POLICY[metricKey];
+  return `Requer ao menos ${policy.minimumObservations} retornos e ${policy.minimumHorizonDays} dias de horizonte efetivo.`;
+}
+
+function samplePolicyIssues(input: {
+  portfolioObservationCount: number;
+  betaObservationCount: number;
+  correlationObservationCount: number;
+  effectiveHorizonDays: number;
+}): DataQualityIssue[] {
+  const samples = [
+    ["annualizedReturn", input.portfolioObservationCount],
+    ["volatility", input.portfolioObservationCount],
+    ["beta", input.betaObservationCount],
+    ["sharpeRatio", input.portfolioObservationCount],
+    ["assetCorrelation", input.correlationObservationCount]
+  ] as const;
+
+  return samples
+    .filter(
+      ([metricKey, observations]) =>
+        !satisfiesAnalyticsSamplePolicy(metricKey, observations, input.effectiveHorizonDays)
+    )
+    .map(([metricKey, observations]) => ({
+      code: "analytics.insufficient_sample",
+      severity: "blocking" as const,
+      message: `${minimumSampleReason(metricKey)} Amostra atual: ${observations} retornos em ${input.effectiveHorizonDays} dias.`,
+      metricKeys: [metricKey]
+    }));
+}
+
+function maximumPairObservationCount(series: Map<string, number[]>): number {
+  const lengths = Array.from(series.values())
+    .map((returns) => returns.length)
+    .sort((left, right) => right - left);
+  return lengths.length >= 2 ? Math.min(lengths[0], lengths[1]) : 0;
+}
+
 function assumptionsFor(key: AnalyticsMetricKey): string[] {
   switch (key) {
     case "totalReturn":
-      return ["Current market value and cost basis are converted to USD at calculation time."];
+      return ["O valor de mercado atual e o custo-base são convertidos para USD no cálculo."];
     case "annualizedReturn":
-      return ["Historical portfolio values use current holdings and latest available FX rates."];
+      return ["Os valores históricos usam as posições atuais e as taxas de câmbio disponíveis."];
     case "maxDrawdown":
-      return ["Drawdown is measured within the available historical price window."];
+      return ["O drawdown é medido na janela histórica de preços disponível."];
     case "volatility":
-      return ["Simple daily returns are annualized with 252 trading periods."];
+      return ["Retornos diários simples são anualizados com 252 pregões."];
     case "beta":
-      return [`${BENCHMARK_SYMBOL} is the benchmark until a configurable benchmark source exists.`];
+      return [`${BENCHMARK_SYMBOL} é o benchmark enquanto não houver configuração por portfólio.`];
     case "sharpeRatio":
-      return ["Risk-free rate is 0 until a treasury-rate source is configured."];
+      return ["A taxa livre de risco é 0 até existir uma fonte configurada."];
     case "concentrationHhi":
-      return ["HHI uses current USD market-value weights."];
+      return ["O HHI usa os pesos atuais por valor de mercado em USD."];
     case "sectorExposure":
-      return ["Missing sector metadata is grouped as Unknown."];
+      return ["Ativos sem metadados de setor são agrupados como Não classificado."];
     case "assetCorrelation":
-      return ["Correlation uses pairwise aligned simple daily returns."];
+      return ["A correlação usa retornos diários simples alinhados por par."];
   }
 }
 

@@ -14,7 +14,7 @@ async function login(app: Parameters<typeof request>[0], email: string) {
 describe("advisory team permissions", () => {
   it("returns the office permission matrix for the authenticated actor", async () => {
     const { app } = await createApp();
-    const token = await login(app, "analyst@example.com");
+    const token = await login(app, "analyst@risk.local");
 
     const response = await request(app)
       .get("/api/v1/me/permissions")
@@ -34,7 +34,7 @@ describe("advisory team permissions", () => {
 
   it("allows office admins to manage teams and assignments", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const teamResponse = await request(app)
       .post("/api/v1/offices/ofc_main/teams")
@@ -99,8 +99,8 @@ describe("advisory team permissions", () => {
 
   it("denies team management outside office member management permission", async () => {
     const { app } = await createApp();
-    const analystToken = await login(app, "analyst@example.com");
-    const userToken = await login(app, "user@example.com");
+    const analystToken = await login(app, "analyst@risk.local");
+    const userToken = await login(app, "user@risk.local");
 
     const deniedByRole = await request(app)
       .post("/api/v1/offices/ofc_main/teams")
@@ -118,8 +118,8 @@ describe("advisory team permissions", () => {
 
   it("blocks analyst ledger writes until an explicit portfolio assignment grants them", async () => {
     const { app } = await createApp();
-    const officeAdminToken = await login(app, "user@example.com");
-    const analystToken = await login(app, "analyst@example.com");
+    const officeAdminToken = await login(app, "user@risk.local");
+    const analystToken = await login(app, "analyst@risk.local");
 
     const deniedWrite = await request(app)
       .post("/api/v1/portfolios/prt_main/transactions")

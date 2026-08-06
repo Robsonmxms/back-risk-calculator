@@ -39,6 +39,10 @@ export interface AnalyticsMetric {
   status: AnalyticsMetricStatus;
   value?: number;
   reason?: string;
+  reasonCode?: string;
+  observationCount: number;
+  effectiveHorizonDays: number;
+  calculationVersion: string;
   assumptions: string[];
   requiredData: string[];
 }
@@ -113,6 +117,7 @@ export interface CurrencyConversionAudit {
   rate: number;
   providerName: string;
   asOf: Date;
+  updatedAt: Date;
 }
 
 export interface PortfolioAnalyticsSnapshot {

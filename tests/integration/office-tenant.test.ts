@@ -14,7 +14,7 @@ async function login(app: Parameters<typeof request>[0], email: string) {
 describe("office tenant model", () => {
   it("adds office memberships to the authenticated actor", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const response = await request(app)
       .get("/api/v1/users/me")
@@ -32,8 +32,8 @@ describe("office tenant model", () => {
 
   it("lists visible offices and keeps tenant metadata isolated", async () => {
     const { app } = await createApp();
-    const userToken = await login(app, "user@example.com");
-    const adminToken = await login(app, "admin@example.com");
+    const userToken = await login(app, "user@risk.local");
+    const adminToken = await login(app, "admin@risk.local");
 
     const userResponse = await request(app)
       .get("/api/v1/offices")
@@ -60,7 +60,7 @@ describe("office tenant model", () => {
 
   it("denies cross-office office and portfolio access", async () => {
     const { app } = await createApp();
-    const userToken = await login(app, "user@example.com");
+    const userToken = await login(app, "user@risk.local");
 
     const officeResponse = await request(app)
       .get("/api/v1/offices/ofc_private")
@@ -77,8 +77,8 @@ describe("office tenant model", () => {
 
   it("allows office admins to inspect members and update office settings", async () => {
     const { app } = await createApp();
-    const userToken = await login(app, "user@example.com");
-    const analystToken = await login(app, "analyst@example.com");
+    const userToken = await login(app, "user@risk.local");
+    const analystToken = await login(app, "analyst@risk.local");
 
     const membersResponse = await request(app)
       .get("/api/v1/offices/ofc_main/members")

@@ -904,6 +904,8 @@ export async function createSeededIdentityStore(
       freshness: "fresh",
       analyticsState: "ready",
       marketDataState: "ready",
+      analyticsAsOf: new Date("2026-07-15T12:00:00.000Z"),
+      marketDataAsOf: new Date("2026-07-15T12:00:00.000Z"),
       warnings: []
     },
     [

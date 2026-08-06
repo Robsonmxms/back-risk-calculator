@@ -10,6 +10,10 @@ import {
   calculateTotalReturn,
   calculateVolatility
 } from "../../src/modules/analytics/formulas";
+import {
+  ANALYTICS_SAMPLE_POLICY,
+  satisfiesAnalyticsSamplePolicy
+} from "../../src/modules/analytics/sample-policy";
 
 describe("analytics formulas", () => {
   it("calculates return, annualized return and drawdown from value series", () => {
@@ -49,5 +53,21 @@ describe("analytics formulas", () => {
         correlation: 1
       })
     ]);
+  });
+
+  it("enforces analytics observation and horizon thresholds at their boundaries", () => {
+    expect(ANALYTICS_SAMPLE_POLICY.annualizedReturn).toEqual({
+      minimumObservations: 30,
+      minimumHorizonDays: 30
+    });
+
+    for (const metric of Object.keys(ANALYTICS_SAMPLE_POLICY) as Array<
+      keyof typeof ANALYTICS_SAMPLE_POLICY
+    >) {
+      expect(satisfiesAnalyticsSamplePolicy(metric, 29, 30)).toBe(false);
+      expect(satisfiesAnalyticsSamplePolicy(metric, 30, 29)).toBe(false);
+      expect(satisfiesAnalyticsSamplePolicy(metric, 30, 30)).toBe(true);
+      expect(satisfiesAnalyticsSamplePolicy(metric, 31, 31)).toBe(true);
+    }
   });
 });

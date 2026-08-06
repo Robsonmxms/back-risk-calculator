@@ -19,7 +19,9 @@
     "prepare": "husky",
     "db:migrate:dev": "tsx scripts/migrate-dev-database.ts",
     "db:seed:dev": "tsx scripts/seed-dev-database.ts",
+    "smoke:fx:real": "tsx scripts/smoke-real-fx-provider.ts",
     "test": "vitest run",
+    "test:risk": "vitest run tests/unit/analytics-formulas.test.ts tests/unit/freshness-policy.test.ts tests/unit/yahoo-finance-market-data-provider.test.ts tests/integration/analytics-risk-engine.test.ts tests/integration/market-data-ingestion.test.ts tests/integration/reports-alerts-realtime.test.ts tests/integration/security-contract-hardening.test.ts",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"
   },

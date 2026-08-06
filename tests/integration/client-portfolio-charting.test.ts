@@ -18,7 +18,7 @@ import {
 
 const fixedNow = () => new Date("2026-07-15T12:00:00.000Z");
 
-async function login(app: Parameters<typeof request>[0], email = "user@example.com") {
+async function login(app: Parameters<typeof request>[0], email = "user@risk.local") {
   const response = await request(app).post("/api/v1/auth/login").send({
     email,
     password: "Password123!"
@@ -151,7 +151,8 @@ describe("client portfolio charting", () => {
     expect(response.status).toBe(200);
     expectProtectedNoStore(response);
     expect(response.body.meta.sourceSnapshotId).toEqual(expect.any(String));
-    expect(response.body.data.dataQuality.status).toBe("complete");
+    expect(response.body.data.dataQuality.status).toBe("partial");
+    expect(response.body.data.dataQuality.unavailableChartKeys).toContain("correlation");
     expect(response.body.data.charts.assetPrices).toHaveLength(3);
     expect(response.body.data.charts.assetPrices[0]).toEqual(
       expect.objectContaining({
@@ -206,7 +207,7 @@ describe("client portfolio charting", () => {
 
   it("uses the same stable authorization error for missing and out-of-scope chart requests", async () => {
     const { app } = await createApp();
-    const otherToken = await login(app, "other@example.com");
+    const otherToken = await login(app, "other@risk.local");
 
     const outOfScope = await request(app)
       .get("/api/v1/portfolios/prt_main/charts")

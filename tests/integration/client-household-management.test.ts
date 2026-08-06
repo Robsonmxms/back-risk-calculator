@@ -14,7 +14,7 @@ async function login(app: Parameters<typeof request>[0], email: string) {
 describe("client household management", () => {
   it("lists clients with search and contract-backed filters", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const searchResponse = await request(app)
       .get("/api/v1/offices/ofc_main/clients")
@@ -41,7 +41,7 @@ describe("client household management", () => {
 
   it("returns client detail with household, accounts, portfolios, and portfolio client links", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const clientResponse = await request(app)
       .get("/api/v1/clients/client_main")
@@ -74,7 +74,7 @@ describe("client household management", () => {
 
   it("creates households and clients, then archives without deleting linked history", async () => {
     const { app } = await createApp();
-    const token = await login(app, "user@example.com");
+    const token = await login(app, "user@risk.local");
 
     const householdResponse = await request(app)
       .post("/api/v1/offices/ofc_main/households")
@@ -118,7 +118,7 @@ describe("client household management", () => {
 
   it("denies cross-office client reads and mutations without client management permission", async () => {
     const { app } = await createApp();
-    const officeToken = await login(app, "user@example.com");
+    const officeToken = await login(app, "user@risk.local");
     const assistantToken = await login(app, "assistant@example.com");
 
     const crossOfficeResponse = await request(app)

@@ -30,10 +30,11 @@ export function generateRiskInsights(input: {
     insights.push({
       id: randomUUID(),
       severity: "watch",
-      title: "Concentracao por ativo elevada",
-      explanation: `${largestPosition.assetSymbol} representa ${largestPosition.weightPercent.toFixed(
+      title: "Concentração por ativo elevada",
+      explanation: `${largestPosition.assetSymbol} representa ${formatNumber(
+        largestPosition.weightPercent,
         1
-      )}% do valor estimado em USD. Isso aumenta a sensibilidade do portfolio a eventos especificos desse ativo.`,
+      )}% do valor estimado em USD. Isso aumenta a sensibilidade do portfólio a eventos específicos desse ativo.`,
       metricKeys: ["concentrationHhi"],
       symbols: [largestPosition.assetSymbol]
     });
@@ -44,10 +45,11 @@ export function generateRiskInsights(input: {
     insights.push({
       id: randomUUID(),
       severity: "watch",
-      title: "Concentracao agregada em observacao",
-      explanation: `O HHI de ${hhi.toFixed(
+      title: "Concentração agregada em observação",
+      explanation: `O HHI de ${formatNumber(
+        hhi,
         3
-      )} indica que a distribuicao de pesos esta concentrada. A leitura e explicativa e deve ser combinada com o mandato do portfolio.`,
+      )} indica concentração na distribuição dos pesos. A leitura é explicativa e deve ser combinada com o mandato do portfólio.`,
       metricKeys: ["concentrationHhi"]
     });
   }
@@ -57,10 +59,11 @@ export function generateRiskInsights(input: {
     insights.push({
       id: randomUUID(),
       severity: "watch",
-      title: "Exposicao setorial concentrada",
-      explanation: `${largestSector.sector} concentra ${largestSector.weightPercent.toFixed(
+      title: "Exposição setorial concentrada",
+      explanation: `${localizeSector(largestSector.sector)} concentra ${formatNumber(
+        largestSector.weightPercent,
         1
-      )}% do portfolio em USD. Choques nesse setor podem explicar parte relevante da volatilidade total.`,
+      )}% do portfólio em USD. Choques nesse setor podem explicar parte relevante da volatilidade total.`,
       metricKeys: ["sectorExposure"]
     });
   }
@@ -71,9 +74,10 @@ export function generateRiskInsights(input: {
       id: randomUUID(),
       severity: "high",
       title: "Drawdown recente material",
-      explanation: `O maior drawdown calculado foi ${(maxDrawdown * 100).toFixed(
+      explanation: `O maior drawdown calculado foi ${formatNumber(
+        maxDrawdown * 100,
         1
-      )}%. Essa medida descreve perda desde pico historico da janela analisada, sem projetar perdas futuras.`,
+      )}%. Essa medida descreve a perda desde o pico histórico da janela analisada, sem projetar perdas futuras.`,
       metricKeys: ["maxDrawdown"]
     });
   }
@@ -84,10 +88,28 @@ export function generateRiskInsights(input: {
       severity: "info",
       title: "Leitura parcial de dados",
       explanation:
-        "Algumas metricas dependem de cotacoes, historico ou cambio indisponiveis. O snapshot preserva os valores calculaveis e sinaliza as lacunas de qualidade.",
+        "Algumas métricas dependem de cotações, histórico ou câmbio indisponíveis. O retrato de risco preserva os valores calculáveis e sinaliza as lacunas de qualidade.",
       metricKeys: input.dataQualityIssues.flatMap((issue) => issue.metricKeys ?? [])
     });
   }
 
   return insights;
+}
+
+function formatNumber(value: number, fractionDigits: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits
+  }).format(value);
+}
+
+function localizeSector(value: string): string {
+  const labels: Record<string, string> = {
+    Energy: "Energia",
+    Financials: "Serviços financeiros",
+    Materials: "Materiais",
+    "Real Estate": "Imobiliário",
+    Technology: "Tecnologia"
+  };
+  return labels[value] ?? value;
 }

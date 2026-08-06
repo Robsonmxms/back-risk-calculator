@@ -25,7 +25,7 @@ Specs are not local to this project. Before implementation, read the relevant ro
 | Language | TypeScript |
 | API | Express 5 |
 | Validation | Joi |
-| Persistence in runtime | In-memory identity/session/portfolio/market-data/analytics/report/alert/notification stores |
+| Persistence in runtime | Empty-by-default in-memory stores across the implemented domain modules |
 | Persistence prepared | PostgreSQL + Knex migrations/query builder |
 | Auth | Password login, JWT access token, refresh token rotation |
 | Market data | Backend provider adapters behind ports |
@@ -58,16 +58,27 @@ back-risk-calculator/
   src/
     01-domain/
       accounts/
+      advisory/
       auth/
+      clients/
+      compliance/
+      delivery/
+      offices/
       portfolios/
       users/
+      workbench/
     02-application/
       accounts/
       auth/
+      clients/
+      compliance/
+      delivery/
       errors/
+      offices/
       portfolios/
       ports/
       users/
+      workbench/
     03-adapters/
       controllers/
       schemas/

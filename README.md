@@ -1,126 +1,46 @@
 # back-risk-calculator
 
-Backend em TypeScript + Express do Risk Calculator. No estado atual, este projeto implementa
-autenticacao, sessao com refresh token rotativo, RBAC e um endpoint protegido de resumo de
-analytics por conta.
+API TypeScript + Express do Risk Calculator. O backend é a fonte de verdade para autenticação,
+autorização, escritórios/clientes, contas, portfólios, dados de mercado, analytics, relatórios,
+alertas, notificações, compliance, entrega e eventos SSE.
 
-## Estado atual
+## Estado e arquitetura
 
-O backend ja possui codigo executavel, testes e rotas HTTP. O escopo implementado hoje e:
+- Node.js 26.5+, TypeScript, Express 5 e Joi.
+- Clean Architecture: `04-infra -> 03-adapters -> 02-application -> 01-domain`.
+- Stores e workers em processo para o runtime local.
+- PostgreSQL/Knex preparado para migrações e seed operacional, ainda não usado como repositório
+  durável por todos os módulos do runtime.
+- Yahoo Finance como fonte primária de mercado/FX e Open ER API como fallback de FX, sempre atrás
+  de portas do backend.
+- Relatórios, alertas, notificações e SSE locais implementados; filas externas, object storage e
+  realtime endurecido para produção permanecem no roadmap.
 
-- login por email/senha;
-- refresh de sessao com rotacao de refresh token;
-- logout com revogacao do token ativo;
-- identificacao do usuario autenticado;
-- RBAC para rotas globais e por conta;
-- listagem administrativa de usuarios;
-- resumo de analytics por conta;
-- health check em `/health`.
+O bootstrap normal começa vazio: não cria identidades nem registros de negócio. Fixtures e fontes
+determinísticas existem somente em testes ou no comando operacional explícito `dev:seeded`.
 
-Persistencia de identidade e sessoes ainda esta em memoria via
-`src/04-infra/repositories/InMemoryIdentityStore.ts`. O projeto ja contem migracao Knex e
-`DATABASE_URL` no `docker-compose.yml`, mas a API local ainda nao grava usuarios, memberships ou
-refresh tokens no PostgreSQL.
+## API
 
-## Stack atual
+Base local: `http://localhost:8000/api/v1` (`GET /health` fica fora do prefixo).
 
-| Camada | Tecnologia |
-| --- | --- |
-| Runtime | Node.js 26.5.0+ |
-| Linguagem | TypeScript |
-| API | Express 5 |
-| Validacao | Joi |
-| Persistencia atual | Store em memoria |
-| Persistencia preparada | PostgreSQL + Knex |
-| Auth | JWT, login por senha e refresh token rotation |
-| Execucao local | `tsx watch` |
-| Serverless | `serverless` + `serverless-offline` |
-| Testes | Vitest + Supertest |
-| Pacotes | Yarn 4.17.1 via `packageManager` |
+Os módulos de rota implementados cobrem:
 
-## Rotas disponiveis
+- autenticação por senha, refresh rotativo, logout e ator atual;
+- usuários administrativos, contas e autorização por conta;
+- escritórios, permissões, operações e gráficos operacionais;
+- clientes, grupos familiares, assignments e workbench;
+- portfólios, ledger, posições, snapshots e idempotência;
+- busca/cotação/histórico de mercado, exchanges, FX, refresh e status de providers;
+- analytics, recomputação, snapshots, qualidade de dados e diagnósticos;
+- relatórios/downloads, alertas, notificações e SSE autorizado;
+- compliance, auditoria, revisões e entrega/portal de relatórios.
 
-Base local:
+Datas de calendário usam `YYYY-MM-DD`; instantes usam RFC 3339. Métricas anualizadas e de risco
+sensíveis a amostra exigem 30 retornos e 30 dias de horizonte na versão
+`risk-v2-minimum-sample`. Cotações são frescas por 15 minutos e snapshots analíticos por 24 horas;
+as respostas preservam origem e idade em vez de tratar sucesso do worker como sinônimo de frescor.
 
-```text
-http://localhost:8000/api/v1
-```
-
-Rotas implementadas:
-
-- `POST /auth/login`
-- `POST /auth/refresh`
-- `POST /auth/logout`
-- `GET /users/me`
-- `GET /admin/users`
-- `GET /accounts/:accountId/analytics/summary`
-
-## Caminho de QA local
-
-O bootstrap normal da API nao popula registros de negocio. Isso evita que o runtime local ou
-produtivo dependa de fixtures acopladas ao boot da aplicacao.
-
-Para QA automatizado, os testes usam `tests/helpers/createSeededTestApp` e
-`tests/helpers/seededIdentityStore.ts`. Esse caminho e explicito, test-only e cobre login,
-usuario atual, RBAC, portfolio ledger, analytics, market data, reports, alerts, notifications,
-delivery, compliance e workbench sem importar seed para `src/`.
-
-Para QA manual no navegador com a mesma massa semeada e graficos prontos, rode a API com:
-
-```bash
-yarn dev:seeded
-```
-
-Esse script e um bootstrap operacional explicito: ele usa a store semeada de testes, um provider
-de mercado deterministico, recalcula os snapshots de analytics de `prt_main` e `prt_income`, e
-preenche reports, alertas e notificacoes locais antes de abrir a porta `8000`.
-
-Usuarios disponiveis no helper de QA:
-
-- `admin@risk.local`
-- `analyst@risk.local`
-- `advisor@example.com`
-- `assistant@example.com`
-- `client@example.com`
-- `user@risk.local`
-- `other@risk.local`
-
-Senha padrao do helper:
-
-```text
-Password123!
-```
-
-Contas e portfolios principais do helper:
-
-- `acct_main`
-- `acct_income`
-- `prt_main`
-
-## Estrutura do projeto
-
-```text
-back-risk-calculator/
-  src/
-    01-domain/
-    02-application/
-    03-adapters/
-    04-infra/
-    app.ts
-  scripts/
-  tests/
-    integration/
-```
-
-Direcao de dependencias:
-
-```text
-04-infra -> 03-adapters -> 02-application -> 01-domain
-```
-
-## Desenvolvimento local
-
-Use Node e Yarn nas versoes do projeto:
+## Execução local
 
 ```bash
 nvm use
@@ -129,48 +49,18 @@ yarn install
 yarn dev
 ```
 
-Use `yarn` para instalar dependencias e executar scripts; o projeto declara `packageManager`
-como `yarn@4.17.1` e usa `nodeLinker: node-modules`.
+Modos distintos:
 
-Comandos uteis:
+- `yarn dev`: API normal, vazia, com adapters reais configurados;
+- `yarn dev:seeded`: massa determinística explícita para QA manual, nunca importada pelo boot normal;
+- `yarn smoke:fx:real`: consulta operacional USD/BRL sem login e imprime provider, taxa, `asOf`,
+  `updatedAt`, freshness e idade da fonte. Requer rede e não faz parte do CI determinístico.
 
-```bash
-yarn test
-yarn test:coverage
-yarn typecheck
-yarn lint
-yarn aws:package
-yarn offline
-```
+O modo seeded usa as identidades canônicas documentadas em `tests/helpers/seededIdentityStore.ts`
+e a senha de QA `Password123!`. Seus retornos de mercado aparecem como fonte determinística, não
+como cotação atual.
 
-`yarn test:coverage` usa Vitest com provider `v8`. O gate atual exige no minimo 80% de
-statements, functions e lines no codigo coberto pelo projeto, e trava branch coverage em 55% para
-impedir regressao abaixo do baseline existente. O baseline de branches medido nesta etapa foi
-56.97%; elevar esse indicador para 80% exige expansao dedicada de testes de ramificacao.
-
-`yarn offline` e `yarn aws:package` compilam TypeScript antes de chamar Serverless. A
-configuracao Serverless aponta para `dist/src/04-infra/serverless.handler`; o bootstrap com
-`tsx/register` fica apenas como legado local e nao deve ser usado em Lambda de producao.
-
-Detalhes do alvo AWS, runtime Node, CORS, variaveis obrigatorias, limites atuais e responsabilidades
-que ainda precisam sair da memoria estao em [docs/aws-serverless-readiness.md](docs/aws-serverless-readiness.md).
-Checks obrigatorios sugeridos para branch protection estao em
-[docs/branch-protection.md](docs/branch-protection.md).
-
-Docker:
-
-```bash
-docker build --target dev -t back-risk-calculator:dev .
-docker run --rm -p 8000:8000 back-risk-calculator:dev
-```
-
-Compose do projeto:
-
-```bash
-docker compose up --build
-```
-
-Scripts de banco atualmente disponiveis:
+Banco local preparado:
 
 ```bash
 docker compose up -d postgres
@@ -178,32 +68,36 @@ yarn db:migrate:dev
 yarn db:seed:dev
 ```
 
-Esses scripts preparam o PostgreSQL local, mas nao substituem a store em memoria usada pela API
-no bootstrap atual da aplicacao.
+Esses comandos não substituem os stores em memória do bootstrap atual.
 
-Use esses scripts para smoke manual de migracao/seed quando o PostgreSQL local estiver ativo. Se
-`docker compose up -d postgres` nao estiver rodando, `yarn db:migrate:dev` falha com
-`ECONNREFUSED 127.0.0.1:5432`.
+## Qualidade
 
-## Variaveis de ambiente
+```bash
+yarn check:runtime-data
+yarn lint
+yarn typecheck
+yarn test
+yarn test:risk
+yarn test:coverage
+yarn build
+```
 
-- `PORT`
-- `ACCESS_TOKEN_SECRET`
-- `ACCESS_TOKEN_TTL_SECONDS`
-- `REFRESH_TOKEN_TTL_DAYS`
+`test:risk` protege os ramos críticos de amostra/freshness, adapters Yahoo/fallback, autorização,
+market data e SSE. `test:coverage` exige 80% de statements/functions/lines e 55% de branches no
+escopo configurado. Testes usam Vitest e Supertest e não dependem da internet.
 
-## Testes e comportamento validado
+## Estrutura
 
-Os testes de integracao cobrem:
+```text
+src/
+  01-domain/        entidades e regras de domínio
+  02-application/   auth, contas, clientes, escritórios, portfólios, workbench, compliance e entrega
+  03-adapters/      controllers, schemas Joi, middlewares, segurança e observabilidade
+  04-infra/         containers, stores, providers, rotas, banco e entrypoints
+  modules/          analytics, market-data e reports-alerts
+scripts/            boot seeded, banco, guards e smokes operacionais
+tests/              helpers, unitários e integrações
+```
 
-- login com credenciais validas e invalidas;
-- refresh token rotativo;
-- revogacao de familia de refresh tokens quando ha reuse;
-- logout com revogacao do token;
-- retorno seguro de `/users/me`;
-- bloqueio de rota admin para nao-admin;
-- autorizacao por conta em `/accounts/:accountId/analytics/summary`.
-
-## Licenca
-
-Distribuido sob a licenca MIT. Veja [LICENSE](LICENSE).
+Veja também [prontidão AWS](docs/aws-serverless-readiness.md) e
+[branch protection](docs/branch-protection.md). Licença MIT em [LICENSE](LICENSE).

@@ -462,7 +462,7 @@ function buildFallbackSectorExposure(
 
   return [
     {
-      sector: "Nao classificado",
+      sector: "Não classificado",
       weightPercent: 100,
       marketValueUsd: round(total, 2)
     }

@@ -95,7 +95,7 @@ export class MarketDataIngestionWorker {
         requestedAt: this.now()
       });
 
-      await this.portfolios.markMarketDataRefreshSucceeded(asset.symbol, this.now());
+      await this.portfolios.markMarketDataRefreshSucceeded(asset.symbol, quote.asOf);
       const portfolioIds = await this.portfolios.listPortfolioIdsHoldingAsset(asset.symbol);
       await this.events.publish("MarketDataUpdated", asset.id, {
         assetId: asset.id,

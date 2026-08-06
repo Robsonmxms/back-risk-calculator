@@ -1,11 +1,12 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { createSeededTestApp as createApp } from "../helpers/testApp";
+import type { CurrencyRateProvider } from "../../src/modules/market-data/ports";
 import type { DateRange } from "../../src/modules/market-data/types";
 import { BrapiMarketDataProvider } from "../helpers/BrapiMarketDataProvider";
 import { createSeededIdentityStore } from "../helpers/seededIdentityStore";
 
-async function login(app: Parameters<typeof request>[0], email = "user@example.com") {
+async function login(app: Parameters<typeof request>[0], email = "user@risk.local") {
   const response = await request(app).post("/api/v1/auth/login").send({
     email,
     password: "Password123!"
@@ -37,6 +38,21 @@ class CountingProvider extends BrapiMarketDataProvider {
   async getExchangeRate(from: string, to: string) {
     this.currencyRateCalls += 1;
     return super.getExchangeRate(from, to);
+  }
+}
+
+class FallbackCurrencyProvider implements CurrencyRateProvider {
+  readonly name = "yahoo";
+
+  async getExchangeRate(from: string, to: string) {
+    return {
+      from,
+      to,
+      rate: 5.25,
+      providerName: "open.er-api",
+      asOf: new Date("2026-07-15T11:00:00.000Z"),
+      updatedAt: new Date("2026-07-15T12:00:00.000Z")
+    };
   }
 }
 
@@ -143,7 +159,10 @@ describe("market data ingestion", () => {
         from: "USD",
         to: "BRL",
         amount: 2.5,
-        convertedAmount: expect.any(Number)
+        convertedAmount: expect.any(Number),
+        freshness: "fresh",
+        sourceAgeSeconds: expect.any(Number),
+        sourceType: "live"
       })
     );
 
@@ -172,6 +191,34 @@ describe("market data ingestion", () => {
       expect.objectContaining({ status: "succeeded" }),
       expect.objectContaining({ status: "succeeded" })
     ]);
+  });
+
+  it("exposes fallback source and source age without relabeling it as the configured provider", async () => {
+    const now = () => new Date("2026-07-15T12:00:00.000Z");
+    const provider = new CountingProvider(now);
+    const { app, metrics } = await createApp({
+      marketData: {
+        marketDataProvider: provider,
+        currencyRateProvider: new FallbackCurrencyProvider(),
+        marketDataNow: now
+      }
+    });
+    const token = await login(app);
+
+    const response = await request(app)
+      .get("/api/v1/market-data/fx-rate?from=USD&to=BRL&amount=2")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.conversion).toMatchObject({
+      providerName: "open.er-api",
+      asOf: "2026-07-15T11:00:00.000Z",
+      updatedAt: "2026-07-15T12:00:00.000Z",
+      sourceType: "fallback",
+      freshness: "partial",
+      sourceAgeSeconds: 3600
+    });
+    expect(metrics.snapshot()["market_data.currency_rate.fallback"]).toBe(1);
   });
 
   it("calculates transaction trade price from provider data", async () => {
@@ -330,7 +377,7 @@ describe("market data ingestion", () => {
       marketData: { marketDataProvider: provider }
     });
     const userToken = await login(app);
-    const adminToken = await login(app, "admin@example.com");
+    const adminToken = await login(app, "admin@risk.local");
 
     const forbiddenResponse = await request(app)
       .get("/api/v1/market-data/provider-status")

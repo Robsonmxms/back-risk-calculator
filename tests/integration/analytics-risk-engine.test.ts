@@ -17,7 +17,7 @@ import {
   Split
 } from "../../src/modules/market-data/types";
 
-async function login(app: Parameters<typeof request>[0], email = "user@example.com") {
+async function login(app: Parameters<typeof request>[0], email = "user@risk.local") {
   const response = await request(app).post("/api/v1/auth/login").send({
     email,
     password: "Password123!"
@@ -29,6 +29,7 @@ async function login(app: Parameters<typeof request>[0], email = "user@example.c
 class AnalyticsFixtureProvider implements MarketDataProvider, CurrencyRateProvider {
   readonly name = "analytics-fixture";
   missingHistory = false;
+  historyPointCount = 31;
 
   private readonly assets: Record<string, MarketAssetCandidate> = {
     MSFT: asset("MSFT", "Microsoft Corporation", "NASDAQ", "USD", "Technology"),
@@ -75,7 +76,7 @@ class AnalyticsFixtureProvider implements MarketDataProvider, CurrencyRateProvid
     };
   }
 
-  async getHistoricalPrices(symbol: string, _range: DateRange): Promise<HistoricalPrice[]> {
+  async getHistoricalPrices(symbol: string, range: DateRange): Promise<HistoricalPrice[]> {
     if (this.missingHistory) {
       throw new ApplicationError(
         "unavailable",
@@ -95,10 +96,13 @@ class AnalyticsFixtureProvider implements MarketDataProvider, CurrencyRateProvid
       );
     }
 
-    return [0.94, 0.98, 0.96, 1.02, 1].map((multiplier, index) => {
+    const endDate = new Date(`${range.to}T00:00:00.000Z`);
+    return Array.from({ length: this.historyPointCount }, (_, index) => {
+      const progress = index / Math.max(1, this.historyPointCount - 1);
+      const multiplier = 0.9 + progress * 0.1 + Math.sin(index / 3) * 0.005;
       const close = Number((base * multiplier).toFixed(2));
-      const date = new Date("2026-07-10T00:00:00.000Z");
-      date.setUTCDate(date.getUTCDate() + index);
+      const date = new Date(endDate);
+      date.setUTCDate(endDate.getUTCDate() - (this.historyPointCount - 1 - index));
 
       return {
         assetId: assetCandidate.id,
@@ -227,7 +231,7 @@ describe("analytics risk engine", () => {
     );
     expect(analyticsResponse.body.data.snapshot.insights).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ title: "Exposicao setorial concentrada" })
+        expect.objectContaining({ title: "Exposição setorial concentrada" })
       ])
     );
     expect(metrics.snapshot()["analytics.calculation.success"]).toBe(1);
@@ -254,11 +258,49 @@ describe("analytics risk engine", () => {
     expect(response.body.data.snapshot.status).toBe("partial");
     expect(response.body.data.snapshot.metrics.volatility).toMatchObject({
       status: "unavailable",
-      reason: "Requires at least two portfolio return observations."
+      reasonCode: "analytics.insufficient_sample",
+      observationCount: 0,
+      effectiveHorizonDays: 0,
+      calculationVersion: "risk-v2-minimum-sample"
     });
     expect(response.body.data.snapshot.dataQuality.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "analytics.history_unavailable" })
+      ])
+    );
+  });
+
+  it("qualifies short histories with stable sample metadata instead of annualizing them", async () => {
+    const provider = new AnalyticsFixtureProvider();
+    provider.historyPointCount = 30;
+    const { app, analytics } = await createApp({
+      marketData: { marketDataProvider: provider, currencyRateProvider: provider }
+    });
+    const token = await login(app);
+
+    await request(app)
+      .post("/api/v1/portfolios/prt_main/analytics/recompute")
+      .set("Authorization", `Bearer ${token}`);
+    await analytics.worker.processNext();
+
+    const response = await request(app)
+      .get("/api/v1/portfolios/prt_main/analytics")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.snapshot.metrics.annualizedReturn).toMatchObject({
+      status: "unavailable",
+      reasonCode: "analytics.insufficient_sample",
+      observationCount: 29,
+      effectiveHorizonDays: 29,
+      calculationVersion: "risk-v2-minimum-sample"
+    });
+    expect(response.body.data.snapshot.dataQuality.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "analytics.insufficient_sample",
+          metricKeys: ["annualizedReturn"]
+        })
       ])
     );
   });
