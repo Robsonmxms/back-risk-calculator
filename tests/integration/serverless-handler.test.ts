@@ -8,14 +8,16 @@ describe("serverless handler", () => {
     vi.resetModules();
     process.env = {
       ...originalEnv,
-      ACCESS_TOKEN_SECRET: "lambda-test-secret",
+      APP_CONFIG_SOURCE: "environment",
+      ACCESS_TOKEN_SECRET: "lambda-test-access-token-secret-at-least-32-characters",
       CORS_ALLOWED_ORIGINS: "https://app.example.com",
+      DATABASE_URL: "postgres://test:test@127.0.0.1:5432/lambda_test",
       PORTFOLIO_IMPORT_QUEUE_PROVIDER: "sqs",
       PORTFOLIO_IMPORT_QUEUE_URL:
         "https://sqs.us-east-1.amazonaws.com/000000000000/portfolio-imports.fifo",
       PORTFOLIO_IMPORT_DLQ_URL:
         "https://sqs.us-east-1.amazonaws.com/000000000000/portfolio-imports-dlq.fifo",
-      NODE_ENV: "staging"
+      NODE_ENV: "test"
     };
   });
 

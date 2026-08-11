@@ -32,6 +32,7 @@
     "yarn": ">=4.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1103.0",
     "@aws-sdk/client-sqs": "^3.1103.0",
     "busboy": "^1.6.0",
     "exceljs": "^4.4.0",

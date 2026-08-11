@@ -16,9 +16,9 @@ alertas, notificações, compliance, entrega e eventos SSE.
   de portas do backend.
 - Relatórios, alertas, notificações e SSE locais implementados; filas externas dos demais módulos,
   object storage e realtime endurecido para produção permanecem no roadmap.
-- A configuração ainda é carregada pelo adapter de ambiente em `src/04-infra/config/env.ts`; a
-  centralização validada com AWS Secrets Manager está especificada na feature raiz `1`, mas ainda
-  não foi implementada.
+- A configuração é resolvida uma vez no bootstrap por um documento versionado e imutável. Ambientes
+  de produção e staging exigem AWS Secrets Manager; desenvolvimento e testes usam fontes locais
+  explicitamente selecionadas sem fallback de produção.
 
 O bootstrap normal começa vazio: não cria identidades nem registros de negócio. Fixtures e fontes
 determinísticas existem somente em testes ou no comando operacional explícito `dev:seeded`.
@@ -56,6 +56,9 @@ runtime.
 nvm use
 corepack enable
 yarn install
+export APP_CONFIG_SOURCE=environment
+export ACCESS_TOKEN_SECRET=local-only-change-before-sharing-at-least-32-characters
+export DATABASE_URL=postgres://risk_calculator:risk_calculator@127.0.0.1:5432/risk_calculator_dev
 yarn dev
 ```
 
@@ -88,7 +91,8 @@ docker compose up -d localstack postgres back-risk-calculator
 ```
 
 `yarn dev` e os testes usam explicitamente a fila em memória local. Ambientes `staging`/`prod`
-recusam esse adapter e exigem `PORTFOLIO_IMPORT_QUEUE_URL` e `PORTFOLIO_IMPORT_DLQ_URL`.
+obtêm o provider pelo documento central e recebem as URLs geradas das filas como locators de
+deployment; não existe fallback para configuração de ambiente quando Secrets Manager falha.
 
 ### Importação de portfólio por planilha
 

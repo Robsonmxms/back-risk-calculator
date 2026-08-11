@@ -145,6 +145,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aws-sdk/client-secrets-manager@npm:^3.1103.0":
+  version: 3.1106.0
+  resolution: "@aws-sdk/client-secrets-manager@npm:3.1106.0"
+  dependencies:
+    "@aws-sdk/core": "npm:^3.977.6"
+    "@aws-sdk/credential-provider-node": "npm:^3.972.78"
+    "@aws-sdk/types": "npm:^3.974.2"
+    "@smithy/core": "npm:^3.31.1"
+    "@smithy/fetch-http-handler": "npm:^5.6.13"
+    "@smithy/node-http-handler": "npm:^4.9.13"
+    "@smithy/types": "npm:^4.16.1"
+    tslib: "npm:^2.6.2"
+  checksum: 10c0/9b0b3df3cf1ad3df17ee5c5ee6b7b5792bd887b28d9c3115244a3f22d30b111a9a253922ffab5c09e4a032b58d9a6e78122f539de8b11afe03616dd390e7f43a
+  languageName: node
+  linkType: hard
+
 "@aws-sdk/client-sqs@npm:^3.1103.0":
   version: 3.1103.0
   resolution: "@aws-sdk/client-sqs@npm:3.1103.0"
@@ -2778,6 +2794,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "back-risk-calculator@workspace:."
   dependencies:
+    "@aws-sdk/client-secrets-manager": "npm:^3.1103.0"
     "@aws-sdk/client-sqs": "npm:^3.1103.0"
     "@eslint/js": "npm:^10.0.1"
     "@rolldown/binding-linux-x64-gnu": "npm:^1.1.5"

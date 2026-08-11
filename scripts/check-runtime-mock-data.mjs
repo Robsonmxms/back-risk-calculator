@@ -36,6 +36,14 @@ const prohibitedFixtureIdentities = [
   "other@risk.local"
 ];
 const fixedCalendarDatePattern = /["'`]20\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])["'`]/g;
+const prohibitedSensitivePatterns = [
+  { label: "AWS access key", pattern: /\bAKIA[0-9A-Z]{16}\b/g },
+  { label: "private key", pattern: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g },
+  {
+    label: "hardcoded access-token signing secret",
+    pattern: /accessTokenSecret\s*:\s*["'`][^"'`]+["'`]/g
+  }
+];
 
 const failures = [];
 
@@ -61,6 +69,13 @@ for (const file of listFiles(join(root, "src"))) {
 
   for (const match of content.matchAll(fixedCalendarDatePattern)) {
     failures.push(`${relativePath}: contains fixed runtime calendar date ${match[0]}`);
+  }
+
+  for (const sensitive of prohibitedSensitivePatterns) {
+    if (sensitive.pattern.test(content)) {
+      failures.push(`${relativePath}: contains prohibited ${sensitive.label}`);
+    }
+    sensitive.pattern.lastIndex = 0;
   }
 }
 

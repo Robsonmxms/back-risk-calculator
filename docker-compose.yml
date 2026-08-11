@@ -7,6 +7,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: "8000"
+      APP_CONFIG_SOURCE: environment
       ACCESS_TOKEN_SECRET: docker-local-risk-calculator-access-token-secret
       ACCESS_TOKEN_TTL_SECONDS: "900"
       REFRESH_TOKEN_TTL_DAYS: "30"
@@ -41,7 +42,7 @@ services:
   localstack:
     image: localstack/localstack:4.7
     environment:
-      SERVICES: sqs
+      SERVICES: sqs,secretsmanager
       AWS_DEFAULT_REGION: us-east-1
     ports:
       - "4566:4566"

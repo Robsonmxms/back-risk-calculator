@@ -1,12 +1,13 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../../src/app";
+import { createTestRuntimeConfig } from "../helpers/testRuntimeConfig";
 import { createSeededTestApp } from "../helpers/testApp";
 import { createSeededIdentityStore } from "../helpers/seededIdentityStore";
 
 describe("mocked data elimination audit", () => {
   it("does not seed historical local users during runtime app startup", async () => {
-    const { app } = await createApp();
+    const { app } = await createApp({ runtimeConfig: createTestRuntimeConfig() });
 
     const response = await request(app).post("/api/v1/auth/login").send({
       email: "user@risk.local",
