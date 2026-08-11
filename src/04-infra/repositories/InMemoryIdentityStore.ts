@@ -39,6 +39,7 @@ import {
 } from "../../01-domain/portfolios/portfolio";
 import { Office, OfficeMembership, OfficeMembershipSummary } from "../../01-domain/offices/office";
 import { User } from "../../01-domain/users/user";
+import { UserManagementAuditEvent } from "../../01-domain/users/user-management-audit";
 import {
   AccountRepository,
   AppendAuditEventInput,
@@ -60,6 +61,8 @@ import {
   CreatePortfolioTransactionInput,
   CreateRefreshTokenInput,
   CreateUserInput,
+  ManagedUserListQuery,
+  ManagedUserPage,
   OfficeRepository,
   PortfolioRepository,
   ReportPackageFilters,
@@ -76,6 +79,8 @@ import {
   UpdateSupervisionReviewInput,
   UpdateReportPackageInput,
   UpdatePortfolioInput,
+  UpdateManagedUserInput,
+  UpdateManagedUserResult,
   UserRepository,
   WorkbenchRepository,
   ReviewItemFilters
@@ -139,6 +144,7 @@ export class InMemoryIdentityStore
   readonly transactionIdempotency = new Map<string, PortfolioTransactionIdempotencyRecord>();
   readonly outboxEvents: PortfolioOutboxEvent[] = [];
   readonly refreshTokens = new Map<string, RefreshTokenRecord>();
+  readonly userManagementAuditEvents: UserManagementAuditEvent[] = [];
 
   async create(input: CreateUserInput): Promise<User>;
   async create(input: CreateRefreshTokenInput): Promise<RefreshTokenRecord>;
@@ -170,6 +176,84 @@ export class InMemoryIdentityStore
 
   async list(): Promise<User[]> {
     return Array.from(this.users.values());
+  }
+
+  async listManagedUsers(query: ManagedUserListQuery): Promise<ManagedUserPage> {
+    const search = query.search ? normalizeSearch(query.search) : undefined;
+    const matching = Array.from(this.users.values())
+      .filter((user) => user.role === query.role)
+      .filter((user) => !query.status || user.status === query.status)
+      .filter(
+        (user) =>
+          !search ||
+          normalizeSearch(user.name).includes(search) ||
+          normalizeSearch(user.email).includes(search)
+      )
+      .sort(
+        (left, right) =>
+          left.name.localeCompare(right.name, "pt-BR") || left.email.localeCompare(right.email)
+      );
+    const start = (query.page - 1) * query.perPage;
+    return {
+      users: matching.slice(start, start + query.perPage).map(copyUser),
+      totalItems: matching.length,
+      page: query.page,
+      perPage: query.perPage
+    };
+  }
+
+  async createManagedUser(input: CreateUserInput): Promise<User | undefined> {
+    const normalizedEmail = input.email.trim().toLowerCase();
+    if (Array.from(this.users.values()).some((user) => user.email === normalizedEmail)) {
+      return undefined;
+    }
+    const user = { ...input, email: normalizedEmail };
+    this.users.set(user.id, user);
+    return copyUser(user);
+  }
+
+  async updateManagedUser(
+    id: string,
+    input: UpdateManagedUserInput
+  ): Promise<UpdateManagedUserResult> {
+    const current = this.users.get(id);
+    if (!current) {
+      return { outcome: "not_found" };
+    }
+    const nextEmail = input.email?.trim().toLowerCase() ?? current.email;
+    if (
+      Array.from(this.users.values()).some((user) => user.id !== id && user.email === nextEmail)
+    ) {
+      return { outcome: "email_conflict" };
+    }
+    const nextRole = input.role ?? current.role;
+    const nextStatus = input.status ?? current.status;
+    const removesActiveAdmin =
+      current.role === "admin" &&
+      current.status === "active" &&
+      (nextRole !== "admin" || nextStatus !== "active");
+    if (
+      removesActiveAdmin &&
+      Array.from(this.users.values()).filter(
+        (user) => user.role === "admin" && user.status === "active"
+      ).length <= 1
+    ) {
+      return { outcome: "last_active_admin_required" };
+    }
+
+    const previous = copyUser(current);
+    const updated: User = {
+      ...current,
+      ...input,
+      email: nextEmail,
+      updatedAt: input.updatedAt
+    };
+    this.users.set(id, updated);
+    return { outcome: "updated", previous, user: copyUser(updated) };
+  }
+
+  async recordUserManagementAudit(event: UserManagementAuditEvent): Promise<void> {
+    this.userManagementAuditEvents.push({ ...event, changedFields: [...event.changedFields] });
   }
 
   async findAccountById(id: string): Promise<Account | undefined> {
@@ -1292,6 +1376,19 @@ export class InMemoryIdentityStore
     }
   }
 
+  async revokeAllForUser(
+    userId: string,
+    revokedAt: Date,
+    reason: Extract<RefreshTokenRevocationReason, "role_changed" | "status_changed">
+  ): Promise<void> {
+    for (const refreshToken of this.refreshTokens.values()) {
+      if (refreshToken.userId === userId && !refreshToken.revokedAt) {
+        refreshToken.revokedAt = revokedAt;
+        refreshToken.revocationReason = reason;
+      }
+    }
+  }
+
   addAccount(account: Account): void {
     this.accounts.set(account.id, account);
   }
@@ -1813,4 +1910,16 @@ function safeAuditMetadataFromPayload(payload: Record<string, unknown>): SafeAud
   }
 
   return metadata;
+}
+
+function normalizeSearch(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function copyUser(user: User): User {
+  return { ...user };
 }

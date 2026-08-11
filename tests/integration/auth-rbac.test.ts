@@ -118,15 +118,15 @@ describe("auth and RBAC", () => {
     expect(response.body.data.user.passwordHash).toBeUndefined();
   });
 
-  it("forbids non-admin actors from admin operations", async () => {
+  it("forbids regular users from global user management", async () => {
     const { app, response: loginResponse } = await login("user@risk.local");
 
     const response = await request(app)
-      .get("/api/v1/admin/users")
+      .get("/api/v1/users?role=user")
       .set("Authorization", `Bearer ${loginResponse.body.data.accessToken}`);
 
     expect(response.status).toBe(403);
-    expect(response.body.error.code).toBe("auth.forbidden");
+    expect(response.body.error.code).toBe("user.management_forbidden");
   });
 
   it("allows assigned analysts and blocks analysts without account access", async () => {

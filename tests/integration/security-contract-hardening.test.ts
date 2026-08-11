@@ -28,7 +28,7 @@ describe("security contract hardening", () => {
 
     const protectedEndpoints = [
       { path: "/api/v1/users/me", token: userToken },
-      { path: "/api/v1/admin/users", token: adminToken },
+      { path: "/api/v1/users?role=admin", token: adminToken },
       { path: "/api/v1/portfolios", token: userToken },
       { path: "/api/v1/portfolios/prt_main", token: userToken },
       { path: "/api/v1/portfolios/prt_main/analytics", token: userToken },
@@ -69,11 +69,11 @@ describe("security contract hardening", () => {
     const userToken = await login(app, "user@risk.local");
 
     const response = await request(app)
-      .get("/api/v1/admin/users")
+      .get("/api/v1/users?role=user")
       .set("Authorization", `Bearer ${userToken}`);
 
     expect(response.status).toBe(403);
-    expect(response.body.error.code).toBe("auth.forbidden");
+    expect(response.body.error.code).toBe("user.management_forbidden");
     expectProtectedNoStore(response);
   });
 });

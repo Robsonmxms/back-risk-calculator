@@ -41,7 +41,7 @@ import {
   ReviewItemStatus,
   ReviewResourceType
 } from "../../01-domain/workbench/workbench";
-import { User, UserRole } from "../../01-domain/users/user";
+import { User, UserRole, UserStatus } from "../../01-domain/users/user";
 import {
   Portfolio,
   PortfolioDetail,
@@ -70,7 +70,39 @@ export interface UserRepository {
   findById(id: string): Promise<User | undefined>;
   findByEmail(email: string): Promise<User | undefined>;
   list(): Promise<User[]>;
+  listManagedUsers(query: ManagedUserListQuery): Promise<ManagedUserPage>;
+  createManagedUser(input: CreateUserInput): Promise<User | undefined>;
+  updateManagedUser(id: string, input: UpdateManagedUserInput): Promise<UpdateManagedUserResult>;
 }
+
+export interface ManagedUserListQuery {
+  role: UserRole;
+  search?: string;
+  status?: UserStatus;
+  page: number;
+  perPage: number;
+}
+
+export interface ManagedUserPage {
+  users: User[];
+  totalItems: number;
+  page: number;
+  perPage: number;
+}
+
+export interface UpdateManagedUserInput {
+  name?: string;
+  email?: string;
+  role?: UserRole;
+  status?: UserStatus;
+  updatedAt: Date;
+}
+
+export type UpdateManagedUserResult =
+  | { outcome: "updated"; previous: User; user: User }
+  | { outcome: "not_found" }
+  | { outcome: "email_conflict" }
+  | { outcome: "last_active_admin_required" };
 
 export interface AccountRepository {
   findAccountById(id: string): Promise<Account | undefined>;
@@ -469,7 +501,8 @@ export interface PortfolioRepository {
   listOutboxEvents(): Promise<PortfolioOutboxEvent[]>;
 }
 
-export type RefreshTokenRevocationReason = "rotated" | "logout" | "reuse_detected" | "expired";
+export type RefreshTokenRevocationReason =
+  "rotated" | "logout" | "reuse_detected" | "expired" | "role_changed" | "status_changed";
 
 export interface RefreshTokenRecord {
   id: string;
@@ -505,5 +538,10 @@ export interface RefreshTokenRepository {
     familyId: string,
     revokedAt: Date,
     reason: RefreshTokenRevocationReason
+  ): Promise<void>;
+  revokeAllForUser(
+    userId: string,
+    revokedAt: Date,
+    reason: Extract<RefreshTokenRevocationReason, "role_changed" | "status_changed">
   ): Promise<void>;
 }

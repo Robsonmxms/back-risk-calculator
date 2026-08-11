@@ -1,9 +1,9 @@
 import express, { NextFunction, Request, Response } from "express";
 import { errorHandler } from "../03-adapters/http";
 import { AccountController } from "../03-adapters/controllers/AccountController";
-import { AdminController } from "../03-adapters/controllers/AdminController";
 import { AuthController } from "../03-adapters/controllers/AuthController";
 import { UserController } from "../03-adapters/controllers/UserController";
+import { UserManagementController } from "../03-adapters/controllers/UserManagementController";
 import { PortfolioController } from "../03-adapters/controllers/PortfolioController";
 import { MarketDataController } from "../03-adapters/controllers/MarketDataController";
 import { AnalyticsController } from "../03-adapters/controllers/AnalyticsController";
@@ -17,7 +17,6 @@ import { OperationalChartsController } from "../03-adapters/controllers/Operatio
 import { PortfolioImportController } from "../03-adapters/controllers/PortfolioImportController";
 import { AuthenticateAccessTokenUseCase } from "../02-application/auth/use-cases/authenticate-access-token-use-case";
 import { registerAccountRoutes } from "./routes/accountRoutes";
-import { registerAdminRoutes } from "./routes/adminRoutes";
 import { registerAnalyticsRoutes } from "./routes/analyticsRoutes";
 import { registerAuthRoutes } from "./routes/authRoutes";
 import { registerMarketDataRoutes } from "./routes/marketDataRoutes";
@@ -35,7 +34,7 @@ import { registerPortfolioImportRoutes } from "./routes/portfolioImportRoutes";
 export interface ServerDependencies {
   authController: AuthController;
   userController: UserController;
-  adminController: AdminController;
+  userManagementController: UserManagementController;
   accountController: AccountController;
   portfolioController: PortfolioController;
   portfolioImportController: PortfolioImportController;
@@ -71,11 +70,7 @@ export function createServer(dependencies: ServerDependencies) {
   registerUserRoutes(
     apiRouter,
     dependencies.userController,
-    dependencies.authenticateAccessTokenUseCase
-  );
-  registerAdminRoutes(
-    apiRouter,
-    dependencies.adminController,
+    dependencies.userManagementController,
     dependencies.authenticateAccessTokenUseCase
   );
   registerOfficeRoutes(
