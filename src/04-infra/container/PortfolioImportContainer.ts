@@ -86,17 +86,18 @@ export function buildPortfolioImportContainer(
 }
 
 function buildQueue(shared: SharedContainer): PortfolioImportQueue {
-  if (shared.config.portfolioImportQueueProvider === "memory") {
+  const config = shared.portfolioImportQueueConfig;
+  if (config.provider === "memory") {
     return new InMemoryPortfolioImportQueue();
   }
   return new SqsPortfolioImportQueue(
     new SQSClient({
-      region: shared.config.awsRegion,
-      endpoint: shared.config.awsEndpoint
+      region: config.awsRegion,
+      endpoint: config.awsEndpoint
     }),
     {
-      queueUrl: shared.config.portfolioImportQueueUrl!,
-      deadLetterQueueUrl: shared.config.portfolioImportDeadLetterQueueUrl!
+      queueUrl: config.queueUrl!,
+      deadLetterQueueUrl: config.deadLetterQueueUrl!
     }
   );
 }

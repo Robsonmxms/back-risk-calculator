@@ -16,11 +16,11 @@ repositories for every module, production object storage, and hardened realtime 
 implemented in this repository yet. Portfolio spreadsheet imports have an Amazon SQS FIFO/DLQ
 adapter; market-data, analytics, and report workers still use in-process queues.
 
-Two root macro features are active but not implemented:
-`1 - centralized-secrets-runtime-configuration` replaces dispersed environment reads with one
-validated Secrets Manager-capable bootstrap, and `2 - hierarchical-user-management` adds
-create/edit APIs and the `admin > analyst > user` management hierarchy. The current
-user-management capability remains admin-only and read-only.
+Centralized runtime configuration is implemented through one validated, immutable document with
+AWS Secrets Manager required for production-like stages. Root macro feature
+`2 - hierarchical-user-management` remains active and adds create/edit APIs and the
+`admin > analyst > user` management hierarchy. The current user-management capability remains
+admin-only and read-only.
 
 Specs are not local to this project. Before implementation, read the relevant root macro spec in
 `../.specs/features/<feature>/`.
@@ -133,10 +133,9 @@ back-risk-calculator/
 - Follow root macro specs for feature scope and acceptance criteria.
 - Treat global roles, office membership roles, account roles, and advisory permissions as distinct
   authorization dimensions.
-- Until feature `1` is delivered, configuration continues to enter through
-  `src/04-infra/config/env.ts`. Do not add environment/secret reads to domain, application,
-  controllers, routers, or providers; keep new configuration access at the infrastructure
-  composition boundary and follow the active macro spec for the centralized bootstrap.
+- Configuration enters only through `src/04-infra/config/bootstrap.ts`. Do not add
+  environment/secret reads to domain, application, controllers, routers, providers, workers or
+  request paths; project immutable capability-specific settings at the composition boundary.
 - Do not expose user creation/editing or delegated hierarchy through the existing read-only admin
   route; implement that behavior only under feature `2` and its canonical contracts.
 - Do not put business rules in Express routers, Joi schemas, or infrastructure entry points.

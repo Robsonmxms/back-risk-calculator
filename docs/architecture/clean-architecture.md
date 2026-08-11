@@ -12,16 +12,16 @@ stay in `04-infra/portfolio-imports`.
 
 ## Runtime Configuration Boundary
 
-The currently implemented `src/04-infra/config/env.ts` is the only application configuration
-adapter and still reads deployment values from `process.env`. `app.ts` loads that infrastructure
-configuration during composition and projects values into containers. Domain and application
-modules must not read the environment or depend on AWS SDK configuration types.
+`src/04-infra/config/bootstrap.ts` is the only runtime module permitted to read `process.env`.
+It selects an explicit local environment source or AWS Secrets Manager in production-like stages,
+validates one namespaced `schemaVersion: 1` document and returns one deeply immutable
+`RuntimeConfig`. The memoized in-flight promise is shared by HTTP, Serverless, workers and
+containers; requests never fetch configuration.
 
-Root feature `1 - centralized-secrets-runtime-configuration` is active but not implemented. It will
-replace the current environment adapter with one validated asynchronous bootstrap and narrow,
-immutable dependencies backed by AWS Secrets Manager in production-like stages. Until delivery,
-do not describe Secrets Manager retrieval or a shared `RuntimeConfig` bootstrap as current runtime
-behavior.
+`app.ts` projects the resolved configuration into narrow authentication, HTTP and SQS settings.
+Domain and application modules do not depend on AWS SDKs, environment access or infrastructure
+configuration types. `yarn architecture:check` enforces the approved environment reader and keeps
+the Secrets Manager SDK restricted to `04-infra/config`.
 
 ## Legacy Module Migration Inventory
 

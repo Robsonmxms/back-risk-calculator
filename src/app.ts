@@ -1,6 +1,7 @@
 import serverless from "serverless-http";
 import type { APIGatewayProxyEvent, APIGatewayProxyEventV2, Context } from "aws-lambda";
-import { loadConfig } from "./04-infra/config/env";
+import { loadRuntimeConfig } from "./04-infra/config/bootstrap";
+import type { RuntimeConfig } from "./04-infra/config/RuntimeConfig";
 import { buildAccountContainer } from "./04-infra/container/AccountContainer";
 import { buildAdminContainer } from "./04-infra/container/AdminContainer";
 import { buildAuthContainer } from "./04-infra/container/AuthContainer";
@@ -25,6 +26,7 @@ import type { PortfolioImportContainerDependencies } from "./04-infra/container/
 import type { InMemoryIdentityStore } from "./04-infra/repositories/InMemoryIdentityStore";
 
 export interface AppDependencies {
+  runtimeConfig?: RuntimeConfig;
   identityStore?: InMemoryIdentityStore;
   marketData?: MarketDataContainerDependencies;
   analytics?: AnalyticsContainerDependencies;
@@ -36,7 +38,7 @@ export interface AppDependencies {
 }
 
 export async function createApp(dependencies: AppDependencies = {}) {
-  const config = loadConfig();
+  const config = dependencies.runtimeConfig ?? (await loadRuntimeConfig());
   const shared = await buildSharedContainer(config, { identityStore: dependencies.identityStore });
   const authContainer = buildAuthContainer(shared);
   const userContainer = buildUserContainer(shared);
@@ -95,7 +97,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
     analyticsController: analyticsContainer.controller,
     reportsAlertsController: reportsAlertsContainer.controller,
     authenticateAccessTokenUseCase: shared.authenticateAccessTokenUseCase,
-    corsAllowedOrigins: config.corsAllowedOrigins
+    corsAllowedOrigins: config.http.corsAllowedOrigins
   });
 
   return {
@@ -153,7 +155,8 @@ export async function createApp(dependencies: AppDependencies = {}) {
       workbook: portfolioImportContainer.workbook,
       worker: portfolioImportContainer.worker
     },
-    metrics: shared.metrics
+    metrics: shared.metrics,
+    runtimeConfig: config
   };
 }
 
@@ -174,11 +177,14 @@ export async function handler(
 }
 
 export async function startServer() {
-  const config = loadConfig();
-  const { app } = await createApp();
-  return app.listen(config.port, () => {
+  const { app, runtimeConfig } = await createApp();
+  return app.listen(runtimeConfig.runtime.port, () => {
     process.stdout.write(
-      `${JSON.stringify({ level: "info", message: "api.started", port: config.port })}\n`
+      `${JSON.stringify({
+        level: "info",
+        message: "api.started",
+        port: runtimeConfig.runtime.port
+      })}\n`
     );
   });
 }

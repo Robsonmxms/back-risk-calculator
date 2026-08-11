@@ -27,6 +27,7 @@ const layerRank = new Map([
   ["01-domain", 4]
 ]);
 const failures = [];
+const approvedProcessEnvironmentReaders = new Set(["04-infra/config/bootstrap.ts"]);
 
 for (const entry of fs.readdirSync(sourceRoot)) {
   if (!allowedSourceRoots.has(entry)) {
@@ -41,6 +42,24 @@ const config = ts.parseJsonConfigFileContent(
   projectRoot
 );
 const files = collectSourceFiles(sourceRoot);
+
+for (const file of files) {
+  const relative = relativePath(sourceRoot, file);
+  const source = fs.readFileSync(file, "utf8");
+  if (source.includes("process.env") && !approvedProcessEnvironmentReaders.has(relative)) {
+    failures.push(
+      `${relativePath(projectRoot, file)} reads process.env outside the approved configuration bootstrap`
+    );
+  }
+  if (
+    source.includes("@aws-sdk/client-secrets-manager") &&
+    !relative.startsWith("04-infra/config/")
+  ) {
+    failures.push(
+      `${relativePath(projectRoot, file)} imports AWS Secrets Manager outside infrastructure configuration`
+    );
+  }
+}
 const { graph, unresolvedLegacyImports } = resolveProductionGraph(
   files,
   config.options,

@@ -92,6 +92,9 @@ jobs:
         run: yarn build
 
       - name: Serverless package smoke
+        env:
+          APP_CONFIG_SECRET_ID: back-risk-calculator-ci-placeholder
+          APP_CONFIG_SECRET_ARN: arn:aws:secretsmanager:us-east-1:000000000000:secret:back-risk-calculator-ci-placeholder
         run: yarn aws:package
 
   migrations-and-seed:

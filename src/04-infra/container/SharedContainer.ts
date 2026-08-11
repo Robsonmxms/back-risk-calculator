@@ -6,7 +6,7 @@ import { Metrics } from "../../03-adapters/observability/Metrics";
 import { HmacJwtAccessTokenService } from "../../03-adapters/security/HmacJwtAccessTokenService";
 import { ScryptPasswordHasher } from "../../03-adapters/security/ScryptPasswordHasher";
 import { Sha256RefreshTokenGenerator } from "../../03-adapters/security/Sha256RefreshTokenGenerator";
-import { AppConfig } from "../config/env";
+import type { RuntimeConfig } from "../config/RuntimeConfig";
 import { InMemoryIdentityStore } from "../repositories/InMemoryIdentityStore";
 
 export interface SharedContainerDependencies {
@@ -14,7 +14,13 @@ export interface SharedContainerDependencies {
 }
 
 export interface SharedContainer {
-  config: AppConfig;
+  portfolioImportQueueConfig: {
+    provider: "memory" | "sqs";
+    queueUrl?: string;
+    deadLetterQueueUrl?: string;
+    awsRegion: string;
+    awsEndpoint?: string;
+  };
   identityStore: InMemoryIdentityStore;
   logger: Logger;
   metrics: Metrics;
@@ -27,7 +33,7 @@ export interface SharedContainer {
 }
 
 export async function buildSharedContainer(
-  config: AppConfig,
+  config: RuntimeConfig,
   dependencies: SharedContainerDependencies = {}
 ): Promise<SharedContainer> {
   const passwordHasher = new ScryptPasswordHasher();
@@ -35,8 +41,8 @@ export async function buildSharedContainer(
   const logger = new Logger();
   const metrics = new Metrics();
   const accessTokenService = new HmacJwtAccessTokenService(
-    config.accessTokenSecret,
-    config.accessTokenTtlSeconds
+    config.auth.accessTokenSecret,
+    config.auth.accessTokenTtlSeconds
   );
   const refreshTokenGenerator = new Sha256RefreshTokenGenerator();
   const getActorForUserIdUseCase = new GetActorForUserIdUseCase(
@@ -54,11 +60,17 @@ export async function buildSharedContainer(
     accessTokenService,
     refreshTokenGenerator,
     getActorForUserIdUseCase,
-    config
+    { refreshTokenTtlDays: config.auth.refreshTokenTtlDays }
   );
 
   return {
-    config,
+    portfolioImportQueueConfig: {
+      provider: config.queues.portfolioImports.provider,
+      queueUrl: config.queues.portfolioImports.queueUrl,
+      deadLetterQueueUrl: config.queues.portfolioImports.deadLetterQueueUrl,
+      awsRegion: config.runtime.awsRegion,
+      awsEndpoint: config.runtime.awsEndpoint
+    },
     identityStore,
     logger,
     metrics,

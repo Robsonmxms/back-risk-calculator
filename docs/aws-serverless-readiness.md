@@ -29,29 +29,32 @@ dist/src/app.handler
 Do not deploy `src/04-infra/serverless-bootstrap.cjs` or rely on `tsx/register` for production
 Lambda execution.
 
-## Current Runtime Configuration
+## Runtime Configuration
 
 Production-like stages are `prod`, `production`, and `staging`.
 
-The implemented API reads configuration directly through `src/04-infra/config/env.ts`. In a
-production-like stage it fails startup unless these values are available:
+The API resolves one versioned configuration document before creating routers, workers or
+listeners. Production-like stages use AWS Secrets Manager and fail startup unless these bootstrap
+locators are available:
 
-- `ACCESS_TOKEN_SECRET`, with a value different from the development fallback;
-- `PORTFOLIO_IMPORT_QUEUE_URL`;
-- `PORTFOLIO_IMPORT_DLQ_URL`.
+- `APP_CONFIG_SOURCE=secrets-manager`;
+- `APP_CONFIG_SECRET_ID`, passed to `GetSecretValue`;
+- `APP_CONFIG_SECRET_ARN`, used only by Serverless packaging to scope IAM;
+- `NODE_ENV`, `PORT` and `AWS_REGION` deployment metadata.
 
-`PORTFOLIO_IMPORT_QUEUE_PROVIDER` must resolve to `sqs`; `serverless.yml` sets it and injects the
-two provisioned FIFO queue URLs. Production-like stages reject the development access-token secret
-and the in-memory queue adapter.
+The secret JSON uses `schemaVersion: 1` and the namespaces `auth`, `http`, `database`, `queues` and
+`providers`. It contains the signing secret, TTLs, CORS origins, database URL and queue provider.
+`serverless.yml` injects only the two provisioned FIFO queue URLs as a documented exception because
+they are immutable CloudFormation outputs. Production-like stages never fall back to environment
+payload fields.
 
-Other current inputs are optional or operationally scoped:
+Local development selects `APP_CONFIG_SOURCE=environment` explicitly and supplies the same
+document fields through environment variables. Tests inject an in-memory source. The runtime source
+scan allows `process.env` only in `src/04-infra/config/bootstrap.ts` and operator scripts.
 
-- `ACCESS_TOKEN_TTL_SECONDS`, `REFRESH_TOKEN_TTL_DAYS`, `AWS_REGION`, and `AWS_ENDPOINT_URL` have
-  local defaults or are optional;
-- `CORS_ALLOWED_ORIGINS` is consumed by the API but does not currently fail startup when empty;
-- `DATABASE_URL` is consumed by migration/seed commands and has a development-only local default;
-  the normal API still uses process-local domain repositories and does not require PostgreSQL at
-  startup.
+The IAM role has only `secretsmanager:GetSecretValue` for the exact ARN supplied by
+`APP_CONFIG_SECRET_ARN`; it cannot list secrets. Use the AWS credential provider chain and an
+execution role—never static production AWS keys.
 
 `CORS_ALLOWED_ORIGINS` is a comma-separated allowlist of exact frontend origins, for example:
 
@@ -63,18 +66,21 @@ The current CORS middleware also accepts HTTP origins on `localhost` and `127.0.
 stage. A production-hardening change must scope that exception to local/test execution before this
 behavior can be described as development-only.
 
-## Planned Secrets Manager Bootstrap
+## Rotation, Rollback And Diagnosis
 
-Root feature `1 - centralized-secrets-runtime-configuration` is specified but not implemented. Its
-target is a single versioned configuration document loaded from AWS Secrets Manager, with only
-bootstrap locators such as stage, region, port, source selector, and `APP_CONFIG_SECRET_ID` left in
-deployment environment variables. `serverless.yml` does not yet grant
-`secretsmanager:GetSecretValue` or configure that locator, so the current package must not be
-described as Secrets Manager-backed.
+- Rotate by creating a new secret version, validating it in staging and moving `AWSCURRENT`.
+- Restart the process or trigger a Lambda cold start to adopt the current version. Runtime requests
+  never poll Secrets Manager and the resolved object is deeply immutable.
+- Roll back by moving `AWSCURRENT` to the last validated version and restarting/cold-starting.
+- Diagnose with stable codes: `config.secret_id_required`, `config.secret_unavailable`,
+  `config.secret_payload_invalid`, `config.schema_version_unsupported` and
+  `config.source_invalid`.
+- Logs expose only source kind, stage, schema version, duration and a short hash of the identifier;
+  they never include the identifier, document, credentials or secret values.
 
-After that feature is delivered, this section and `serverless.yml` must be updated together to
-document least-privilege IAM, secret rotation, the validated document schema, and any queue URL
-locator exception retained for generated infrastructure outputs.
+Before a deployment, validate the JSON shape offline with deterministic non-production values and
+confirm both `APP_CONFIG_SECRET_ID` and the exact `APP_CONFIG_SECRET_ARN` refer to the same secret.
+Malformed, empty, binary, inaccessible or unsupported-version payloads fail before traffic starts.
 
 ## Current Runtime Limits
 
