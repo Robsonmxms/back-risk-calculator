@@ -6,7 +6,7 @@ Guidance for AI agents working in the backend project.
 
 `back-risk-calculator` is the TypeScript + Express backend for the Investment Portfolio Analytics
 Platform. Today it owns auth, session lifecycle, global/office/account authorization, current-user
-lookup, read-only admin user listing, offices, clients, workbench, portfolios and ledger,
+lookup, hierarchical global user management, offices, clients, workbench, portfolios and ledger,
 backend-owned market data, analytics and operational charts, asynchronous XLSX portfolio imports,
 reports, alerts, notifications, compliance, report delivery, audit, client portal contracts, and
 authorized realtime delivery.
@@ -17,10 +17,10 @@ implemented in this repository yet. Portfolio spreadsheet imports have an Amazon
 adapter; market-data, analytics, and report workers still use in-process queues.
 
 Centralized runtime configuration is implemented through one validated, immutable document with
-AWS Secrets Manager required for production-like stages. Root macro feature
-`2 - hierarchical-user-management` remains active and adds create/edit APIs and the
-`admin > analyst > user` management hierarchy. The current user-management capability remains
-admin-only and read-only.
+AWS Secrets Manager required for production-like stages. Global identity management is implemented
+through the canonical `/users` collection with role-scoped pagination and the
+`admin > analyst > user` hierarchy, including create/edit operations, self-management denial,
+last-active-admin protection, audit events, and session revocation after role/status changes.
 
 Specs are not local to this project. Before implementation, read the relevant root macro spec in
 `../.specs/features/<feature>/`.
@@ -136,8 +136,8 @@ back-risk-calculator/
 - Configuration enters only through `src/04-infra/config/bootstrap.ts`. Do not add
   environment/secret reads to domain, application, controllers, routers, providers, workers or
   request paths; project immutable capability-specific settings at the composition boundary.
-- Do not expose user creation/editing or delegated hierarchy through the existing read-only admin
-  route; implement that behavior only under feature `2` and its canonical contracts.
+- Keep global identity management under the canonical `/users` contracts and the source-controlled
+  hierarchy policy; do not reintroduce the removed `/admin/users` compatibility route.
 - Do not put business rules in Express routers, Joi schemas, or infrastructure entry points.
 - Runtime startup must not seed users, offices, clients, accounts, portfolios, reports, alerts,
   notifications, audit events, assignments, quotes, analytics, or any other business records.

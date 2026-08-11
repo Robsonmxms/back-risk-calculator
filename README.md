@@ -30,7 +30,7 @@ Base local: `http://localhost:8000/api/v1` (`GET /health` fica fora do prefixo).
 Os módulos de rota implementados cobrem:
 
 - autenticação por senha, refresh rotativo, logout e ator atual;
-- listagem administrativa somente leitura de usuários, contas e autorização por conta;
+- gestão global de usuários, contas e autorização por conta;
 - escritórios, permissões, operações e gráficos operacionais;
 - clientes, grupos familiares, assignments e workbench;
 - portfólios, ledger, posições, snapshots e idempotência;
@@ -45,10 +45,12 @@ sensíveis a amostra exigem 30 retornos e 30 dias de horizonte na versão
 `risk-v2-minimum-sample`. Cotações são frescas por 15 minutos e snapshots analíticos por 24 horas;
 as respostas preservam origem e idade em vez de tratar sucesso do worker como sinônimo de frescor.
 
-O gerenciamento global de identidades implementado limita-se a `GET /api/v1/admin/users`, acessível
-por administradores e com projeção segura. Criação, edição, delegação `admin > analyst > user` e
-listas separadas por classe estão especificadas na feature raiz `2`, mas ainda não existem no
-runtime.
+O gerenciamento global de identidades usa `GET /api/v1/users`, `POST /api/v1/users` e
+`PATCH /api/v1/users/{userId}`. Administradores gerenciam administradores, analistas e usuários;
+analistas gerenciam somente usuários; usuários não possuem acesso a esse fluxo. Listas são
+filtradas por perfil global, busca e status, com paginação padronizada. Atualizações da própria
+conta são negadas, ao menos um administrador ativo é preservado e mudanças de perfil ou status
+revogam as famílias de refresh token afetadas. A rota legada `/api/v1/admin/users` foi removida.
 
 ## Execução local
 

@@ -3,7 +3,6 @@ import type { APIGatewayProxyEvent, APIGatewayProxyEventV2, Context } from "aws-
 import { loadRuntimeConfig } from "./04-infra/config/bootstrap";
 import type { RuntimeConfig } from "./04-infra/config/RuntimeConfig";
 import { buildAccountContainer } from "./04-infra/container/AccountContainer";
-import { buildAdminContainer } from "./04-infra/container/AdminContainer";
 import { buildAuthContainer } from "./04-infra/container/AuthContainer";
 import { buildSharedContainer } from "./04-infra/container/SharedContainer";
 import { buildUserContainer } from "./04-infra/container/UserContainer";
@@ -42,7 +41,6 @@ export async function createApp(dependencies: AppDependencies = {}) {
   const shared = await buildSharedContainer(config, { identityStore: dependencies.identityStore });
   const authContainer = buildAuthContainer(shared);
   const userContainer = buildUserContainer(shared);
-  const adminContainer = buildAdminContainer(shared);
   const officeContainer = buildOfficeContainer(shared);
   const clientContainer = buildClientContainer(shared);
   const complianceContainer = buildComplianceContainer(shared);
@@ -83,7 +81,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
   const app = createServer({
     authController: authContainer.controller,
     userController: userContainer.controller,
-    adminController: adminContainer.controller,
+    userManagementController: userContainer.managementController,
     officeController: officeContainer.controller,
     clientController: clientContainer.controller,
     operationalChartsController: operationalChartsContainer.controller,
@@ -109,6 +107,9 @@ export async function createApp(dependencies: AppDependencies = {}) {
         accountContainer.useCases.getAccountAnalyticsSummaryUseCase,
       getActorForUserIdUseCase: shared.getActorForUserIdUseCase,
       getCurrentUserUseCase: userContainer.useCases.getCurrentUserUseCase,
+      listManagedUsersUseCase: userContainer.useCases.listManagedUsersUseCase,
+      createManagedUserUseCase: userContainer.useCases.createManagedUserUseCase,
+      updateManagedUserUseCase: userContainer.useCases.updateManagedUserUseCase,
       listUserPortfoliosUseCase: accountContainer.useCases.listUserPortfoliosUseCase,
       listVisiblePortfoliosUseCase: portfolioContainer.useCases.listVisiblePortfoliosUseCase,
       searchMarketAssetsUseCase: marketDataContainer.useCases.searchAssetsUseCase,
@@ -116,7 +117,6 @@ export async function createApp(dependencies: AppDependencies = {}) {
       getPortfolioAnalyticsUseCase: analyticsContainer.useCases.getPortfolioAnalyticsUseCase,
       requestPortfolioAnalyticsRecomputeUseCase:
         analyticsContainer.useCases.requestPortfolioAnalyticsRecomputeUseCase,
-      listUsersUseCase: adminContainer.useCases.listUsersUseCase,
       listOfficesUseCase: officeContainer.useCases.listOfficesUseCase,
       listClientsUseCase: clientContainer.useCases.listClientsUseCase,
       getWorkbenchUseCase: workbenchContainer.useCases.getWorkbenchUseCase,

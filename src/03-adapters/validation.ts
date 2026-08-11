@@ -1,11 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import { ObjectSchema } from "joi";
 
-export function validateBody(schema: ObjectSchema) {
+export function validateBody(schema: ObjectSchema, options: { stripUnknown?: boolean } = {}) {
   return (request: Request, _response: Response, next: NextFunction) => {
     const { error, value } = schema.validate(request.body, {
       abortEarly: false,
-      stripUnknown: true
+      stripUnknown: options.stripUnknown ?? true
     });
 
     if (error) {
@@ -13,6 +13,22 @@ export function validateBody(schema: ObjectSchema) {
     }
 
     request.body = value;
+    return next();
+  };
+}
+
+export function validateParams(schema: ObjectSchema) {
+  return (request: Request, _response: Response, next: NextFunction) => {
+    const { error, value } = schema.validate(request.params, {
+      abortEarly: false,
+      stripUnknown: false
+    });
+
+    if (error) {
+      return next(error);
+    }
+
+    (request as Request & { validatedParams?: unknown }).validatedParams = value;
     return next();
   };
 }
