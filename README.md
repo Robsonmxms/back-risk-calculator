@@ -4,9 +4,12 @@ API TypeScript + Express do Risk Calculator. O backend é a fonte de verdade par
 autorização, escritórios/clientes, contas, portfólios, dados de mercado, analytics, relatórios,
 alertas, notificações, compliance, entrega e eventos SSE.
 
+Documentação verificada em 13/08/2026 contra a branch `develop` e o inventário implementado em
+`../.specs/features/implemented-slices-inventory.md`.
+
 ## Estado e arquitetura
 
-- Node.js 26.5+, TypeScript, Express 5 e Joi.
+- Node.js 26.5.0, Yarn 4.17.1, TypeScript 6, Express 5 e Joi.
 - Clean Architecture: `04-infra -> 03-adapters -> 02-application -> 01-domain`.
 - Stores e workers em processo para o runtime local; a importação assíncrona de portfólio possui
   adaptador Amazon SQS FIFO e DLQ, com fila em memória limitada a desenvolvimento e testes.
@@ -54,15 +57,28 @@ revogam as famílias de refresh token afetadas. A rota legada `/api/v1/admin/use
 
 ## Execução local
 
+### Pré-requisitos
+
+- Node.js 26.5.0, fixado em `.nvmrc`;
+- Corepack com Yarn 4.17.1, fixado em `package.json`;
+- Docker com Compose para PostgreSQL, LocalStack/SQS ou execução integral em containers.
+
+Para executar a API no host com a configuração mínima explícita:
+
 ```bash
 nvm use
 corepack enable
-yarn install
+yarn install --immutable
 export APP_CONFIG_SOURCE=environment
 export ACCESS_TOKEN_SECRET=local-only-change-before-sharing-at-least-32-characters
 export DATABASE_URL=postgres://risk_calculator:risk_calculator@127.0.0.1:5432/risk_calculator_dev
 yarn dev
 ```
+
+`PORT` assume `8000`, `ACCESS_TOKEN_TTL_SECONDS` assume `900`,
+`REFRESH_TOKEN_TTL_DAYS` assume `30` e `PORTFOLIO_IMPORT_QUEUE_PROVIDER` assume `memory` nesse
+modo. Origens HTTP em `localhost` e `127.0.0.1` são aceitas automaticamente no desenvolvimento;
+`CORS_ALLOWED_ORIGINS` adiciona outras origens permitidas como uma lista separada por vírgulas.
 
 Modos distintos:
 
@@ -74,6 +90,17 @@ Modos distintos:
 O modo seeded usa as identidades canônicas documentadas em `tests/helpers/seededIdentityStore.ts`
 e a senha de QA `Password123!`. Seus retornos de mercado aparecem como fonte determinística, não
 como cotação atual.
+
+Para subir API, PostgreSQL e LocalStack/SQS com a configuração de desenvolvimento do repositório:
+
+```bash
+docker compose up --build
+```
+
+Nesse caminho, a API fica em `http://localhost:8000`, o PostgreSQL em `localhost:5432` e o
+LocalStack em `localhost:4566`. O serviço da API usa o adapter SQS e as filas FIFO/DLQ criadas pelos
+scripts de inicialização do LocalStack; ele não usa a fila em memória do `yarn dev` executado no
+host.
 
 Banco local preparado:
 
