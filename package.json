@@ -1,0 +1,75 @@
+{
+  "name": "back-risk-calculator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend TypeScript + Express for the Risk Calculator platform.",
+  "main": "dist/src/app.js",
+  "scripts": {
+    "dev": "tsx watch src/app.ts",
+    "dev:seeded": "tsx scripts/seeded-dev-server.ts",
+    "offline": "yarn build && serverless offline --stage dev",
+    "aws:package": "yarn build && serverless package",
+    "start": "node dist/src/app.js",
+    "build": "node scripts/clean-build-output.mjs && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "architecture:check": "node scripts/check-architecture.mjs",
+    "lint": "yarn architecture:check && eslint . && prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.ts\" \"*.ts\"",
+    "lint:fix": "eslint . --fix && prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.ts\" \"*.ts\"",
+    "check:runtime-data": "node scripts/check-runtime-mock-data.mjs",
+    "lint-staged": "lint-staged",
+    "prepare": "husky",
+    "db:migrate:dev": "tsx scripts/migrate-dev-database.ts",
+    "db:seed:dev": "tsx scripts/seed-dev-database.ts",
+    "smoke:fx:real": "tsx scripts/smoke-real-fx-provider.ts",
+    "test": "vitest run",
+    "test:risk": "vitest run tests/unit/architecture-graph.test.ts tests/unit/analytics-formulas.test.ts tests/unit/freshness-policy.test.ts tests/unit/yahoo-finance-market-data-provider.test.ts tests/integration/analytics-risk-engine.test.ts tests/integration/market-data-ingestion.test.ts tests/integration/reports-alerts-realtime.test.ts tests/integration/security-contract-hardening.test.ts",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest"
+  },
+  "packageManager": "yarn@4.17.1",
+  "engines": {
+    "node": ">=26.5.0",
+    "yarn": ">=4.0.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1103.0",
+    "@aws-sdk/client-sqs": "^3.1103.0",
+    "busboy": "^1.6.0",
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "joi": "^18.2.3",
+    "knex": "^3.3.0",
+    "pg": "^8.22.0",
+    "serverless-http": "^4.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/aws-lambda": "^8.10.162",
+    "@types/busboy": "^1.5.4",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.1",
+    "@types/supertest": "^7.2.0",
+    "@vitest/coverage-v8": "4.1.10",
+    "eslint": "^10.6.0",
+    "globals": "^17.7.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.9.6",
+    "serverless": "^3.40.0",
+    "serverless-offline": "^13.9.0",
+    "supertest": "^7.2.2",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.63.0",
+    "vitest": "^4.1.10"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-linux-x64-gnu": "^1.1.5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}

@@ -1,0 +1,101 @@
+service: back-risk-calculator
+frameworkVersion: "3"
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  # Serverless v3 accepts Node 20 for the packaging smoke. The production container keeps Node 26.
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  memorySize: 1024
+  timeout: 28
+  logRetentionInDays: 14
+  environment:
+    NODE_ENV: ${self:provider.stage}
+    PORT: ${env:PORT, '8000'}
+    APP_CONFIG_SOURCE: secrets-manager
+    APP_CONFIG_SECRET_ID: ${env:APP_CONFIG_SECRET_ID, 'configure-at-deploy'}
+    PORTFOLIO_IMPORT_QUEUE_URL:
+      Ref: PortfolioImportQueue
+    PORTFOLIO_IMPORT_DLQ_URL:
+      Ref: PortfolioImportDeadLetterQueue
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: ${env:APP_CONFIG_SECRET_ARN, 'arn:aws:secretsmanager:us-east-1:000000000000:secret:configure-at-deploy'}
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource:
+            - Fn::GetAtt: [PortfolioImportQueue, Arn]
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+          Resource:
+            - Fn::GetAtt: [PortfolioImportDeadLetterQueue, Arn]
+
+package:
+  patterns:
+    - "!**/*"
+    - "dist/src/**"
+    - "node_modules/**"
+    - package.json
+    - yarn.lock
+    - .yarnrc.yml
+
+functions:
+  api:
+    handler: dist/src/app.handler
+    reservedConcurrency: 10
+    events:
+      - http:
+          method: any
+          path: /
+      - http:
+          method: any
+          path: /{proxy+}
+
+resources:
+  Resources:
+    PortfolioImportDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-portfolio-imports-dlq.fifo
+        FifoQueue: true
+        ContentBasedDeduplication: false
+        MessageRetentionPeriod: 1209600
+
+    PortfolioImportQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-portfolio-imports.fifo
+        FifoQueue: true
+        ContentBasedDeduplication: false
+        VisibilityTimeout: 120
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt: [PortfolioImportDeadLetterQueue, Arn]
+          maxReceiveCount: 3
+
+  Outputs:
+    PortfolioImportQueueUrl:
+      Value:
+        Ref: PortfolioImportQueue
+    PortfolioImportDeadLetterQueueUrl:
+      Value:
+        Ref: PortfolioImportDeadLetterQueue
+
+custom:
+  serverless-offline:
+    httpPort: 8000
+    lambdaPort: 3002
+    noPrependStageInUrl: true

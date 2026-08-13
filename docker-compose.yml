@@ -1,0 +1,56 @@
+services:
+  back-risk-calculator:
+    build:
+      context: .
+      target: dev
+    command: yarn dev
+    environment:
+      NODE_ENV: development
+      PORT: "8000"
+      APP_CONFIG_SOURCE: environment
+      ACCESS_TOKEN_SECRET: docker-local-risk-calculator-access-token-secret
+      ACCESS_TOKEN_TTL_SECONDS: "900"
+      REFRESH_TOKEN_TTL_DAYS: "30"
+      DATABASE_URL: postgres://risk_calculator:risk_calculator@postgres:5432/risk_calculator_dev
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_ENDPOINT_URL: http://localstack:4566
+      PORTFOLIO_IMPORT_QUEUE_PROVIDER: sqs
+      PORTFOLIO_IMPORT_QUEUE_URL: http://localstack:4566/000000000000/portfolio-imports.fifo
+      PORTFOLIO_IMPORT_DLQ_URL: http://localstack:4566/000000000000/portfolio-imports-dlq.fifo
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - back_node_modules:/app/node_modules
+    depends_on:
+      - postgres
+      - localstack
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: risk_calculator_dev
+      POSTGRES_USER: risk_calculator
+      POSTGRES_PASSWORD: risk_calculator
+    ports:
+      - "5432:5432"
+    volumes:
+      - back_postgres_data:/var/lib/postgresql/data
+
+  localstack:
+    image: localstack/localstack:4.7
+    environment:
+      SERVICES: sqs,secretsmanager
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - ./scripts/localstack:/etc/localstack/init/ready.d:ro
+      - back_localstack_data:/var/lib/localstack
+
+volumes:
+  back_node_modules:
+  back_postgres_data:
+  back_localstack_data:
